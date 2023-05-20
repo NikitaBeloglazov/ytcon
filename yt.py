@@ -14,6 +14,7 @@ def printraw(printraw_msg):
 	print(Fore.RESET)
 
 def name_shortener(name):
+	""" Shortens filenames so they fit in the console. rewrite required """
 	splitted = name.split()
 	temp1 = []
 	for i in splitted:
@@ -23,11 +24,13 @@ def name_shortener(name):
 			temp1.append(i)
 
 def bettersize(text):
+	""" Rounds up file sizes """
 	if text == "NaN":
 		return "NaN"
 	return text.split(".")[0] + text[-3:-1] + text[-1]
 
 def progressbar_generator(percent):
+	""" Generates progress bar """
 	if percent == "Wait":
 		return f"|{' '*25}|"
 	percent = int(percent.split(".")[0])
@@ -130,8 +133,8 @@ def downloadd(url):
 		ControlClass.screen.refresh()
 		return None
 
-	os.remove(ControlClass.queue_list[temp1_index]["file"])
-	print("File removed!")
+	#os.remove(ControlClass.queue_list[temp1_index]["file"])
+	#print("File removed!")
 
 #threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
@@ -149,7 +152,7 @@ def main(stdscr):
 			r = 0
 			for i in ControlClass.queue_list:
 				i = ControlClass.queue_list[i]
-				temp1 = f'{i["progress"]} {progressbar_generator(i["progress"])} {i["speed"]} {i["downloaded"]}/{i["size"]} {i["site"]} | {name_shortener(i["filename"])}'
+				temp1 = f'{i["progress"]} {progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
 				elif i["status"] == "finished":
