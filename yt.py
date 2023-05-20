@@ -1,11 +1,11 @@
-import yt_dlp
+import os
 import time
-import os, sys
+import threading
 import pprint
+import curses
 from colorama import init, Fore
 init()
-import threading
-import curses
+import yt_dlp
 
 def printraw(printraw_msg):
 	""" Outputs pretty-print json """
@@ -49,7 +49,7 @@ class ErrorLogger:
 		pass#print(msg)
 
 class ControlClass:
-	def __init__():
+	def __init__(self):
 		pass
 
 def hook(d):
@@ -81,7 +81,7 @@ def hook(d):
 	#time.sleep(20)
 	#if d['status'] == 'downloading':
 	#	print(d['eta'])
-	
+
 	#os.system("clear")
 	#print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
 	#printraw(d)
@@ -133,7 +133,7 @@ def downloadd(url):
 	os.remove(ControlClass.queue_list[temp1_index]["file"])
 	print("File removed!")
 
-#threading.Thread(target=downloadd, args=("https://rt.pornhub.com/view_video.php?viewkey=644011f4e4a75",), daemon=True).start()
+#threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 def main(stdscr):
 	ControlClass.screen = stdscr
@@ -165,12 +165,12 @@ def input_url(stdscr):
 	# Получение размеров окна
 	height, width = stdscr.getmaxyx()
 	ControlClass.screen_height, ControlClass.screen_width = height, width
-	
+
 	while True:
 		# Создание и настройка окна для текстового поля
 		textwin = curses.newwin(1, width, height-1, 0)
 		textwin.addstr(0, 0, "Введите текст: ")
-		
+
 		# Получение ввода от пользователя
 		text = textwin.getstr(0, len("Введите текст: "))
 
