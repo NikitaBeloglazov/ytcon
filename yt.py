@@ -1,11 +1,35 @@
 import os
 import time
+import logging
 import threading
 import pprint
 import curses
 from colorama import init, Fore
 init()
 import yt_dlp
+
+logger = logging.getLogger('my_logger')
+logger.setLevel(logging.DEBUG)
+
+# Создание обработчика для основного файла логов
+file_handler = logging.FileHandler('main.log', mode='w')
+file_handler.setLevel(logging.INFO)
+
+# Создание обработчика для дополнительного файла логов
+additional_file_handler = logging.FileHandler('additional.log', mode='w')
+additional_file_handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(levelname)s: %(message)s')
+file_handler.setFormatter(formatter)
+additional_file_handler.setFormatter(formatter)
+
+# Добавление обработчиков в логгер
+logger.addHandler(file_handler)
+logger.addHandler(additional_file_handler)
+
+# Запись логов
+logger.debug('Отладочное сообщение')
+logger.info('Информационное сообщение')
 
 def printraw(printraw_msg):
 	""" Outputs pretty-print json """
@@ -41,15 +65,15 @@ def progressbar_generator(percent):
 class ErrorLogger:
 	def debug(self, msg):
 		if msg.startswith('[debug] '):
-			pass
+			logger.debug(msg)
 		else:
 			self.info(msg)
 	def info(self, msg):
-		pass#print(msg)
+		logger.info(msg)
 	def warning(self, msg):
-		pass#print(msg)
+		logger.warning(msg)
 	def error(self, msg):
-		pass#print(msg)
+		logger.error(msg)
 
 class ControlClass:
 	def __init__(self):
@@ -88,7 +112,7 @@ def hook(d):
 	#os.system("clear")
 	#print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
 	#printraw(d)
-
+	logger.debug(pprint.pformat(d))
 	#if d['status'] == 'finished':
 	#	print('Done downloading')
 
@@ -103,6 +127,7 @@ def downloadd(url):
 		with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 			# - = - = - = Get downloading resolutions (yt) = -
 			infolist = ydl.extract_info(url, download=False)
+			logger.debug(pprint.pformat(infolist))
 			if infolist["extractor"] == "youtube":
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
@@ -127,7 +152,8 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
 			# - = - = - = - = - = - = - = - = - = - = - = - =
-			ydl.download(url)
+			logger.debug(pprint.pformat(ControlClass.queue_list))
+			logger.debug(ydl.download(url))
 	except yt_dlp.utils.DownloadError as e:
 		ControlClass.screen.addstr(ControlClass.screen_height-2, 0, str(e))
 		ControlClass.screen.refresh()
