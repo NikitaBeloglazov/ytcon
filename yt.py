@@ -97,8 +97,11 @@ def hook(d):
 	ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
 
 	try:
-		ControlClass.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
-	except:
+		if d["_total_bytes_estimate_str"].strip() == "N/A":
+			ControlClass.queue_list[indexx]["size"] = d["_total_bytes_str"].strip()
+		else:
+			ControlClass.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
+	except KeyError:
 		pass
 
 	try:
@@ -147,7 +150,10 @@ def downloadd(url):
 					ControlClass.queue_list[temp1_index] = {}
 					ControlClass.queue_list[temp1_index]["progress"] = "Wait"
 					ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
-					ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
+					try:
+						ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
+					except KeyError:
+						ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 					ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 					ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
 					ControlClass.queue_list[temp1_index]["quality"] = i["resolution"]
@@ -158,7 +164,10 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index] = {}
 				ControlClass.queue_list[temp1_index]["progress"] = "Wait"
 				ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
-				ControlClass.queue_list[temp1_index]["size"] = str(round(infolist["filesize_approx"]/1e+6)) + "MiB"
+				try:
+					ControlClass.queue_list[temp1_index]["size"] = str(round(infolist["filesize_approx"]/1e+6)) + "MiB"
+				except KeyError:
+					ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 				ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
 				ControlClass.queue_list[temp1_index]["quality"] = "None"
@@ -197,8 +206,6 @@ def main(stdscr):
 	while True:
 		if ControlClass.queue_list == {}:
 			stdscr.addstr(0, 0, "No tasks")
-			stdscr.refresh()
-			time.sleep(0.1)
 		else:
 			r = 0
 			for i in ControlClass.queue_list:
@@ -214,8 +221,8 @@ def main(stdscr):
 					stdscr.addstr(r, 0, temp1)
 				r = r+1
 			stdscr.addstr(7, 0, str(ControlClass.queue_list))
-			stdscr.refresh()
-			time.sleep(0.1)
+		stdscr.refresh()
+		time.sleep(0.1)
 
 def input_url(stdscr):
 	# Получение размеров окна
