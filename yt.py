@@ -193,8 +193,14 @@ def downloadd(url):
 		ControlClass.screen.refresh()
 		return None
 
-	#os.remove(ControlClass.queue_list[temp1_index]["file"])
-	#print("File removed!")
+	# - = - = - = [Post-processing] = - = - = - #
+	if ControlClass.queue_list[temp1_index]["progress"] == "Exist":
+		return None # skip post-process if file already exists
+	# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
+	os.utime(ControlClass.queue_list[temp1_index]["file"])
+
+	# Remove file after downloading for testing purposes
+	# os.remove(ControlClass.queue_list[temp1_index]["file"])
 
 #threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
