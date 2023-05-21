@@ -51,12 +51,16 @@ def bettersize(text):
 	""" Rounds up file sizes """
 	if text == "NaN":
 		return "NaN"
+	if len(text.split(".")) == 1:
+		return text
 	return text.split(".")[0] + text[-3:-1] + text[-1]
 
 def progressbar_generator(percent):
 	""" Generates progress bar """
 	if percent == "Wait":
 		return f"|{' '*25}|"
+	if percent == "Exist":
+		return f"|{'█'*25}|"
 	percent = int(percent.split(".")[0])
 	progress = round(percent / 4)
 	white_space = 25 - progress
@@ -86,9 +90,11 @@ def hook(d):
 		indexx = d["info_dict"]["original_url"]
 
 	ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
+	if ControlClass.queue_list[indexx]["status"] == "exists" and d['status'] == "finished":
+		return None
+	ControlClass.queue_list[indexx]["status"] = d['status']
 	ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
 	ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
-	ControlClass.queue_list[indexx]["status"] = d['status']
 
 	try:
 		ControlClass.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
@@ -119,7 +125,8 @@ def hook(d):
 ydl_opts = {
 	'logger': ErrorLogger(),
 	'progress_hooks': [hook],
-	'no_color': True
+	'no_color': True,
+	'outtmpl': '%(title)s [%(id)s].%(ext)s'
 	}
 
 def downloadd(url):
@@ -128,6 +135,12 @@ def downloadd(url):
 			# - = - = - = Get downloading resolutions (yt) = -
 			infolist = ydl.extract_info(url, download=False)
 			logger.debug(pprint.pformat(infolist))
+
+			# Check if file exists
+			exists = os.path.exists(f'{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}'.replace("|", "｜")) # yt-dlp, wtf?
+			if exists:
+				logger.warning(f'FILE "{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}" EXISTS'.replace("|", "｜"))
+			
 			if infolist["extractor"] == "youtube":
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
@@ -145,12 +158,24 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index] = {}
 				ControlClass.queue_list[temp1_index]["progress"] = "Wait"
 				ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
-				ControlClass.queue_list[temp1_index]["size"] = "NaN"
+				ControlClass.queue_list[temp1_index]["size"] = str(round(infolist["filesize_approx"]/1e+6)) + "MiB"
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 				ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
 				ControlClass.queue_list[temp1_index]["quality"] = "None"
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
+
+			if exists:
+				if infolist["extractor"] == "youtube":
+					for i in infolist["requested_formats"]:
+						temp1_index = infolist["original_url"] + ":" + i["format_id"]
+						ControlClass.queue_list[temp1_index]["status"] = "exists"
+						ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
+						ControlClass.queue_list[temp1_index]["progress"] = "Exist"
+				else:
+					ControlClass.queue_list[temp1_index]["status"] = "exists"
+					ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
+					ControlClass.queue_list[temp1_index]["progress"] = "Exist"
 			# - = - = - = - = - = - = - = - = - = - = - = - =
 			logger.debug(pprint.pformat(ControlClass.queue_list))
 			logger.debug(ydl.download(url))
@@ -181,6 +206,8 @@ def main(stdscr):
 				temp1 = f'{i["progress"]} {progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
+				elif i["status"] == "exists":
+					stdscr.addstr(r, 0, temp1, curses.color_pair(4))
 				elif i["status"] == "finished":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(2))
 				else:
@@ -222,6 +249,7 @@ curses.use_default_colors()
 curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
 curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
 curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
+curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
 
 # Start
 curses.wrapper(main)

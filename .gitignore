@@ -1,3 +1,6 @@
 
 *.webm
 *.log
+*.part
+*.ytdl
+*.mp4
