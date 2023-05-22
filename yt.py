@@ -8,28 +8,32 @@ from colorama import init, Fore
 init()
 import yt_dlp
 
-logger = logging.getLogger('my_logger')
+# - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
+logger = logging.getLogger('main_logger')
 logger.setLevel(logging.DEBUG)
 
-# Создание обработчика для основного файла логов
-file_handler = logging.FileHandler('main.log', mode='w')
-file_handler.setLevel(logging.INFO)
+# Create handler for the INFO level
+info_file_handler = logging.FileHandler('info.log', mode='w')
+info_file_handler.setLevel(logging.INFO)
 
-# Создание обработчика для дополнительного файла логов
-additional_file_handler = logging.FileHandler('additional.log', mode='w')
-additional_file_handler.setLevel(logging.DEBUG)
+# Create handler for the DEBUG level
+debug_file_handler = logging.FileHandler('debug.log', mode='w')
+debug_file_handler.setLevel(logging.DEBUG)
 
+# Add formatter
 formatter = logging.Formatter('%(levelname)s: %(message)s')
-file_handler.setFormatter(formatter)
-additional_file_handler.setFormatter(formatter)
+info_file_handler.setFormatter(formatter)
+debug_file_handler.setFormatter(formatter)
 
-# Добавление обработчиков в логгер
-logger.addHandler(file_handler)
-logger.addHandler(additional_file_handler)
+# Add handlers to the logger
+logger.addHandler(info_file_handler)
+logger.addHandler(debug_file_handler)
 
-# Запись логов
-logger.debug('Отладочное сообщение')
-logger.info('Информационное сообщение')
+# Write test logs
+logger.debug('== DEBUG LOG FILE ==')
+logger.info('== INFO LOG FILE ==')
+# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+
 
 def printraw(printraw_msg):
 	""" Outputs pretty-print json """
