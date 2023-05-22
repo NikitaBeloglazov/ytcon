@@ -47,6 +47,23 @@ def name_shortener(name):
 		else:
 			temp1.append(i)
 
+def divide_without_remainder(num):
+	"""
+	Division without remainder. Used for centering in the whitespace_stabilization function
+		print(divide(22))  # Out: [11, 11]
+		print(divide(23))  # Out: [11, 12]
+	"""
+	quotient = num // 2
+	remainder = num % 2
+	return [quotient, quotient + remainder]
+
+def whitespace_stabilization(text, needed_space):
+	if len(text) == needed_space:
+		return text
+	white_space = needed_space - len(text)
+	white_space = divide_without_remainder(white_space)
+	return ' '*white_space[0] + text + ' '*white_space[1]
+
 def bettersize(text):
 	""" Rounds up file sizes """
 	if text == "NaN":
@@ -216,7 +233,7 @@ def main(stdscr):
 			r = 0
 			for i in ControlClass.queue_list:
 				i = ControlClass.queue_list[i]
-				temp1 = f'{i["progress"]} {progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
+				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
 				elif i["status"] == "exists":
