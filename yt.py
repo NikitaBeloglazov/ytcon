@@ -34,7 +34,6 @@ logger.debug('== DEBUG LOG FILE ==')
 logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
-
 def printraw(printraw_msg):
 	""" Outputs pretty-print json """
 	print(Fore.CYAN)
@@ -48,8 +47,8 @@ def name_shortener(name):
 	for i in splitted:
 		if len(" ".join(temp1) + " " + i) > 10:
 			return " ".join(temp1)[0:-1].strip() + "...   "
-		else:
-			temp1.append(i)
+		temp1.append(i)
+	return "Unknown name"
 
 def divide_without_remainder(num):
 	"""
@@ -135,16 +134,16 @@ def hook(d):
 	d["info_dict"]["subtitles"] = []
 	d["info_dict"]["fragments"] = []
 
-	#time.sleep(20)
 	#if d['status'] == 'downloading':
-	#	print(d['eta'])
+	#	print(d['eta']) # TODO
 
-	#os.system("clear")
-	#print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
-	#printraw(d)
+	# DEBUG
+	# os.system("clear")
+	# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
+	# printraw(d)
+	# time.sleep(20)
 	logger.debug(pprint.pformat(d))
-	#if d['status'] == 'finished':
-	#	print('Done downloading')
+	return None
 
 ydl_opts = {
 	'logger': ErrorLogger(),
@@ -164,7 +163,7 @@ def downloadd(url):
 			exists = os.path.exists(f'{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}'.replace("|", "｜")) # yt-dlp, wtf?
 			if exists:
 				logger.warning(f'FILE "{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}" EXISTS'.replace("|", "｜"))
-			
+
 			if infolist["extractor"] == "youtube":
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
@@ -222,6 +221,7 @@ def downloadd(url):
 
 	# Remove file after downloading for testing purposes
 	# os.remove(ControlClass.queue_list[temp1_index]["file"])
+	return None
 
 #threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
@@ -231,12 +231,11 @@ def main(stdscr):
 	curses.curs_set(1)
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	while True:
-		if ControlClass.queue_list == {}:
+		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
 			stdscr.addstr(0, 0, "No tasks")
 		else:
 			r = 0
-			for i in ControlClass.queue_list:
-				i = ControlClass.queue_list[i]
+			for _, i in ControlClass.queue_list.items():
 				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
