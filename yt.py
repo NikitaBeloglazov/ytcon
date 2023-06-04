@@ -13,11 +13,11 @@ logger = logging.getLogger('main_logger')
 logger.setLevel(logging.DEBUG)
 
 # Create handler for the INFO level
-info_file_handler = logging.FileHandler('info.log', mode='w')
+info_file_handler = logging.FileHandler('/tmp/info.log', mode='w')
 info_file_handler.setLevel(logging.INFO)
 
 # Create handler for the DEBUG level
-debug_file_handler = logging.FileHandler('debug.log', mode='w')
+debug_file_handler = logging.FileHandler('/tmp/debug.log', mode='w')
 debug_file_handler.setLevel(logging.DEBUG)
 
 # Add formatter
@@ -99,22 +99,29 @@ class ErrorLogger:
 	def error(self, msg):
 		logger.error(msg)
 
-class ControlClass:
+class ControlClass_base:
 	def __init__(self):
-		pass
+		self.last_error = "No errors:)"
 
 def hook(d):
+	logger.debug(pprint.pformat(d))
 	if d["info_dict"]["extractor"] == "youtube":
 		indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
 	else:
 		indexx = d["info_dict"]["original_url"]
 
 	ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
-	if ControlClass.queue_list[indexx]["status"] == "exists" and d['status'] == "finished":
+	if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
 		return None
 	ControlClass.queue_list[indexx]["status"] = d['status']
 	ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
 	ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
+	
+	#try:
+	#	ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
+	#except KeyError:
+	#	if d["status"] == "finished":
+	#		ControlClass.queue_list[indexx]["eta"] = "00:00"
 
 	try:
 		if d["_total_bytes_estimate_str"].strip() == "N/A":
@@ -134,15 +141,11 @@ def hook(d):
 	d["info_dict"]["subtitles"] = []
 	d["info_dict"]["fragments"] = []
 
-	#if d['status'] == 'downloading':
-	#	print(d['eta']) # TODO
-
 	# DEBUG
 	# os.system("clear")
 	# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
 	# printraw(d)
 	# time.sleep(20)
-	logger.debug(pprint.pformat(d))
 	return None
 
 ydl_opts = {
@@ -175,8 +178,9 @@ def downloadd(url):
 					except KeyError:
 						ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 					ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
+					#ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 					ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
-					ControlClass.queue_list[temp1_index]["quality"] = i["resolution"]
+					ControlClass.queue_list[temp1_index]["quality"] = i["resolution"] # TODO
 					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
 					ControlClass.queue_list[temp1_index]["status"] = "waiting"
 			else:
@@ -189,8 +193,9 @@ def downloadd(url):
 				except KeyError:
 					ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
+				#ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 				ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
-				ControlClass.queue_list[temp1_index]["quality"] = "None"
+				ControlClass.queue_list[temp1_index]["quality"] = "None" # TODO
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
 
@@ -209,8 +214,8 @@ def downloadd(url):
 			logger.debug(pprint.pformat(ControlClass.queue_list))
 			logger.debug(ydl.download(url))
 	except yt_dlp.utils.DownloadError as e:
-		ControlClass.screen.addstr(ControlClass.screen_height-2, 0, str(e))
-		ControlClass.screen.refresh()
+		logger.error(e)
+		ControlClass.last_error = e
 		return None
 
 	# - = - = - = [Post-processing] = - = - = - #
@@ -230,12 +235,15 @@ def main(stdscr):
 	curses.echo()
 	curses.curs_set(1)
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
+	threading.Thread(target=errorprinter, args=(stdscr,), daemon=True).start()
 	while True:
 		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
 			stdscr.addstr(0, 0, "No tasks")
 		else:
 			r = 0
 			for _, i in ControlClass.queue_list.items():
+				# Not included flags:
+				# - ETA: {i["eta"]}
 				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
@@ -270,8 +278,24 @@ def input_url(stdscr):
 		else:
 			threading.Thread(target=downloadd, args=(text.decode('utf-8'),), daemon=True).start()
 
+def errorprinter(stdscr):
+	max_error_space = ControlClass.screen_width * 3
+	while True:
+		ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
+		ControlClass.screen.refresh()
+
+		error_text_generator = str(ControlClass.last_error)
+		error_text_generator = error_text_generator + (" " * (max_error_space - len(error_text_generator)))
+
+		ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator)
+		ControlClass.screen.refresh()
+
+		time.sleep(1)
+
+ControlClass = ControlClass_base()
 ControlClass.queue_list = {}
-# Инициализация curses и вызов основной функции
+
+# Init screen
 curses.update_lines_cols()
 curses.initscr()
 
