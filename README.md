@@ -1,3 +1,3 @@
-# yt-dlp_console-gui
+# ytcon (yt-dlp_console_gui)
 Just pseudo-graphical GUI for yt-dlp LOL
-# Currently in the ALPHA stage of development
+# 🚧 Currently in the ALPHA stage of development
