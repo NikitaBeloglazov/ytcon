@@ -1,7 +1,8 @@
-import os
+import os, sys
 import time
 import logging
 import threading
+import traceback
 import pprint
 import curses
 from colorama import init, Fore
@@ -102,6 +103,16 @@ class ErrorLogger:
 class ControlClass_base:
 	def __init__(self):
 		self.last_error = "No errors:)"
+		self.error_countdown = 0
+
+	def report_error(self, text):
+		logger.error(text)
+		self.last_error = text
+		self.error_countdown = 15
+
+	def clear_errors(self):
+		self.last_error = "No errors:)"
+		self.error_countdown = 0
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
@@ -214,8 +225,7 @@ def downloadd(url):
 			logger.debug(pprint.pformat(ControlClass.queue_list))
 			logger.debug(ydl.download(url))
 	except yt_dlp.utils.DownloadError as e:
-		logger.error(e)
-		ControlClass.last_error = e
+		ControlClass.report_error(e)
 		return None
 
 	# - = - = - = [Post-processing] = - = - = - #
@@ -237,6 +247,11 @@ def main(stdscr):
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	threading.Thread(target=errorprinter, args=(stdscr,), daemon=True).start()
 	while True:
+		# removes old text with spaces, as curses doesn't do that..
+		clear_old_text = " " * ((ControlClass.screen_height - 5) * ControlClass.screen_width)
+		stdscr.addstr(0, 0, clear_old_text)
+		# # #
+
 		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
 			stdscr.addstr(0, 0, "No tasks")
 		else:
@@ -254,7 +269,7 @@ def main(stdscr):
 				else:
 					stdscr.addstr(r, 0, temp1)
 				r = r+1
-			stdscr.addstr(7, 0, str(ControlClass.queue_list))
+			# stdscr.addstr(7, 0, str(ControlClass.queue_list))
 		stdscr.refresh()
 		time.sleep(0.1)
 
@@ -266,17 +281,21 @@ def input_url(stdscr):
 	while True:
 		# Создание и настройка окна для текстового поля
 		textwin = curses.newwin(1, width, height-1, 0)
-		textwin.addstr(0, 0, "Введите текст: ")
+		textwin.addstr(0, 0, "Enter URL > ")
 
 		# Получение ввода от пользователя
-		text = textwin.getstr(0, len("Введите текст: "))
+		text = textwin.getstr(0, len("Enter URL > "))
+		text = text.decode('utf-8')
 
-		stdscr.addstr(height-2, 0, "Вы ввели: " + text.decode('utf-8'))
+		stdscr.addstr(height-2, 0, "You entered: " + text)
 		stdscr.refresh()
-		if text.decode('utf-8') == "":
+		if text == "":
 			stdscr.refresh()
+		elif text == "clear" or text == "cls":
+			ControlClass.clear_errors()
+			delete_finished()
 		else:
-			threading.Thread(target=downloadd, args=(text.decode('utf-8'),), daemon=True).start()
+			threading.Thread(target=downloadd, args=(text,), daemon=True).start()
 
 def errorprinter(stdscr):
 	max_error_space = ControlClass.screen_width * 3
@@ -284,13 +303,46 @@ def errorprinter(stdscr):
 		ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
 		ControlClass.screen.refresh()
 
-		error_text_generator = str(ControlClass.last_error)
+		if ControlClass.error_countdown != 0:
+			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
+		else:
+			error_text_generator = str(ControlClass.last_error)
+
+		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
 		error_text_generator = error_text_generator + (" " * (max_error_space - len(error_text_generator)))
 
-		ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator)
-		ControlClass.screen.refresh()
+		if ControlClass.last_error == "No errors:)":
+			ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(3))
+			ControlClass.screen.refresh()
+		else:
+			ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(1))
+			ControlClass.screen.refresh()
+
+		if ControlClass.error_countdown != 0:
+			ControlClass.error_countdown = ControlClass.error_countdown - 1
+			if ControlClass.error_countdown == 0:
+				ControlClass.clear_errors()
 
 		time.sleep(1)
+
+def delete_finished():
+	""" Removes all completed operations from ControlClass.queue_list with a loop """
+	#try:
+	temp1 = 0
+	temp2_new = ControlClass.queue_list.copy()
+	for item, item_content in ControlClass.queue_list.copy().items():
+		if item_content["status"] == "exists" or item_content["status"] == "finished":
+			del temp2_new[item]
+			temp1 = temp1 + 1
+	ControlClass.queue_list = temp2_new
+	ControlClass.report_error(str(temp1) + " item(s) removed from list!")
+	#except:
+	#	exit_with_exception(traceback.format_exc())
+
+#def exit_with_exception(text): # DONT WORKS BUT LIFE-NEEDED # TODO
+#	curses.endwin()
+#	print(text)
+#	sys.exit(0)
 
 ControlClass = ControlClass_base()
 ControlClass.queue_list = {}
