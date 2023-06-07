@@ -94,16 +94,20 @@ class ErrorLogger:
 		else:
 			self.info(msg)
 	def info(self, msg):
+		add_to_logs(msg)
 		logger.info(msg)
 	def warning(self, msg):
+		add_to_logs(msg)
 		logger.warning(msg)
 	def error(self, msg):
+		add_to_logs(msg)
 		logger.error(msg)
 
 class ControlClass_base:
 	def __init__(self):
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
+		self.log = ["Logs will appear there..", "", ""]
 
 	def report_error(self, text):
 		logger.error(text)
@@ -113,6 +117,18 @@ class ControlClass_base:
 	def clear_errors(self):
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
+
+def add_to_logs(msg):
+	if "[download]" in msg and "%" in msg and "at" in msg:
+		# awoid logging such as "[download] 100.0% of   52.05MiB at    3.07MiB/s ETA 00:00"
+		return None
+
+	del ControlClass.log[0]
+	if len(msg) > ControlClass.screen_width:
+		temp1 = ControlClass.screen_width - 3
+		ControlClass.log.append(msg[0:temp1]+"...")
+	else:
+		ControlClass.log.append(msg)
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
@@ -163,7 +179,8 @@ ydl_opts = {
 	'logger': ErrorLogger(),
 	'progress_hooks': [hook],
 	'no_color': True,
-	'outtmpl': '%(title)s [%(id)s].%(ext)s'
+	'outtmpl': '%(title)s [%(id)s].%(ext)s',
+	'socket_timeout': 7
 	}
 
 def downloadd(url):
@@ -246,9 +263,10 @@ def main(stdscr):
 	curses.curs_set(1)
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	threading.Thread(target=errorprinter, args=(stdscr,), daemon=True).start()
+	threading.Thread(target=logprinter, args=(stdscr,), daemon=True).start()
 	while True:
-		# removes old text with spaces, as curses doesn't do that..
-		clear_old_text = " " * ((ControlClass.screen_height - 5) * ControlClass.screen_width)
+		# removes old text with help of spaces, as curses doesn't do that..
+		clear_old_text = " " * ((ControlClass.screen_height - 9) * ControlClass.screen_width)
 		stdscr.addstr(0, 0, clear_old_text)
 		# # #
 
@@ -289,11 +307,15 @@ def input_url(stdscr):
 
 		stdscr.addstr(height-2, 0, "You entered: " + text)
 		stdscr.refresh()
+
+		ErrorLogger.info(None, "[input] " + text)
+
 		if text == "":
 			stdscr.refresh()
 		elif text == "clear" or text == "cls":
 			ControlClass.clear_errors()
-			delete_finished()
+			temp1 = delete_finished()
+			add_to_logs(f"[clear]: {temp1} item(s) removed from list!")
 		else:
 			threading.Thread(target=downloadd, args=(text,), daemon=True).start()
 
@@ -325,6 +347,22 @@ def errorprinter(stdscr):
 
 		time.sleep(1)
 
+def logprinter(stdscr):
+	ControlClass.screen.addstr(ControlClass.screen_height-9, 0, "- - -")
+	ControlClass.screen.refresh()
+	while True:
+		# removes old text with help of spaces, as curses doesn't do that..
+		ControlClass.screen.addstr(ControlClass.screen_height-8, 0, " "*ControlClass.screen_width)
+		ControlClass.screen.addstr(ControlClass.screen_height-7, 0, " "*ControlClass.screen_width)
+		ControlClass.screen.addstr(ControlClass.screen_height-6, 0, " "*ControlClass.screen_width)
+		# # #
+
+		ControlClass.screen.addstr(ControlClass.screen_height-8, 0, ControlClass.log[0])
+		ControlClass.screen.addstr(ControlClass.screen_height-7, 0, ControlClass.log[1])
+		ControlClass.screen.addstr(ControlClass.screen_height-6, 0, ControlClass.log[2])
+		ControlClass.screen.refresh()
+		time.sleep(1)
+
 def delete_finished():
 	""" Removes all completed operations from ControlClass.queue_list with a loop """
 	#try:
@@ -335,7 +373,7 @@ def delete_finished():
 			del temp2_new[item]
 			temp1 = temp1 + 1
 	ControlClass.queue_list = temp2_new
-	ControlClass.report_error(str(temp1) + " item(s) removed from list!")
+	return str(temp1)
 	#except:
 	#	exit_with_exception(traceback.format_exc())
 
