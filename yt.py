@@ -87,48 +87,52 @@ def progressbar_generator(percent):
 	white_space = 25 - progress
 	return f"|{'█'*progress}{' '*white_space}|"
 
-class ErrorLogger:
+class JournalClass:
 	def debug(self, msg):
 		if msg.startswith('[debug] '):
 			logger.debug(msg)
 		else:
 			self.info(msg)
-	def info(self, msg):
-		add_to_logs(msg)
+
+	# show: show in logs field
+	def info(self, msg, show=True):
 		logger.info(msg)
-	def warning(self, msg):
-		add_to_logs(msg)
+		if show:
+			self.add_to_logs_field(msg)
+	def warning(self, msg, show=True):
 		logger.warning(msg)
-	def error(self, msg):
-		add_to_logs(msg)
+		if show:
+			self.add_to_logs_field(msg)
+	def error(self, msg, show=True):
 		logger.error(msg)
+		ControlClass.last_error = msg
+		ControlClass.error_countdown = 15
+		if show:
+			self.add_to_logs_field(msg)
+
+	def clear_errors(self):
+		ControlClass.last_error = "No errors:)"
+		ControlClass.error_countdown = 0
+
+	def add_to_logs_field(self, msg):
+		if "[download]" in msg and "%" in msg and "at" in msg:
+			# awoid logging such as "[download] 100.0% of   52.05MiB at    3.07MiB/s ETA 00:00"
+			return None
+
+		del ControlClass.log[0]
+		if len(msg) > ControlClass.screen_width:
+			temp1 = ControlClass.screen_width - 3
+			ControlClass.log.append(msg[0:temp1]+"...")
+		else:
+			ControlClass.log.append(msg)
+
+journal = JournalClass()
 
 class ControlClass_base:
 	def __init__(self):
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
 		self.log = ["Logs will appear there..", "", ""]
-
-	def report_error(self, text):
-		logger.error(text)
-		self.last_error = text
-		self.error_countdown = 15
-
-	def clear_errors(self):
-		self.last_error = "No errors:)"
-		self.error_countdown = 0
-
-def add_to_logs(msg):
-	if "[download]" in msg and "%" in msg and "at" in msg:
-		# awoid logging such as "[download] 100.0% of   52.05MiB at    3.07MiB/s ETA 00:00"
-		return None
-
-	del ControlClass.log[0]
-	if len(msg) > ControlClass.screen_width:
-		temp1 = ControlClass.screen_width - 3
-		ControlClass.log.append(msg[0:temp1]+"...")
-	else:
-		ControlClass.log.append(msg)
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
@@ -176,7 +180,7 @@ def hook(d):
 	return None
 
 ydl_opts = {
-	'logger': ErrorLogger(),
+	'logger': journal,
 	'progress_hooks': [hook],
 	'no_color': True,
 	'outtmpl': '%(title)s [%(id)s].%(ext)s',
@@ -242,7 +246,7 @@ def downloadd(url):
 			logger.debug(pprint.pformat(ControlClass.queue_list))
 			logger.debug(ydl.download(url))
 	except yt_dlp.utils.DownloadError as e:
-		ControlClass.report_error(e)
+		journal.error(str(e), show=False)
 		return None
 
 	# - = - = - = [Post-processing] = - = - = - #
@@ -308,14 +312,14 @@ def input_url(stdscr):
 		stdscr.addstr(height-2, 0, "You entered: " + text)
 		stdscr.refresh()
 
-		ErrorLogger.info(None, "[input] " + text)
+		journal.info("[input] " + text)
 
 		if text == "":
 			stdscr.refresh()
 		elif text == "clear" or text == "cls":
-			ControlClass.clear_errors()
+			journal.clear_errors()
 			temp1 = delete_finished()
-			add_to_logs(f"[clear]: {temp1} item(s) removed from list!")
+			journal.info(f"[clear]: {temp1} item(s) removed from list!")
 		else:
 			threading.Thread(target=downloadd, args=(text,), daemon=True).start()
 
@@ -343,7 +347,7 @@ def errorprinter(stdscr):
 		if ControlClass.error_countdown != 0:
 			ControlClass.error_countdown = ControlClass.error_countdown - 1
 			if ControlClass.error_countdown == 0:
-				ControlClass.clear_errors()
+				journal.clear_errors()
 
 		time.sleep(1)
 
