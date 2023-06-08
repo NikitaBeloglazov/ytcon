@@ -125,6 +125,7 @@ class JournalClass:
 			ControlClass.log.append(msg[0:temp1]+"...")
 		else:
 			ControlClass.log.append(msg)
+		logger.debug(ControlClass.log)
 
 journal = JournalClass()
 
@@ -132,7 +133,7 @@ class ControlClass_base:
 	def __init__(self):
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
-		self.log = ["Logs will appear there..", "", ""]
+		self.log = ["", "", "", "", "", "Logs will appear there.."]
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
@@ -270,7 +271,7 @@ def main(stdscr):
 	threading.Thread(target=logprinter, args=(stdscr,), daemon=True).start()
 	while True:
 		# removes old text with help of spaces, as curses doesn't do that..
-		clear_old_text = " " * ((ControlClass.screen_height - 9) * ControlClass.screen_width)
+		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
 		stdscr.addstr(0, 0, clear_old_text)
 		# # #
 
@@ -295,33 +296,59 @@ def main(stdscr):
 		stdscr.refresh()
 		time.sleep(0.1)
 
+class InputProcessed(Exception):
+	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
+
 def input_url(stdscr):
-	# Получение размеров окна
+	# Get window sizes
 	height, width = stdscr.getmaxyx()
 	ControlClass.screen_height, ControlClass.screen_width = height, width
 
+
 	while True:
-		# Создание и настройка окна для текстового поля
-		textwin = curses.newwin(1, width, height-1, 0)
-		textwin.addstr(0, 0, "Enter URL > ")
+		try:
+			# Create and setting window for text field
+			textwin = curses.newwin(1, width, height-1, 0)
+			textwin.addstr(0, 0, "Enter URL > ")
 
-		# Получение ввода от пользователя
-		text = textwin.getstr(0, len("Enter URL > "))
-		text = text.decode('utf-8')
+			# Get user input
+			text = textwin.getstr(0, len("Enter URL > "))
+			text = text.decode('utf-8')
 
-		stdscr.addstr(height-2, 0, "You entered: " + text)
-		stdscr.refresh()
+			# stdscr.addstr(height-2, 0, "You entered: " + text)
+			# stdscr.refresh()
 
-		journal.info("[input] " + text)
+			journal.info("")
 
-		if text == "":
-			stdscr.refresh()
-		elif text == "clear" or text == "cls":
-			journal.clear_errors()
-			temp1 = delete_finished()
-			journal.info(f"[clear]: {temp1} item(s) removed from list!")
-		else:
-			threading.Thread(target=downloadd, args=(text,), daemon=True).start()
+			if text == "":
+				journal.info("[input] Force refreshing screen...")
+				stdscr.refresh()
+				raise InputProcessed
+			
+			journal.info("[input] " + text)
+
+			if text == "clear" or text == "cls":
+				journal.clear_errors()
+				temp1 = delete_finished()
+				journal.info(f"[clear]: {temp1} item(s) removed from list!")
+			elif text == "logtest":
+				time.sleep(1)
+				journal.debug("[TEST] 1")
+				time.sleep(1)
+				journal.info("[TEST] 2")
+				time.sleep(1)
+				journal.warning("[TEST] 3")
+				time.sleep(1)
+				journal.error("[TEST] 4")
+				time.sleep(1)
+				journal.error("[TEST] 5", show=False)
+				time.sleep(1)
+				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
+				time.sleep(1)
+			else:
+				threading.Thread(target=downloadd, args=(text,), daemon=True).start()
+		except InputProcessed:
+			pass
 
 def errorprinter(stdscr):
 	max_error_space = ControlClass.screen_width * 3
@@ -352,18 +379,25 @@ def errorprinter(stdscr):
 		time.sleep(1)
 
 def logprinter(stdscr):
-	ControlClass.screen.addstr(ControlClass.screen_height-9, 0, "- - -")
+	ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -")
 	ControlClass.screen.refresh()
+	temp1 = " "*ControlClass.screen_width
 	while True:
 		# removes old text with help of spaces, as curses doesn't do that..
-		ControlClass.screen.addstr(ControlClass.screen_height-8, 0, " "*ControlClass.screen_width)
-		ControlClass.screen.addstr(ControlClass.screen_height-7, 0, " "*ControlClass.screen_width)
-		ControlClass.screen.addstr(ControlClass.screen_height-6, 0, " "*ControlClass.screen_width)
+		ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
+		ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
+		ControlClass.screen.addstr(ControlClass.screen_height-9,  0, temp1)
+		ControlClass.screen.addstr(ControlClass.screen_height-8,  0, temp1)
+		ControlClass.screen.addstr(ControlClass.screen_height-7,  0, temp1)
+		ControlClass.screen.addstr(ControlClass.screen_height-6,  0, temp1)
 		# # #
 
-		ControlClass.screen.addstr(ControlClass.screen_height-8, 0, ControlClass.log[0])
-		ControlClass.screen.addstr(ControlClass.screen_height-7, 0, ControlClass.log[1])
-		ControlClass.screen.addstr(ControlClass.screen_height-6, 0, ControlClass.log[2])
+		ControlClass.screen.addstr(ControlClass.screen_height-11, 0, ControlClass.log[0])
+		ControlClass.screen.addstr(ControlClass.screen_height-10, 0, ControlClass.log[1])
+		ControlClass.screen.addstr(ControlClass.screen_height-9,  0, ControlClass.log[2])
+		ControlClass.screen.addstr(ControlClass.screen_height-8,  0, ControlClass.log[3])
+		ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
+		ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
 		ControlClass.screen.refresh()
 		time.sleep(1)
 
