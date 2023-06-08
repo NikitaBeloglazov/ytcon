@@ -1,8 +1,8 @@
-import os, sys
+import os
 import time
 import logging
 import threading
-import traceback
+# import traceback #not used yet, but I think it will be used.
 import pprint
 import curses
 from colorama import init, Fore
@@ -148,7 +148,7 @@ def hook(d):
 	ControlClass.queue_list[indexx]["status"] = d['status']
 	ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
 	ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
-	
+
 	#try:
 	#	ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
 	#except KeyError:
@@ -267,8 +267,8 @@ def main(stdscr):
 	curses.echo()
 	curses.curs_set(1)
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
-	threading.Thread(target=errorprinter, args=(stdscr,), daemon=True).start()
-	threading.Thread(target=logprinter, args=(stdscr,), daemon=True).start()
+	threading.Thread(target=errorprinter, daemon=True).start()
+	threading.Thread(target=logprinter, daemon=True).start()
 	while True:
 		# removes old text with help of spaces, as curses doesn't do that..
 		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
@@ -304,7 +304,6 @@ def input_url(stdscr):
 	height, width = stdscr.getmaxyx()
 	ControlClass.screen_height, ControlClass.screen_width = height, width
 
-
 	while True:
 		try:
 			# Create and setting window for text field
@@ -318,13 +317,12 @@ def input_url(stdscr):
 			# stdscr.addstr(height-2, 0, "You entered: " + text)
 			# stdscr.refresh()
 
-			journal.info("")
-
 			if text == "":
 				journal.info("[input] Force refreshing screen...")
 				stdscr.refresh()
 				raise InputProcessed
-			
+
+			journal.info("")
 			journal.info("[input] " + text)
 
 			if text == "clear" or text == "cls":
@@ -350,7 +348,7 @@ def input_url(stdscr):
 		except InputProcessed:
 			pass
 
-def errorprinter(stdscr):
+def errorprinter():
 	max_error_space = ControlClass.screen_width * 3
 	while True:
 		ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
@@ -378,11 +376,12 @@ def errorprinter(stdscr):
 
 		time.sleep(1)
 
-def logprinter(stdscr):
+def logprinter():
 	ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -")
 	ControlClass.screen.refresh()
 	temp1 = " "*ControlClass.screen_width
 	while True:
+		# if old_logs == new_logs: skip, do not re-render # TODO
 		# removes old text with help of spaces, as curses doesn't do that..
 		ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
 		ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
@@ -399,7 +398,7 @@ def logprinter(stdscr):
 		ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
 		ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
 		ControlClass.screen.refresh()
-		time.sleep(1)
+		time.sleep(0.2)
 
 def delete_finished():
 	""" Removes all completed operations from ControlClass.queue_list with a loop """
