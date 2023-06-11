@@ -41,15 +41,11 @@ def printraw(printraw_msg):
 	pprint.pprint(printraw_msg)
 	print(Fore.RESET)
 
-def name_shortener(name):
-	""" Shortens filenames so they fit in the console. rewrite required """
-	splitted = name.split()
-	temp1 = []
-	for i in splitted:
-		if len(" ".join(temp1) + " " + i) > 10:
-			return " ".join(temp1)[0:-1].strip() + "...   "
-		temp1.append(i)
-	return "Unknown name"
+def name_shortener(name, symbols):
+	""" Shortens filenames so they fit in the console """
+	if len(name) < symbols:
+		return name
+	return name[0:symbols-3] + "..."
 
 def divide_without_remainder(num):
 	"""
@@ -185,12 +181,16 @@ ydl_opts = {
 	'progress_hooks': [hook],
 	'no_color': True,
 	'outtmpl': '%(title)s [%(id)s].%(ext)s',
-	'socket_timeout': 7
+	'socket_timeout': 7,
+	# 'cookiesfrombrowser': ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
 	}
 
 def downloadd(url):
 	try:
 		with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+			journal.debug(str(ydl.params))
+			# needed for some sites. you may need to replace it with the correct one
+			# ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading resolutions (yt) = -
 			infolist = ydl.extract_info(url, download=False)
 			logger.debug(pprint.pformat(infolist))
@@ -257,18 +257,21 @@ def downloadd(url):
 	os.utime(ControlClass.queue_list[temp1_index]["file"])
 
 	# Remove file after downloading for testing purposes
+	# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
 	# os.remove(ControlClass.queue_list[temp1_index]["file"])
 	return None
-
-#threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 def main(stdscr):
 	ControlClass.screen = stdscr
 	curses.echo()
 	curses.curs_set(1)
+
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	threading.Thread(target=errorprinter, daemon=True).start()
 	threading.Thread(target=logprinter, daemon=True).start()
+	# for testing purposes
+	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
+
 	while True:
 		# removes old text with help of spaces, as curses doesn't do that..
 		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
@@ -282,7 +285,9 @@ def main(stdscr):
 			for _, i in ControlClass.queue_list.items():
 				# Not included flags:
 				# - ETA: {i["eta"]}
-				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])} {i["speed"]} {bettersize(i["downloaded"])}/{bettersize(i["size"])} {i["site"]} | {name_shortener(i["filename"])}'
+				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {i["site"]} | '
+				fileshortname = name_shortener(i["filename"], ControlClass.screen_width - len(temp1))
+				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
 				elif i["status"] == "exists":
