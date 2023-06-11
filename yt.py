@@ -1,8 +1,9 @@
 import os
+import sys
 import time
 import logging
 import threading
-# import traceback #not used yet, but I think it will be used.
+import traceback
 import pprint
 import curses
 from colorama import init, Fore
@@ -130,6 +131,8 @@ class ControlClass_base:
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
+		self.exit = False
+		self.exception = ""
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
@@ -273,6 +276,12 @@ def main(stdscr):
 	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 	while True:
+		# Exit with exception
+		if ControlClass.exit:
+			curses.endwin()
+			ControlClass.screen = None
+			print(ControlClass.exception)
+			sys.exit(1)
 		# removes old text with help of spaces, as curses doesn't do that..
 		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
 		stdscr.addstr(0, 0, clear_old_text)
@@ -348,6 +357,11 @@ def input_url(stdscr):
 				time.sleep(1)
 				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
 				time.sleep(1)
+			elif text == "makecrash":
+				try:
+					0/0
+				except:
+					exit_with_exception(traceback.format_exc())
 			else:
 				threading.Thread(target=downloadd, args=(text,), daemon=True).start()
 		except InputProcessed:
@@ -419,10 +433,10 @@ def delete_finished():
 	#except:
 	#	exit_with_exception(traceback.format_exc())
 
-#def exit_with_exception(text): # DONT WORKS BUT LIFE-NEEDED # TODO
-#	curses.endwin()
-#	print(text)
-#	sys.exit(0)
+def exit_with_exception(text): # TODO connect to all functions
+	journal.error(text)
+	ControlClass.exit = True
+	ControlClass.exception = text
 
 ControlClass = ControlClass_base()
 ControlClass.queue_list = {}
