@@ -1,11 +1,14 @@
 import os
 import sys
+import re
 import time
 import logging
 import threading
 import traceback
 import pprint
 import curses
+import pyperclip
+# import notify2
 from colorama import init, Fore
 init()
 import yt_dlp
@@ -86,6 +89,7 @@ def progressbar_generator(percent):
 
 class JournalClass:
 	def debug(self, msg):
+		""" For yt-dlp """
 		if msg.startswith('[debug] '):
 			logger.debug(msg)
 		else:
@@ -122,7 +126,7 @@ class JournalClass:
 			ControlClass.log.append(msg[0:temp1]+"...")
 		else:
 			ControlClass.log.append(msg)
-		logger.debug(ControlClass.log)
+		logger.debug(ControlClass.log) # TODO: ??????
 
 journal = JournalClass()
 
@@ -191,7 +195,7 @@ ydl_opts = {
 def downloadd(url):
 	try:
 		with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-			journal.debug(str(ydl.params))
+			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
 			# ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading resolutions (yt) = -
@@ -272,6 +276,7 @@ def main(stdscr):
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	threading.Thread(target=errorprinter, daemon=True).start()
 	threading.Thread(target=logprinter, daemon=True).start()
+	threading.Thread(target=clipboard_checker, daemon=True).start()
 	# for testing purposes
 	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
@@ -295,6 +300,7 @@ def main(stdscr):
 				# Not included flags:
 				# - ETA: {i["eta"]}
 				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {i["site"]} | '
+				# TODO: add whitespace stabilization for i["site"]
 				fileshortname = name_shortener(i["filename"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
@@ -345,7 +351,7 @@ def input_url(stdscr):
 				journal.info(f"[clear]: {temp1} item(s) removed from list!")
 			elif text == "logtest":
 				time.sleep(1)
-				journal.debug("[TEST] 1")
+				logger.debug("[TEST] 1")
 				time.sleep(1)
 				journal.info("[TEST] 2")
 				time.sleep(1)
@@ -433,6 +439,25 @@ def delete_finished():
 	#except:
 	#	exit_with_exception(traceback.format_exc())
 
+def clipboard_checker():
+	new_clip = pyperclip.paste()
+	if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
+		journal.info("[CLIP] URL detected: " + new_clip)
+		threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
+	old_clip = new_clip
+
+	while True:
+		new_clip = pyperclip.paste()
+		if new_clip != old_clip:
+			if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
+				journal.info("[CLIP] New URL detected: " + new_clip)
+				threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
+			else:
+				logger.debug(new_clip)
+				journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
+		old_clip = new_clip
+		time.sleep(0.5)
+
 def exit_with_exception(text): # TODO connect to all functions
 	journal.error(text)
 	ControlClass.exit = True
@@ -454,5 +479,6 @@ curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
 curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
 curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
 
+# curses.raw() # TODO: ??? can simplify some points in the program
 # Start
 curses.wrapper(main)
