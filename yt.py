@@ -127,6 +127,7 @@ class JournalClass:
 		else:
 			ControlClass.log.append(msg)
 		logger.debug(ControlClass.log) # TODO: ??????
+		return None
 
 journal = JournalClass()
 
@@ -356,7 +357,7 @@ def input_url(stdscr):
 				else:
 					journal.error("[input] I do not understand you")
 
-			elif text == "clear" or text == "cls":
+			elif text in ("clear", "cls"):
 				journal.clear_errors()
 				temp1 = delete_finished()
 				journal.info(f"[clear] {temp1} item(s) removed from list!")
