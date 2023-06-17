@@ -107,7 +107,7 @@ class JournalClass:
 	def error(self, msg, show=True):
 		logger.error(msg)
 		ControlClass.last_error = msg
-		ControlClass.error_countdown = 15
+		ControlClass.error_countdown = 99
 		if show:
 			self.add_to_logs_field(msg)
 
@@ -137,6 +137,7 @@ class ControlClass_base:
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
 		self.exit = False
 		self.exception = ""
+		self.special_mode = False
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
@@ -183,21 +184,13 @@ def hook(d):
 	# time.sleep(20)
 	return None
 
-ydl_opts = {
-	'logger': journal,
-	'progress_hooks': [hook],
-	'no_color': True,
-	'outtmpl': '%(title)s [%(id)s].%(ext)s',
-	'socket_timeout': 7,
-	# 'cookiesfrombrowser': ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-	}
-
 def downloadd(url):
 	try:
-		with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
 			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
-			# ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+			if ControlClass.special_mode:
+				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading resolutions (yt) = -
 			infolist = ydl.extract_info(url, download=False)
 			logger.debug(pprint.pformat(infolist))
@@ -338,17 +331,36 @@ def input_url(stdscr):
 			# stdscr.refresh()
 
 			if text == "":
-				journal.info("[input] Force refreshing screen...")
+				# Force refreshing screen...
 				stdscr.refresh()
 				raise InputProcessed
 
 			journal.info("")
 			journal.info("[input] " + text)
 
-			if text == "clear" or text == "cls":
+			if text == "sp1":
+				text = "specialmode 1"
+			elif text == "sp0":
+				text = "specialmode 0"
+
+			if text.split()[0] == "specialmode" or text.split()[0] == "sp":
+				if text.split()[1] == "1" or text.split()[1].lower() == "true":
+					ControlClass.special_mode = True
+					ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+					journal.info("[input] sp activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
+					ControlClass.special_mode = False
+					if "cookiesfrombrowser" in ControlClass.ydl_opts:
+						del ControlClass.ydl_opts["cookiesfrombrowser"]
+					journal.info("[input] sp deactivated! now a default yt-dlp extractor settings will be used.")
+				else:
+					journal.error("[input] I do not understand you")
+
+			elif text == "clear" or text == "cls":
 				journal.clear_errors()
 				temp1 = delete_finished()
-				journal.info(f"[clear]: {temp1} item(s) removed from list!")
+				journal.info(f"[clear] {temp1} item(s) removed from list!")
+
 			elif text == "logtest":
 				time.sleep(1)
 				logger.debug("[TEST] 1")
@@ -363,11 +375,13 @@ def input_url(stdscr):
 				time.sleep(1)
 				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
 				time.sleep(1)
+
 			elif text == "makecrash":
 				try:
 					0/0
 				except:
 					exit_with_exception(traceback.format_exc())
+
 			else:
 				threading.Thread(target=downloadd, args=(text,), daemon=True).start()
 		except InputProcessed:
@@ -378,6 +392,10 @@ def errorprinter():
 	while True:
 		ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
 		ControlClass.screen.refresh()
+
+		if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
+			ControlClass.error_countdown = 0
+			journal.clear_errors()
 
 		if ControlClass.error_countdown != 0:
 			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
@@ -463,8 +481,18 @@ def exit_with_exception(text): # TODO connect to all functions
 	ControlClass.exit = True
 	ControlClass.exception = text
 
+# - = - = -
 ControlClass = ControlClass_base()
 ControlClass.queue_list = {}
+
+ControlClass.ydl_opts = {
+	'logger': journal,
+	'progress_hooks': [hook],
+	'no_color': True,
+	'outtmpl': '%(title)s [%(id)s].%(ext)s',
+	'socket_timeout': 7,
+	#'cookiesfrombrowser': ('chromium', ) # REALIZED IN SPECIAL_MODE
+	}
 
 # Init screen
 curses.update_lines_cols()
