@@ -339,6 +339,11 @@ def input_url(stdscr):
 			journal.info("")
 			journal.info("[input] " + text)
 
+			# - = Special mode handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			if text in ("sp", "specialmode"):
+				journal.info("[input] specialmode status: " + str(ControlClass.special_mode))
+				raise InputProcessed
+
 			if text == "sp1":
 				text = "specialmode 1"
 			elif text == "sp0":
@@ -356,6 +361,7 @@ def input_url(stdscr):
 					journal.info("[input] sp deactivated! now a default yt-dlp extractor settings will be used.")
 				else:
 					journal.error("[input] I do not understand you")
+			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			elif text in ("clear", "cls"):
 				journal.clear_errors()
