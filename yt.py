@@ -126,7 +126,7 @@ class JournalClass:
 			ControlClass.log.append(msg[0:temp1]+"...")
 		else:
 			ControlClass.log.append(msg)
-		logger.debug(ControlClass.log) # TODO: ??????
+		# logger.debug(ControlClass.log)
 		return None
 
 journal = JournalClass()
@@ -193,8 +193,13 @@ def downloadd(url):
 			if ControlClass.special_mode:
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading resolutions (yt) = -
+			#journal.info(ydl.prepare_filename(url))
 			infolist = ydl.extract_info(url, download=False)
 			logger.debug(pprint.pformat(infolist))
+			if "_type" in infolist:
+				if infolist["_type"] == "playlist":
+					journal.error("[YTCON] SORRY, PLAYLISTS CURRENTLY UNSUPPORTED") # TODO
+					return None
 
 			# Check if file exists
 			exists = os.path.exists(f'{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}'.replace("|", "｜")) # yt-dlp, wtf?
@@ -497,7 +502,9 @@ ControlClass.ydl_opts = {
 	'progress_hooks': [hook],
 	'no_color': True,
 	'outtmpl': '%(title)s [%(id)s].%(ext)s',
-	'socket_timeout': 7,
+	'socket_timeout': 15,
+	#'restrictfilenames': True
+	#'trim_file_name' //TODO
 	#'cookiesfrombrowser': ('chromium', ) # REALIZED IN SPECIAL_MODE
 	}
 
