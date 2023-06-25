@@ -504,8 +504,10 @@ ControlClass.ydl_opts = {
 	'outtmpl': '%(title)s [%(id)s].%(ext)s',
 	'socket_timeout': 15,
 	#'restrictfilenames': True
-	#'trim_file_name' //TODO
-	#'cookiesfrombrowser': ('chromium', ) # REALIZED IN SPECIAL_MODE
+	'trim_file_name': 100,
+	'retries': 20,
+	'fragment_retries': 40, # Got error: HTTP Error 500: Internal Server Error. Retrying (1/50)...
+	'retry_sleep': 'http,fragment:exp'
 	}
 
 # Init screen
