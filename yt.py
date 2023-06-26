@@ -183,6 +183,8 @@ def hook(d):
 	# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
 	# printraw(d)
 	# time.sleep(20)
+
+	logger.debug(ControlClass.queue_list)
 	return None
 
 def downloadd(url):
@@ -192,20 +194,24 @@ def downloadd(url):
 			# needed for some sites. you may need to replace it with the correct one
 			if ControlClass.special_mode:
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
-			# - = - = - = Get downloading resolutions (yt) = -
-			#journal.info(ydl.prepare_filename(url))
+			# - = - = - = Get downloading resolutions (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
+			#del infolist["formats"]
 			logger.debug(pprint.pformat(infolist))
 			if "_type" in infolist:
 				if infolist["_type"] == "playlist":
 					journal.error("[YTCON] SORRY, PLAYLISTS CURRENTLY UNSUPPORTED") # TODO
 					return None
 
-			# Check if file exists
-			exists = os.path.exists(f'{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}'.replace("|", "｜")) # yt-dlp, wtf?
-			if exists:
-				logger.warning(f'FILE "{infolist["title"]} [{infolist["id"]}].{infolist["ext"]}" EXISTS'.replace("|", "｜"))
+			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"]) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
+			filename = f'{temp1} [{infolist["id"]}].{infolist["ext"]}'
 
+			# Check if file exists
+			exists = os.path.exists(filename)
+			if exists:
+				logger.warning(f'FILE "{filename}" EXISTS') # TODO where is warning?
+
+			# - = - = - = Set parameters = -
 			if infolist["extractor"] == "youtube":
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
@@ -218,10 +224,11 @@ def downloadd(url):
 						ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 					ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 					#ControlClass.queue_list[temp1_index]["eta"] = "??:??"
-					ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
+					ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 					ControlClass.queue_list[temp1_index]["quality"] = i["resolution"] # TODO
 					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
 					ControlClass.queue_list[temp1_index]["status"] = "waiting"
+					ControlClass.queue_list[temp1_index]["file"] = filename
 			else:
 				temp1_index = infolist["original_url"]
 				ControlClass.queue_list[temp1_index] = {}
@@ -233,10 +240,11 @@ def downloadd(url):
 					ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 				#ControlClass.queue_list[temp1_index]["eta"] = "??:??"
-				ControlClass.queue_list[temp1_index]["filename"] = infolist["fulltitle"]
+				ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 				ControlClass.queue_list[temp1_index]["quality"] = "None" # TODO
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
+				ControlClass.queue_list[temp1_index]["file"] = filename
 
 			if exists:
 				if infolist["extractor"] == "youtube":
@@ -251,7 +259,10 @@ def downloadd(url):
 					ControlClass.queue_list[temp1_index]["progress"] = "Exist"
 			# - = - = - = - = - = - = - = - = - = - = - = - =
 			logger.debug(pprint.pformat(ControlClass.queue_list))
-			logger.debug(ydl.download(url))
+
+			with yt_dlp.YoutubeDL(ControlClass.ydl_opts | {"outtmpl": filename}) as ydl2:
+				logger.debug(ydl2.download(url))
+
 	except yt_dlp.utils.DownloadError as e:
 		journal.error(str(e), show=False)
 		return None
@@ -300,7 +311,7 @@ def main(stdscr):
 				# - ETA: {i["eta"]}
 				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {i["site"]} | '
 				# TODO: add whitespace stabilization for i["site"]
-				fileshortname = name_shortener(i["filename"], ControlClass.screen_width - len(temp1))
+				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
 					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
@@ -501,12 +512,12 @@ ControlClass.ydl_opts = {
 	'logger': journal,
 	'progress_hooks': [hook],
 	'no_color': True,
-	'outtmpl': '%(title)s [%(id)s].%(ext)s',
+	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
 	#'restrictfilenames': True
-	'trim_file_name': 100,
+	'trim_file_name': 150,
 	'retries': 20,
-	'fragment_retries': 40, # Got error: HTTP Error 500: Internal Server Error. Retrying (1/50)...
+	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp'
 	}
 
