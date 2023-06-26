@@ -142,7 +142,7 @@ class ControlClass_base:
 
 def hook(d):
 	logger.debug(pprint.pformat(d))
-	if d["info_dict"]["extractor"] == "youtube":
+	if d["info_dict"]["extractor"] == "youtube" and "requested_formats" in d["info_dict"]:
 		indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
 	else:
 		indexx = d["info_dict"]["original_url"]
@@ -209,10 +209,10 @@ def downloadd(url):
 			# Check if file exists
 			exists = os.path.exists(filename)
 			if exists:
-				logger.warning(f'FILE "{filename}" EXISTS') # TODO where is warning?
+				journal.warning(f'[YTCON] FILE "{filename}" EXISTS')
 
 			# - = - = - = Set parameters = -
-			if infolist["extractor"] == "youtube":
+			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
 					ControlClass.queue_list[temp1_index] = {}
@@ -247,7 +247,7 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["file"] = filename
 
 			if exists:
-				if infolist["extractor"] == "youtube":
+				if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
 					for i in infolist["requested_formats"]:
 						temp1_index = infolist["original_url"] + ":" + i["format_id"]
 						ControlClass.queue_list[temp1_index]["status"] = "exists"
