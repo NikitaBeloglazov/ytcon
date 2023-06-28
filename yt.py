@@ -64,6 +64,8 @@ def divide_without_remainder(num):
 def whitespace_stabilization(text, needed_space):
 	if len(text) == needed_space:
 		return text
+	if len(text) > needed_space:
+		return text[0:needed_space-2] + ".."
 	white_space = needed_space - len(text)
 	white_space = divide_without_remainder(white_space)
 	return ' '*white_space[0] + text + ' '*white_space[1]
@@ -154,11 +156,11 @@ def hook(d):
 	ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
 	ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
 
-	#try:
-	#	ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
-	#except KeyError:
-	#	if d["status"] == "finished":
-	#		ControlClass.queue_list[indexx]["eta"] = "00:00"
+	try:
+		ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
+	except KeyError:
+		if d["status"] == "finished":
+			ControlClass.queue_list[indexx]["eta"] = "00:00"
 
 	try:
 		if d["_total_bytes_estimate_str"].strip() == "N/A":
@@ -223,10 +225,10 @@ def downloadd(url):
 					except KeyError:
 						ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 					ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-					#ControlClass.queue_list[temp1_index]["eta"] = "??:??"
+					ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 					ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 					ControlClass.queue_list[temp1_index]["quality"] = i["resolution"] # TODO
-					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
+					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 					ControlClass.queue_list[temp1_index]["status"] = "waiting"
 					ControlClass.queue_list[temp1_index]["file"] = filename
 			else:
@@ -239,10 +241,10 @@ def downloadd(url):
 				except KeyError:
 					ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-				#ControlClass.queue_list[temp1_index]["eta"] = "??:??"
+				ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 				ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 				ControlClass.queue_list[temp1_index]["quality"] = "None" # TODO
-				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor_key"]
+				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
 				ControlClass.queue_list[temp1_index]["file"] = filename
 
@@ -307,10 +309,7 @@ def main(stdscr):
 		else:
 			r = 0
 			for _, i in ControlClass.queue_list.items():
-				# Not included flags:
-				# - ETA: {i["eta"]}
-				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {i["site"]} | '
-				# TODO: add whitespace stabilization for i["site"]
+				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| ETA {i["eta"]} | {whitespace_stabilization(i["site"], 7)} | '
 				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
