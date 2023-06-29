@@ -187,7 +187,7 @@ def hook(d):
 		# printraw(d)
 		# time.sleep(20)
 
-		logger.debug(ControlClass.queue_list)
+		logger.debug(pprint.pformat(ControlClass.queue_list))
 		return None
 	except:
 		exit_with_exception(traceback.format_exc())
@@ -225,6 +225,7 @@ def downloadd(url):
 				ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
 				ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
 				ControlClass.queue_list[infolist["original_url"]]["formats"] = []
+				ControlClass.queue_list[infolist["original_url"]]["status"] = "waiting"
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
 					ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
@@ -260,6 +261,7 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["file"] = filename
 
 			if exists:
+				ControlClass.queue_list[infolist["original_url"]]["status"] = "exists"
 				if multiple_formats == True:
 					for i in infolist["requested_formats"]:
 						temp1_index = infolist["original_url"] + ":" + i["format_id"]
@@ -267,7 +269,6 @@ def downloadd(url):
 						ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
 						ControlClass.queue_list[temp1_index]["progress"] = "Exist"
 				else:
-					ControlClass.queue_list[temp1_index]["status"] = "exists"
 					ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
 					ControlClass.queue_list[temp1_index]["progress"] = "Exist"
 			# - = - = - = - = - = - = - = - = - = - = - = - =
@@ -275,6 +276,8 @@ def downloadd(url):
 
 			with yt_dlp.YoutubeDL(ControlClass.ydl_opts | {"outtmpl": filename}) as ydl2:
 				logger.debug(ydl2.download(url))
+			# - = Mark meta as finished = -
+			ControlClass.queue_list[infolist["original_url"]]["status"] = "finished"
 
 	except yt_dlp.utils.DownloadError as e:
 		journal.error(str(e), show=False)
@@ -423,6 +426,8 @@ def input_url(stdscr):
 				threading.Thread(target=downloadd, args=(text,), daemon=True).start()
 		except InputProcessed:
 			pass
+		except:
+			exit_with_exception(traceback.format_exc())
 
 def errorprinter():
 	max_error_space = ControlClass.screen_width * 3
@@ -495,6 +500,7 @@ def delete_finished():
 			del temp2_new[item]
 			temp1 = temp1 + 1
 	ControlClass.queue_list = temp2_new
+	logger.debug(ControlClass.queue_list)
 	return str(temp1)
 	#except:
 	#	exit_with_exception(traceback.format_exc())
