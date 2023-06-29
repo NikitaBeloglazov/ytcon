@@ -143,51 +143,54 @@ class ControlClass_base:
 		self.special_mode = False
 
 def hook(d):
-	logger.debug(pprint.pformat(d))
-	if d["info_dict"]["extractor"] == "youtube" and "requested_formats" in d["info_dict"]:
-		indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
-	else:
-		indexx = d["info_dict"]["original_url"]
-
-	ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
-	if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
-		return None
-	ControlClass.queue_list[indexx]["status"] = d['status']
-	ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
-	ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
-
 	try:
-		ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
-	except KeyError:
-		if d["status"] == "finished":
-			ControlClass.queue_list[indexx]["eta"] = "00:00"
-
-	try:
-		if d["_total_bytes_estimate_str"].strip() == "N/A":
-			ControlClass.queue_list[indexx]["size"] = d["_total_bytes_str"].strip()
+		logger.debug(pprint.pformat(d))
+		if "multiple_formats" in ControlClass.queue_list[d["info_dict"]["original_url"]]:
+			indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
 		else:
-			ControlClass.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
-	except KeyError:
-		pass
+			indexx = d["info_dict"]["original_url"]
 
-	try:
-		ControlClass.queue_list[indexx]["downloaded"] = d["_downloaded_bytes_str"].strip()
+		ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
+		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
+			return None
+		ControlClass.queue_list[indexx]["status"] = d['status']
+		ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
+		ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
+
+		try:
+			ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
+		except KeyError:
+			if d["status"] == "finished":
+				ControlClass.queue_list[indexx]["eta"] = "00:00"
+
+		try:
+			if d["_total_bytes_estimate_str"].strip() == "N/A":
+				ControlClass.queue_list[indexx]["size"] = d["_total_bytes_str"].strip()
+			else:
+				ControlClass.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
+		except KeyError:
+			pass
+
+		try:
+			ControlClass.queue_list[indexx]["downloaded"] = d["_downloaded_bytes_str"].strip()
+		except:
+			pass
+
+		d["info_dict"]["formats"] = []
+		d["info_dict"]["thumbnails"] = []
+		d["info_dict"]["subtitles"] = []
+		d["info_dict"]["fragments"] = []
+
+		# DEBUG
+		# os.system("clear")
+		# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
+		# printraw(d)
+		# time.sleep(20)
+
+		logger.debug(ControlClass.queue_list)
+		return None
 	except:
-		pass
-
-	d["info_dict"]["formats"] = []
-	d["info_dict"]["thumbnails"] = []
-	d["info_dict"]["subtitles"] = []
-	d["info_dict"]["fragments"] = []
-
-	# DEBUG
-	# os.system("clear")
-	# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
-	# printraw(d)
-	# time.sleep(20)
-
-	logger.debug(ControlClass.queue_list)
-	return None
+		exit_with_exception(traceback.format_exc())
 
 def downloadd(url):
 	try:
@@ -214,9 +217,17 @@ def downloadd(url):
 				journal.warning(f'[YTCON] FILE "{filename}" EXISTS')
 
 			# - = - = - = Set parameters = -
+			multiple_formats = False
 			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
+				multiple_formats = True
+			if multiple_formats == True:
+				ControlClass.queue_list[infolist["original_url"]] = {}
+				ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
+				ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
+				ControlClass.queue_list[infolist["original_url"]]["formats"] = []
 				for i in infolist["requested_formats"]:
 					temp1_index = infolist["original_url"] + ":" + i["format_id"]
+					ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
 					ControlClass.queue_list[temp1_index] = {}
 					ControlClass.queue_list[temp1_index]["progress"] = "Wait"
 					ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
@@ -249,7 +260,7 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["file"] = filename
 
 			if exists:
-				if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
+				if multiple_formats == True:
 					for i in infolist["requested_formats"]:
 						temp1_index = infolist["original_url"] + ":" + i["format_id"]
 						ControlClass.queue_list[temp1_index]["status"] = "exists"
@@ -268,6 +279,8 @@ def downloadd(url):
 	except yt_dlp.utils.DownloadError as e:
 		journal.error(str(e), show=False)
 		return None
+	except:
+		exit_with_exception(traceback.format_exc())
 
 	# - = - = - = [Post-processing] = - = - = - #
 	if ControlClass.queue_list[temp1_index]["progress"] == "Exist":
@@ -309,6 +322,8 @@ def main(stdscr):
 		else:
 			r = 0
 			for _, i in ControlClass.queue_list.items():
+				if "meta_index" in i:
+					continue # just ignore meta-downloads
 				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| ETA {i["eta"]} | {whitespace_stabilization(i["site"], 7)} | '
 				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
@@ -411,59 +426,64 @@ def input_url(stdscr):
 
 def errorprinter():
 	max_error_space = ControlClass.screen_width * 3
-	while True:
-		ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
-		ControlClass.screen.refresh()
-
-		if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
-			ControlClass.error_countdown = 0
-			journal.clear_errors()
-
-		if ControlClass.error_countdown != 0:
-			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
-		else:
-			error_text_generator = str(ControlClass.last_error)
-
-		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
-		error_text_generator = error_text_generator + (" " * (max_error_space - len(error_text_generator)))
-
-		if ControlClass.last_error == "No errors:)":
-			ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(3))
-			ControlClass.screen.refresh()
-		else:
-			ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(1))
+	try:
+		while True:
+			ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
 			ControlClass.screen.refresh()
 
-		if ControlClass.error_countdown != 0:
-			ControlClass.error_countdown = ControlClass.error_countdown - 1
-			if ControlClass.error_countdown == 0:
+			if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
+				ControlClass.error_countdown = 0
 				journal.clear_errors()
 
-		time.sleep(1)
+			if ControlClass.error_countdown != 0:
+				error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
+			else:
+				error_text_generator = str(ControlClass.last_error)
+
+			error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
+			error_text_generator = error_text_generator + (" " * (max_error_space - len(error_text_generator)))
+
+			if ControlClass.last_error == "No errors:)":
+				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(3))
+				ControlClass.screen.refresh()
+			else:
+				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(1))
+				ControlClass.screen.refresh()
+
+			if ControlClass.error_countdown != 0:
+				ControlClass.error_countdown = ControlClass.error_countdown - 1
+				if ControlClass.error_countdown == 0:
+					journal.clear_errors()
+			time.sleep(1)
+	except:
+		exit_with_exception(traceback.format_exc())
 
 def logprinter():
 	ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -")
 	ControlClass.screen.refresh()
 	temp1 = " "*ControlClass.screen_width
-	while True:
-		# if old_logs == new_logs: skip, do not re-render # TODO
-		# removes old text with help of spaces, as curses doesn't do that..
-		ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
-		ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
-		ControlClass.screen.addstr(ControlClass.screen_height-9,  0, temp1)
-		ControlClass.screen.addstr(ControlClass.screen_height-8,  0, temp1)
-		ControlClass.screen.addstr(ControlClass.screen_height-7,  0, temp1)
-		ControlClass.screen.addstr(ControlClass.screen_height-6,  0, temp1)
-		# # #
+	try:
+		while True:
+			# if old_logs == new_logs: skip, do not re-render # TODO
+			# removes old text with help of spaces, as curses doesn't do that..
+			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
+			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
+			ControlClass.screen.addstr(ControlClass.screen_height-9,  0, temp1)
+			ControlClass.screen.addstr(ControlClass.screen_height-8,  0, temp1)
+			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, temp1)
+			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, temp1)
+			# # #
 
-		ControlClass.screen.addstr(ControlClass.screen_height-11, 0, ControlClass.log[0])
-		ControlClass.screen.addstr(ControlClass.screen_height-10, 0, ControlClass.log[1])
-		ControlClass.screen.addstr(ControlClass.screen_height-9,  0, ControlClass.log[2])
-		ControlClass.screen.addstr(ControlClass.screen_height-8,  0, ControlClass.log[3])
-		ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
-		ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
-		ControlClass.screen.refresh()
-		time.sleep(0.2)
+			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, ControlClass.log[0])
+			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, ControlClass.log[1])
+			ControlClass.screen.addstr(ControlClass.screen_height-9,  0, ControlClass.log[2])
+			ControlClass.screen.addstr(ControlClass.screen_height-8,  0, ControlClass.log[3])
+			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
+			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
+			ControlClass.screen.refresh()
+			time.sleep(0.2)
+	except:
+		exit_with_exception(traceback.format_exc())
 
 def delete_finished():
 	""" Removes all completed operations from ControlClass.queue_list with a loop """
