@@ -153,7 +153,7 @@ def hook(d):
 		ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
 		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
 			return None
-		ControlClass.queue_list[indexx]["status"] = d['status']
+		ControlClass.queue_list[indexx]["status"] = d["status"]
 		ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
 		ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
 
@@ -194,6 +194,11 @@ def hook(d):
 
 def downloadd(url):
 	try:
+		if url in ControlClass.queue_list:
+			if ControlClass.queue_list[url]["status"] not in ("exists", "finished"):
+				journal.error(f"[YTCON] Video link \"{name_shortener(url, 40)}\" is already downloading!")
+				return None
+
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
 			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
@@ -277,7 +282,8 @@ def downloadd(url):
 			with yt_dlp.YoutubeDL(ControlClass.ydl_opts | {"outtmpl": filename}) as ydl2:
 				logger.debug(ydl2.download(url))
 			# - = Mark meta as finished = -
-			ControlClass.queue_list[infolist["original_url"]]["status"] = "finished"
+			if "meta_index" in ControlClass.queue_list[infolist["original_url"]]:
+				ControlClass.queue_list[infolist["original_url"]]["status"] = "finished"
 
 	except yt_dlp.utils.DownloadError as e:
 		journal.error(str(e), show=False)
@@ -286,7 +292,7 @@ def downloadd(url):
 		exit_with_exception(traceback.format_exc())
 
 	# - = - = - = [Post-processing] = - = - = - #
-	if ControlClass.queue_list[temp1_index]["progress"] == "Exist":
+	if ControlClass.queue_list[temp1_index]["status"] == "exists":
 		return None # skip post-process if file already exists
 	# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
 	os.utime(ControlClass.queue_list[temp1_index]["file"])
@@ -498,7 +504,8 @@ def delete_finished():
 	for item, item_content in ControlClass.queue_list.copy().items():
 		if item_content["status"] == "exists" or item_content["status"] == "finished":
 			del temp2_new[item]
-			temp1 = temp1 + 1
+			if "meta_index" not in item_content:
+				temp1 = temp1 + 1
 	ControlClass.queue_list = temp2_new
 	logger.debug(ControlClass.queue_list)
 	return str(temp1)
