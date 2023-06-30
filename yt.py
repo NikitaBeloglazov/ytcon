@@ -225,7 +225,7 @@ def downloadd(url):
 			multiple_formats = False
 			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
 				multiple_formats = True
-			if multiple_formats == True:
+			if multiple_formats:
 				ControlClass.queue_list[infolist["original_url"]] = {}
 				ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
 				ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
@@ -244,7 +244,13 @@ def downloadd(url):
 					ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 					ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 					ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-					ControlClass.queue_list[temp1_index]["quality"] = i["resolution"] # TODO
+					if i["resolution"] == "audio only":
+						ControlClass.queue_list[temp1_index]["resolution"] = "audio"
+					else:
+						if i["width"] is None and i["height"] is None:
+							ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+						else:
+							ControlClass.queue_list[temp1_index]["resolution"] = str(i["width"]) + "x" + str(i["height"])
 					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 					ControlClass.queue_list[temp1_index]["status"] = "waiting"
 					ControlClass.queue_list[temp1_index]["file"] = filename
@@ -260,14 +266,17 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 				ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 				ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-				ControlClass.queue_list[temp1_index]["quality"] = "None" # TODO
+				if infolist["width"] is None and infolist["height"] is None:
+					ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+				else:
+					ControlClass.queue_list[temp1_index]["resolution"] = str(infolist["width"]) + "x" + str(infolist["height"])
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
 				ControlClass.queue_list[temp1_index]["file"] = filename
 
 			if exists:
 				ControlClass.queue_list[infolist["original_url"]]["status"] = "exists"
-				if multiple_formats == True:
+				if multiple_formats:
 					for i in infolist["requested_formats"]:
 						temp1_index = infolist["original_url"] + ":" + i["format_id"]
 						ControlClass.queue_list[temp1_index]["status"] = "exists"
@@ -333,7 +342,7 @@ def main(stdscr):
 			for _, i in ControlClass.queue_list.items():
 				if "meta_index" in i:
 					continue # just ignore meta-downloads
-				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| ETA {i["eta"]} | {whitespace_stabilization(i["site"], 7)} | '
+				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| ETA {i["eta"]} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
 				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
