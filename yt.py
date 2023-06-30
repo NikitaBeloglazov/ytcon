@@ -8,6 +8,7 @@ import traceback
 import pprint
 import curses
 import pyperclip
+import ffmpeg # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 # import notify2
 from colorama import init, Fore
 init()
@@ -144,11 +145,30 @@ class ControlClass_base:
 
 def hook(d):
 	try:
+		# - = - = - log spam filter - = - = - = - =
+		if "automatic_captions" in d["info_dict"]:
+			del d["info_dict"]["automatic_captions"]
+		if "formats" in d["info_dict"]:
+			del d["info_dict"]["formats"]
+		if "thumbnails" in d["info_dict"]:
+			del d["info_dict"]["thumbnails"]
+		# - = - = - = - = - = - = - = - = - = - = -
+
 		logger.debug(pprint.pformat(d))
 		if "multiple_formats" in ControlClass.queue_list[d["info_dict"]["original_url"]]:
 			indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
 		else:
 			indexx = d["info_dict"]["original_url"]
+
+		if ControlClass.queue_list[indexx]["resolution"] == "???х???" and "resolution_detection_tried" not in ControlClass.queue_list[indexx] and int(d["downloaded_bytes"]) > 4000000:
+			# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
+			logger.debug("DOWNBYTES: " + str(d["downloaded_bytes"]))
+			temp1 = get_resolution_ffprobe(d["tmpfilename"])
+
+			if temp1 is not None:
+				ControlClass.queue_list[indexx]["resolution"] = temp1
+				journal.info("[YTCON] Detected resolution: " + temp1)
+			ControlClass.queue_list[indexx]["resolution_detection_tried"] = True
 
 		ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
 		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
@@ -206,8 +226,18 @@ def downloadd(url):
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading resolutions (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
-			#del infolist["formats"]
+
+			# - = - = - log spam filter - = - = - = - =
+			if "automatic_captions" in infolist:
+				del infolist["automatic_captions"]
+			if "formats" in infolist:
+				del infolist["formats"]
+			if "thumbnails" in infolist:
+				del infolist["thumbnails"]
+
 			logger.debug(pprint.pformat(infolist))
+			# - = - = - = - = - = - = - = - = - = - = -
+
 			if "_type" in infolist:
 				if infolist["_type"] == "playlist":
 					journal.error("[YTCON] SORRY, PLAYLISTS CURRENTLY UNSUPPORTED") # TODO
@@ -544,6 +574,23 @@ def exit_with_exception(text): # TODO connect to all functions
 	journal.error(text)
 	ControlClass.exit = True
 	ControlClass.exception = text
+
+def get_resolution_ffprobe(file):
+	""" Uses ffprobe to get video (even not fully downloaded) resolution """
+	try:
+		probe = ffmpeg.probe(file)
+	except ffmpeg._run.Error as e:
+		journal.warning("[YTCON] ffprobe resolution get failed")
+		logger.debug("ffprobe error:")
+		logger.debug(e.stderr)
+		return None
+	logger.debug("ffprobe response:")
+	logger.debug(pprint.pformat(probe))
+	for i in probe["streams"]:
+		if "width" in i and "height" in i:
+			return str(i["width"]) + "x" + str(i["height"])
+	journal.warning("[YTCON] ffprobe resolution get failed")
+	return None
 
 # - = - = -
 ControlClass = ControlClass_base()
