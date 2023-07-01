@@ -160,15 +160,21 @@ def hook(d):
 		else:
 			indexx = d["info_dict"]["original_url"]
 
-		if ControlClass.queue_list[indexx]["resolution"] == "???х???" and "resolution_detection_tried" not in ControlClass.queue_list[indexx] and int(d["downloaded_bytes"]) > 4000000:
+		# - = - resolution detector - = - = - = - = - = - = - = - = - = -
+		if ControlClass.queue_list[indexx]["resolution"].find("???") > -1 and (ControlClass.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and ControlClass.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
 			# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
 			logger.debug("DOWNBYTES: " + str(d["downloaded_bytes"]))
 			temp1 = get_resolution_ffprobe(d["tmpfilename"])
+			temp2 = str(ControlClass.queue_list[indexx].get("resolution_detection_tries", 0)+1)
 
 			if temp1 is not None:
 				ControlClass.queue_list[indexx]["resolution"] = temp1
-				journal.info("[YTCON] Detected resolution: " + temp1)
-			ControlClass.queue_list[indexx]["resolution_detection_tried"] = True
+				journal.info(f"[YTCON] Detected resolution: {temp1} (on try {temp2})" )
+			else:
+				journal.warning(f'[YTCON] Resolution detection failed: ffprobe gave an error (try {temp2})')
+			ControlClass.queue_list[indexx]["resolution_detection_tried_on_byte"] = int(d["downloaded_bytes"])
+			ControlClass.queue_list[indexx]["resolution_detection_tries"] = ControlClass.queue_list[indexx].get("resolution_detection_tries", 0) + 1
+		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 		ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
 		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
@@ -234,7 +240,6 @@ def downloadd(url):
 				del infolist["formats"]
 			if "thumbnails" in infolist:
 				del infolist["thumbnails"]
-
 			logger.debug(pprint.pformat(infolist))
 			# - = - = - = - = - = - = - = - = - = - = -
 
@@ -243,8 +248,11 @@ def downloadd(url):
 					journal.error("[YTCON] SORRY, PLAYLISTS CURRENTLY UNSUPPORTED") # TODO
 					return None
 
-			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"]) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
-			filename = f'{temp1} [{infolist["id"]}].{infolist["ext"]}'
+			# - Name fiter + assemble - = - = - = - = - = - = - = - = - = - = -
+			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"].replace("&", "and")) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
+			temp1 = " ".join(temp1.removesuffix(" 1").split()) # remove space duplicates and remove 1 in the end because for some reason yt-dlp adds it on its own
+			filename = f'{temp1} [{infolist["id"].removesuffix("-1")}].{infolist["ext"]}'
+			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			# Check if file exists
 			exists = os.path.exists(filename)
@@ -277,10 +285,10 @@ def downloadd(url):
 					if i["resolution"] == "audio only":
 						ControlClass.queue_list[temp1_index]["resolution"] = "audio"
 					else:
-						if i["width"] is None and i["height"] is None:
+						if i.get("width", None) is None and i["height"] is None:
 							ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
 						else:
-							ControlClass.queue_list[temp1_index]["resolution"] = str(i["width"]) + "x" + str(i["height"])
+							ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i["height"])).replace("None", "???")
 					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 					ControlClass.queue_list[temp1_index]["status"] = "waiting"
 					ControlClass.queue_list[temp1_index]["file"] = filename
@@ -296,10 +304,10 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 				ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 				ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-				if infolist["width"] is None and infolist["height"] is None:
+				if infolist.get("width", None) is None and infolist["height"] is None:
 					ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
 				else:
-					ControlClass.queue_list[temp1_index]["resolution"] = str(infolist["width"]) + "x" + str(infolist["height"])
+					ControlClass.queue_list[temp1_index]["resolution"] = (str(infolist.get("width", None)) + "x" + str(infolist["height"])).replace("None", "???")
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
 				ControlClass.queue_list[temp1_index]["file"] = filename
@@ -337,8 +345,8 @@ def downloadd(url):
 	os.utime(ControlClass.queue_list[temp1_index]["file"])
 
 	# Remove file after downloading for testing purposes
-	# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
-	# os.remove(ControlClass.queue_list[temp1_index]["file"])
+	journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
+	os.remove(ControlClass.queue_list[temp1_index]["file"])
 	return None
 
 def main(stdscr):
@@ -580,7 +588,6 @@ def get_resolution_ffprobe(file):
 	try:
 		probe = ffmpeg.probe(file)
 	except ffmpeg._run.Error as e:
-		journal.warning("[YTCON] ffprobe resolution get failed")
 		logger.debug("ffprobe error:")
 		logger.debug(e.stderr)
 		return None
@@ -589,7 +596,6 @@ def get_resolution_ffprobe(file):
 	for i in probe["streams"]:
 		if "width" in i and "height" in i:
 			return str(i["width"]) + "x" + str(i["height"])
-	journal.warning("[YTCON] ffprobe resolution get failed")
 	return None
 
 # - = - = -
