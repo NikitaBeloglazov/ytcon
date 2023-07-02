@@ -124,6 +124,7 @@ class JournalClass:
 			return None
 
 		del ControlClass.log[0]
+		msg = msg.replace("\n", "")
 		if len(msg) > ControlClass.screen_width:
 			temp1 = ControlClass.screen_width - 3
 			ControlClass.log.append(msg[0:temp1]+"...")
@@ -345,8 +346,8 @@ def downloadd(url):
 	os.utime(ControlClass.queue_list[temp1_index]["file"])
 
 	# Remove file after downloading for testing purposes
-	journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
-	os.remove(ControlClass.queue_list[temp1_index]["file"])
+	# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
+	# os.remove(ControlClass.queue_list[temp1_index]["file"])
 	return None
 
 def main(stdscr):
@@ -499,6 +500,12 @@ def errorprinter():
 				error_text_generator = str(ControlClass.last_error)
 
 			error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
+
+			# avoid situations when the text goes beyond the window due to too long url
+			if len(error_text_generator) > ControlClass.screen_width*3 - 5:
+				error_text_generator = error_text_generator[0:(ControlClass.screen_width*3 - 5)]
+			# - = - = - = - = -
+
 			error_text_generator = error_text_generator + (" " * (max_error_space - len(error_text_generator)))
 
 			if ControlClass.last_error == "No errors:)":
