@@ -143,6 +143,8 @@ class ControlClass_base:
 		self.exit = False
 		self.exception = ""
 		self.special_mode = False
+		self.clipboard_checker_state = True
+		self.clipboard_checker_state_launched = False
 
 def hook(d):
 	try:
@@ -358,7 +360,6 @@ def main(stdscr):
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	threading.Thread(target=errorprinter, daemon=True).start()
 	threading.Thread(target=logprinter, daemon=True).start()
-	threading.Thread(target=clipboard_checker, daemon=True).start()
 	# for testing purposes
 	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
@@ -369,6 +370,9 @@ def main(stdscr):
 			ControlClass.screen = None
 			print(ControlClass.exception)
 			sys.exit(1)
+		# Clipboard auto-paste starter
+		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
+			threading.Thread(target=clipboard_checker, daemon=True).start()
 		# removes old text with help of spaces, as curses doesn't do that..
 		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
 		stdscr.addstr(0, 0, clear_old_text)
@@ -440,14 +444,38 @@ def input_url(stdscr):
 				if text.split()[1] == "1" or text.split()[1].lower() == "true":
 					ControlClass.special_mode = True
 					ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-					journal.info("[input] sp activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+					journal.info("[YTCON] sp activated! now a different user agent will be used, and cookies will be retrieved from chromium")
 				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
 					ControlClass.special_mode = False
 					if "cookiesfrombrowser" in ControlClass.ydl_opts:
 						del ControlClass.ydl_opts["cookiesfrombrowser"]
-					journal.info("[input] sp deactivated! now a default yt-dlp extractor settings will be used.")
+					journal.info("[YTCON] sp deactivated! now a default yt-dlp extractor settings will be used.")
+				else:
+					journal.error("[YTCON] I do not understand you")
+				raise InputProcessed
+			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			# - = Clipboard auto-paste status handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+			if text in ("cb", "clipboard"):
+				journal.info("[YTCON] Clipboard auto-paste status: " + str(ControlClass.clipboard_checker_state) + ", launched state: " + str(ControlClass.clipboard_checker_state_launched))
+				raise InputProcessed
+
+			if text == "cb1":
+				text = "clipboard 1"
+			elif text == "cb0":
+				text = "clipboard 0"
+
+			if text.split()[0] == "clipboard" or text.split()[0] == "cb":
+				if text.split()[1] == "1" or text.split()[1].lower() == "true":
+					if ControlClass.clipboard_checker_state == True:
+						journal.info("[YTCON] Already enabled.")
+					ControlClass.clipboard_checker_state = True
+				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
+					if ControlClass.clipboard_checker_state == False:
+						journal.info("[YTCON] Already disabled.")
+					ControlClass.clipboard_checker_state = False
 				else:
 					journal.error("[input] I do not understand you")
+				raise InputProcessed
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			elif text in ("clear", "cls"):
@@ -567,6 +595,9 @@ def delete_finished():
 	#	exit_with_exception(traceback.format_exc())
 
 def clipboard_checker():
+	ControlClass.clipboard_checker_state_launched = True
+	journal.info("[YTCON] Clipboard auto-paste is ON.")
+
 	new_clip = pyperclip.paste()
 	if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
 		journal.info("[CLIP] URL detected: " + new_clip)
@@ -574,6 +605,11 @@ def clipboard_checker():
 	old_clip = new_clip
 
 	while True:
+		if ControlClass.clipboard_checker_state == False:
+			ControlClass.clipboard_checker_state_launched = False
+			journal.info("[YTCON] Clipboard auto-paste turned off.")
+			return None
+
 		new_clip = pyperclip.paste()
 		if new_clip != old_clip:
 			if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
