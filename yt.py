@@ -266,54 +266,8 @@ def downloadd(url):
 			multiple_formats = False
 			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
 				multiple_formats = True
-			if multiple_formats:
-				ControlClass.queue_list[infolist["original_url"]] = {}
-				ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
-				ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
-				ControlClass.queue_list[infolist["original_url"]]["formats"] = []
-				ControlClass.queue_list[infolist["original_url"]]["status"] = "waiting"
-				for i in infolist["requested_formats"]:
-					temp1_index = infolist["original_url"] + ":" + i["format_id"]
-					ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
-					ControlClass.queue_list[temp1_index] = {}
-					ControlClass.queue_list[temp1_index]["progress"] = "Wait"
-					ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
-					try:
-						ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
-					except KeyError:
-						ControlClass.queue_list[temp1_index]["size"] = "???MiB"
-					ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-					ControlClass.queue_list[temp1_index]["eta"] = "??:??"
-					ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-					if i["resolution"] == "audio only":
-						ControlClass.queue_list[temp1_index]["resolution"] = "audio"
-					else:
-						if i.get("width", None) is None and i.get("height", None) is None:
-							ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
-						else:
-							ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
-					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
-					ControlClass.queue_list[temp1_index]["status"] = "waiting"
-					ControlClass.queue_list[temp1_index]["file"] = filename
-			else:
-				temp1_index = infolist["original_url"]
-				ControlClass.queue_list[temp1_index] = {}
-				ControlClass.queue_list[temp1_index]["progress"] = "Wait"
-				ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
-				try:
-					ControlClass.queue_list[temp1_index]["size"] = str(round(infolist["filesize_approx"]/1e+6)) + "MiB"
-				except KeyError:
-					ControlClass.queue_list[temp1_index]["size"] = "???MiB"
-				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-				ControlClass.queue_list[temp1_index]["eta"] = "??:??"
-				ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-				if infolist.get("width", None) is None and infolist.get("height", None) is None:
-					ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
-				else:
-					ControlClass.queue_list[temp1_index]["resolution"] = (str(infolist.get("width", None)) + "x" + str(infolist.get("height", None))).replace("None", "???")
-				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
-				ControlClass.queue_list[temp1_index]["status"] = "waiting"
-				ControlClass.queue_list[temp1_index]["file"] = filename
+
+			temp1_index = map_variables(multiple_formats, infolist, filename)
 
 			if exists:
 				ControlClass.queue_list[infolist["original_url"]]["status"] = "exists"
@@ -351,6 +305,58 @@ def downloadd(url):
 	# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
 	# os.remove(ControlClass.queue_list[temp1_index]["file"])
 	return None
+
+def map_variables(multiple_formats, infolist, filename):
+	if multiple_formats:
+		ControlClass.queue_list[infolist["original_url"]] = {}
+		ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
+		ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
+		ControlClass.queue_list[infolist["original_url"]]["formats"] = []
+		ControlClass.queue_list[infolist["original_url"]]["status"] = "waiting"
+		for i in infolist["requested_formats"]:
+			temp1_index = infolist["original_url"] + ":" + i["format_id"]
+			ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
+			ControlClass.queue_list[temp1_index] = {}
+			ControlClass.queue_list[temp1_index]["progress"] = "Wait"
+			ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
+			try:
+				ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
+			except KeyError:
+				ControlClass.queue_list[temp1_index]["size"] = "???MiB"
+			ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
+			ControlClass.queue_list[temp1_index]["eta"] = "??:??"
+			ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
+			if i["resolution"] == "audio only":
+				ControlClass.queue_list[temp1_index]["resolution"] = "audio"
+			else:
+				if i.get("width", None) is None and i.get("height", None) is None:
+					ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+				else:
+					ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
+			ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
+			ControlClass.queue_list[temp1_index]["status"] = "waiting"
+			ControlClass.queue_list[temp1_index]["file"] = filename
+		return temp1_index
+	else:
+		temp1_index = infolist["original_url"]
+		ControlClass.queue_list[temp1_index] = {}
+		ControlClass.queue_list[temp1_index]["progress"] = "Wait"
+		ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
+		try:
+			ControlClass.queue_list[temp1_index]["size"] = str(round(infolist["filesize_approx"]/1e+6)) + "MiB"
+		except KeyError:
+			ControlClass.queue_list[temp1_index]["size"] = "???MiB"
+		ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
+		ControlClass.queue_list[temp1_index]["eta"] = "??:??"
+		ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
+		if infolist.get("width", None) is None and infolist.get("height", None) is None:
+			ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+		else:
+			ControlClass.queue_list[temp1_index]["resolution"] = (str(infolist.get("width", None)) + "x" + str(infolist.get("height", None))).replace("None", "???")
+		ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
+		ControlClass.queue_list[temp1_index]["status"] = "waiting"
+		ControlClass.queue_list[temp1_index]["file"] = filename
+		return temp1_index
 
 def main(stdscr):
 	ControlClass.screen = stdscr
