@@ -288,10 +288,10 @@ def downloadd(url):
 					if i["resolution"] == "audio only":
 						ControlClass.queue_list[temp1_index]["resolution"] = "audio"
 					else:
-						if i.get("width", None) is None and i["height"] is None:
+						if i.get("width", None) is None and i.get("height", None) is None:
 							ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
 						else:
-							ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i["height"])).replace("None", "???")
+							ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
 					ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 					ControlClass.queue_list[temp1_index]["status"] = "waiting"
 					ControlClass.queue_list[temp1_index]["file"] = filename
@@ -307,10 +307,10 @@ def downloadd(url):
 				ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 				ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 				ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-				if infolist.get("width", None) is None and infolist["height"] is None:
+				if infolist.get("width", None) is None and infolist.get("height", None) is None:
 					ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
 				else:
-					ControlClass.queue_list[temp1_index]["resolution"] = (str(infolist.get("width", None)) + "x" + str(infolist["height"])).replace("None", "???")
+					ControlClass.queue_list[temp1_index]["resolution"] = (str(infolist.get("width", None)) + "x" + str(infolist.get("height", None))).replace("None", "???")
 				ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 				ControlClass.queue_list[temp1_index]["status"] = "waiting"
 				ControlClass.queue_list[temp1_index]["file"] = filename
