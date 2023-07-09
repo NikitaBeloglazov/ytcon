@@ -267,7 +267,7 @@ def downloadd(url):
 			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
 				multiple_formats = True
 
-			temp1_index = map_variables(multiple_formats, infolist, filename)
+			temp1_index = map_variables.main(multiple_formats, infolist, filename)
 
 			if exists:
 				ControlClass.queue_list[infolist["original_url"]]["status"] = "exists"
@@ -306,57 +306,51 @@ def downloadd(url):
 	# os.remove(ControlClass.queue_list[temp1_index]["file"])
 	return None
 
-def map_variables(multiple_formats, infolist, filename):
-	if multiple_formats:
-		ControlClass.queue_list[infolist["original_url"]] = {}
-		ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
-		ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
-		ControlClass.queue_list[infolist["original_url"]]["formats"] = []
-		ControlClass.queue_list[infolist["original_url"]]["status"] = "waiting"
-		for i in infolist["requested_formats"]:
-			temp1_index = infolist["original_url"] + ":" + i["format_id"]
-			ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
-			ControlClass.queue_list[temp1_index] = {}
-			ControlClass.queue_list[temp1_index]["progress"] = "Wait"
-			ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
-			try:
-				ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
-			except KeyError:
-				ControlClass.queue_list[temp1_index]["size"] = "???MiB"
-			ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-			ControlClass.queue_list[temp1_index]["eta"] = "??:??"
-			ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-			if i["resolution"] == "audio only":
-				ControlClass.queue_list[temp1_index]["resolution"] = "audio"
-			else:
-				if i.get("width", None) is None and i.get("height", None) is None:
-					ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
-				else:
-					ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
-			ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
-			ControlClass.queue_list[temp1_index]["status"] = "waiting"
-			ControlClass.queue_list[temp1_index]["file"] = filename
-		return temp1_index
-	else:
-		temp1_index = infolist["original_url"]
+class MapVariablesClass:
+	""" Created to simplify the distribution of parameters, work is organized here with playlists and requesting several formats on youtube """
+
+	def main(self, multiple_formats, infolist, filename):
+		""" Finding some specific parameters and using a loop assign if there are several files """
+		if multiple_formats:
+			ControlClass.queue_list[infolist["original_url"]] = {}
+			ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
+			ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
+			ControlClass.queue_list[infolist["original_url"]]["formats"] = []
+			ControlClass.queue_list[infolist["original_url"]]["status"] = "waiting"
+			for i in infolist["requested_formats"]:
+				temp1_index = infolist["original_url"] + ":" + i["format_id"]
+				ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
+				self.map_variables(temp1_index, infolist, i, filename)
+			return temp1_index
+		else:
+			temp1_index = infolist["original_url"]
+			self.map_variables(temp1_index, infolist, infolist, filename)
+			return temp1_index
+
+	def map_variables(self, temp1_index, infolist, i, filename):
+		""" Main parameter assigner. In some cases, it can be used in a loop """
 		ControlClass.queue_list[temp1_index] = {}
 		ControlClass.queue_list[temp1_index]["progress"] = "Wait"
 		ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
 		try:
-			ControlClass.queue_list[temp1_index]["size"] = str(round(infolist["filesize_approx"]/1e+6)) + "MiB"
+			ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
 		except KeyError:
 			ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 		ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
 		ControlClass.queue_list[temp1_index]["eta"] = "??:??"
 		ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-		if infolist.get("width", None) is None and infolist.get("height", None) is None:
-			ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+		if i["resolution"] == "audio only":
+			ControlClass.queue_list[temp1_index]["resolution"] = "audio"
 		else:
-			ControlClass.queue_list[temp1_index]["resolution"] = (str(infolist.get("width", None)) + "x" + str(infolist.get("height", None))).replace("None", "???")
+			if i.get("width", None) is None and i.get("height", None) is None:
+				ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+			else:
+				ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
 		ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 		ControlClass.queue_list[temp1_index]["status"] = "waiting"
 		ControlClass.queue_list[temp1_index]["file"] = filename
-		return temp1_index
+
+map_variables = MapVariablesClass()
 
 def main(stdscr):
 	ControlClass.screen = stdscr
