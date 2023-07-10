@@ -237,6 +237,9 @@ def downloadd(url):
 			infolist = ydl.extract_info(url, download=False)
 
 			# - = - = - log spam filter - = - = - = - =
+			if infolist is None:
+				journal.warning("ydl.extract_info RETURNED NONE", show=False)
+				return None
 			if "automatic_captions" in infolist:
 				del infolist["automatic_captions"]
 			if "formats" in infolist:
@@ -249,7 +252,7 @@ def downloadd(url):
 			# - Playlists support - = - = - = - = - = - = - = - = - = - = -
 			if "entries" in infolist:
 				for i in infolist["entries"]:
-					if i is None: # Private videos returns as None :||
+					if i is None: # Private/error videos returns as None :||
 						continue
 					threading.Thread(target=downloadd, args=(i["original_url"],), daemon=True).start()
 				return None
@@ -660,7 +663,8 @@ ControlClass.ydl_opts = {
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
-	'ignoreerrors': True # Don't exit if there is private video in playlist
+	#'download_archive': 'downloaded_videos.txt', # TODO?
+	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
 
 # Init screen
