@@ -233,7 +233,7 @@ def downloadd(url):
 			# needed for some sites. you may need to replace it with the correct one
 			if ControlClass.special_mode:
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
-			# - = - = - = Get downloading resolutions (yt) and generate filename (global) = -
+			# - = - = - = Get downloading formats (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
 
 			# - = - = - log spam filter - = - = - = - =
@@ -246,10 +246,14 @@ def downloadd(url):
 			logger.debug(pprint.pformat(infolist))
 			# - = - = - = - = - = - = - = - = - = - = -
 
-			if "_type" in infolist:
-				if infolist["_type"] == "playlist":
-					journal.error("[YTCON] SORRY, PLAYLISTS CURRENTLY UNSUPPORTED") # TODO
-					return None
+			# - Playlists support - = - = - = - = - = - = - = - = - = - = -
+			if "entries" in infolist:
+				for i in infolist["entries"]:
+					if i is None: # Private videos returns as None :||
+						continue
+					threading.Thread(target=downloadd, args=(i["original_url"],), daemon=True).start()
+				return None
+			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			# - Name fiter + assemble - = - = - = - = - = - = - = - = - = - = -
 			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"].replace("&", "and")) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
@@ -655,7 +659,8 @@ ControlClass.ydl_opts = {
 	'trim_file_name': 150,
 	'retries': 20,
 	'fragment_retries': 40,
-	'retry_sleep': 'http,fragment:exp'
+	'retry_sleep': 'http,fragment:exp',
+	'ignoreerrors': True # Don't exit if there is private video in playlist
 	}
 
 # Init screen
