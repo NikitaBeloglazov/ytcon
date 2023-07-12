@@ -187,10 +187,13 @@ def hook(d):
 		ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
 
 		try:
-			ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
+			if ControlClass.queue_list[indexx]["eta"].count(":") > 1:
+				ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
+			else:
+				ControlClass.queue_list[indexx]["eta"] = "ETA " + d["_eta_str"].strip()
 		except KeyError:
 			if d["status"] == "finished":
-				ControlClass.queue_list[indexx]["eta"] = "00:00"
+				ControlClass.queue_list[indexx]["eta"] = "ETA 00:00"
 
 		try:
 			if d["_total_bytes_estimate_str"].strip() == "N/A":
@@ -237,7 +240,7 @@ def downloadd(url):
 			infolist = ydl.extract_info(url, download=False)
 
 			# - = - = - log spam filter - = - = - = - =
-			if infolist is None:
+			if infolist is None: # yt-dlp returns videos with errors as None :||
 				journal.warning("ydl.extract_info RETURNED NONE", show=False)
 				return None
 			if "automatic_captions" in infolist:
@@ -252,7 +255,7 @@ def downloadd(url):
 			# - Playlists support - = - = - = - = - = - = - = - = - = - = -
 			if "entries" in infolist:
 				for i in infolist["entries"]:
-					if i is None: # Private/error videos returns as None :||
+					if i is None: # yt-dlp returns videos with errors as None :||
 						continue
 					threading.Thread(target=downloadd, args=(i["original_url"],), daemon=True).start()
 				return None
@@ -392,7 +395,7 @@ def main(stdscr):
 			for _, i in ControlClass.queue_list.items():
 				if "meta_index" in i:
 					continue # just ignore meta-downloads
-				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| ETA {i["eta"]} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
+				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
 				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
@@ -423,8 +426,14 @@ def input_url(stdscr):
 			textwin.addstr(0, 0, "Enter URL > ")
 
 			# Get user input
-			text = textwin.getstr(0, len("Enter URL > "))
-			text = text.decode('utf-8')
+			text = textwin.getstr(0, len("Enter URL > ")) # TODO: get_wch?? # or https://docs.python.org/3/library/curses.html#module-curses.textpad???
+			try:
+				text = text.decode('utf-8')
+			except UnicodeDecodeError:
+				journal.error("[YTCON] An encoding error occurred while entering the url. Please try again. Detailed information is written in debug.log.")
+				logger.debug("ERROR: ")
+				logger.debug(traceback.format_exc())
+				raise InputProcessed
 
 			# stdscr.addstr(height-2, 0, "You entered: " + text)
 			# stdscr.refresh()
