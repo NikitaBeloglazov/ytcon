@@ -8,7 +8,7 @@ import traceback
 import pprint
 import curses
 import pyperclip
-import ffmpeg # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
+import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 # import notify2
 from colorama import init, Fore
 init()
@@ -81,10 +81,6 @@ def bettersize(text):
 
 def progressbar_generator(percent):
 	""" Generates progress bar """
-	if percent == "Wait":
-		return f"|{' '*25}|"
-	if percent == "Exist":
-		return f"|{'█'*25}|"
 	percent = int(percent.split(".")[0])
 	progress = round(percent / 4)
 	white_space = 25 - progress
@@ -183,7 +179,12 @@ def hook(d):
 		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
 			return None
 		ControlClass.queue_list[indexx]["status"] = d["status"]
-		ControlClass.queue_list[indexx]["progress"] = d["_percent_str"].strip()
+
+		if int(d["_percent_str"].strip().split(".")[0]) > 100:
+			journal.warning("[YTCON] YT-DLP RETURNED PERCENT MORE THAN 100%: \"" + d["_percent_str"].strip() + "\". VALUES REMAIN UNCHANGED...")
+		else:
+			ControlClass.queue_list[indexx]["status_short_display"] = d["_percent_str"].strip()
+			ControlClass.queue_list[indexx]["percent"] = d["_percent_str"].strip()
 		ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
 
 		try:
@@ -286,10 +287,12 @@ def downloadd(url):
 						temp1_index = infolist["original_url"] + ":" + i["format_id"]
 						ControlClass.queue_list[temp1_index]["status"] = "exists"
 						ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
-						ControlClass.queue_list[temp1_index]["progress"] = "Exist"
+						ControlClass.queue_list[temp1_index]["status_short_display"] = "Exist"
+						ControlClass.queue_list[temp1_index]["percent"] = "100.0%"
 				else:
 					ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
-					ControlClass.queue_list[temp1_index]["progress"] = "Exist"
+					ControlClass.queue_list[temp1_index]["status_short_display"] = "Exist"
+					ControlClass.queue_list[temp1_index]["percent"] = "100.0%"
 			# - = - = - = - = - = - = - = - = - = - = - = - =
 			logger.debug(pprint.pformat(ControlClass.queue_list))
 
@@ -340,14 +343,16 @@ class MapVariablesClass:
 	def map_variables(self, temp1_index, infolist, i, filename):
 		""" Main parameter assigner. In some cases, it can be used in a loop """
 		ControlClass.queue_list[temp1_index] = {}
-		ControlClass.queue_list[temp1_index]["progress"] = "Wait"
+		ControlClass.queue_list[temp1_index]["status"] = "waiting"
+		ControlClass.queue_list[temp1_index]["status_short_display"] = "Wait"
+		ControlClass.queue_list[temp1_index]["percent"] = "0.0%"
 		ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
 		try:
 			ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
 		except KeyError:
 			ControlClass.queue_list[temp1_index]["size"] = "???MiB"
 		ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-		ControlClass.queue_list[temp1_index]["eta"] = "??:??"
+		ControlClass.queue_list[temp1_index]["eta"] = "ETA ??:??"
 		ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 		if i["resolution"] == "audio only":
 			ControlClass.queue_list[temp1_index]["resolution"] = "audio"
@@ -357,7 +362,6 @@ class MapVariablesClass:
 			else:
 				ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
 		ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
-		ControlClass.queue_list[temp1_index]["status"] = "waiting"
 		ControlClass.queue_list[temp1_index]["file"] = filename
 
 map_variables = MapVariablesClass()
@@ -395,7 +399,7 @@ def main(stdscr):
 			for _, i in ControlClass.queue_list.items():
 				if "meta_index" in i:
 					continue # just ignore meta-downloads
-				temp1 = f'{whitespace_stabilization(i["progress"], 7)}{progressbar_generator(i["progress"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
+				temp1 = f'{whitespace_stabilization(i["status_short_display"], 7)}{progressbar_generator(i["percent"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
 				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
 				temp1 = temp1 + fileshortname
 				if i["status"] == "waiting":
@@ -611,31 +615,34 @@ def delete_finished():
 	#	exit_with_exception(traceback.format_exc())
 
 def clipboard_checker():
-	ControlClass.clipboard_checker_state_launched = True
-	journal.info("[YTCON] Clipboard auto-paste is ON.")
-
-	new_clip = pyperclip.paste()
-	if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
-		journal.info("[CLIP] URL detected: " + new_clip)
-		threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
-	old_clip = new_clip
-
-	while True:
-		if ControlClass.clipboard_checker_state == False:
-			ControlClass.clipboard_checker_state_launched = False
-			journal.info("[YTCON] Clipboard auto-paste turned off.")
-			return None
+	try:
+		ControlClass.clipboard_checker_state_launched = True
+		journal.info("[YTCON] Clipboard auto-paste is ON.")
 
 		new_clip = pyperclip.paste()
-		if new_clip != old_clip:
-			if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
-				journal.info("[CLIP] New URL detected: " + new_clip)
-				threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
-			else:
-				logger.debug(new_clip)
-				journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
+		if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
+			journal.info("[CLIP] URL detected: " + new_clip)
+			threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
 		old_clip = new_clip
-		time.sleep(0.5)
+
+		while True:
+			if ControlClass.clipboard_checker_state == False:
+				ControlClass.clipboard_checker_state_launched = False
+				journal.info("[YTCON] Clipboard auto-paste turned off.")
+				return None
+
+			new_clip = pyperclip.paste()
+			if new_clip != old_clip:
+				if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
+					journal.info("[CLIP] New URL detected: " + new_clip)
+					threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
+				else:
+					logger.debug(new_clip)
+					journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
+			old_clip = new_clip
+			time.sleep(0.5)
+	except:
+		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
 
 def exit_with_exception(text): # TODO connect to all functions
 	journal.error(text)
