@@ -135,7 +135,11 @@ class ControlClass_base:
 	def __init__(self):
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
+		self.prev_last_error = ""
+		self.prev_error_countdown = 0
+
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
+		self.oldlog = ["", "", "", "", "", ""]
 		self.exit = False
 		self.exception = ""
 		self.special_mode = False
@@ -181,7 +185,7 @@ def hook(d):
 		ControlClass.queue_list[indexx]["status"] = d["status"]
 
 		if int(d["_percent_str"].strip().split(".")[0]) > 100:
-			journal.warning("[YTCON] YT-DLP RETURNED PERCENT MORE THAN 100%: \"" + d["_percent_str"].strip() + "\". VALUES REMAIN UNCHANGED...")
+			journal.warning("[YTCON] yt-dlp returned percent more than 100%: \"" + d["_percent_str"].strip() + "\". Values remain unchanged...")
 		else:
 			ControlClass.queue_list[indexx]["status_short_display"] = d["_percent_str"].strip()
 			ControlClass.queue_list[indexx]["percent"] = d["_percent_str"].strip()
@@ -258,7 +262,7 @@ def downloadd(url):
 				for i in infolist["entries"]:
 					if i is None: # yt-dlp returns videos with errors as None :||
 						continue
-					threading.Thread(target=downloadd, args=(i["original_url"],), daemon=True).start()
+					threading.Thread(target=downloadd, args=(i["webpage_url"],), daemon=True).start()
 				return None
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
@@ -535,6 +539,10 @@ def errorprinter():
 	max_error_space = ControlClass.screen_width * 3
 	try:
 		while True:
+			# - = skip, do not re-render if there is no errors - = - = - = - = -
+			if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
+				continue
+			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - =
 			ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
 			ControlClass.screen.refresh()
 
@@ -563,13 +571,16 @@ def errorprinter():
 				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(1))
 				ControlClass.screen.refresh()
 
+			ControlClass.prev_last_error = ControlClass.last_error
+			ControlClass.prev_error_countdown = ControlClass.error_countdown
+
 			if ControlClass.error_countdown != 0:
 				ControlClass.error_countdown = ControlClass.error_countdown - 1
 				if ControlClass.error_countdown == 0:
 					journal.clear_errors()
 			time.sleep(1)
 	except:
-		exit_with_exception(traceback.format_exc())
+		exit_with_exception("last error:\n" + ControlClass.last_error + str(traceback.format_exc()))
 
 def logprinter():
 	ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -")
@@ -577,7 +588,15 @@ def logprinter():
 	temp1 = " "*ControlClass.screen_width
 	try:
 		while True:
-			# if old_logs == new_logs: skip, do not re-render # TODO
+			time.sleep(0.2)
+
+			# skip, do not re-render if it doesn't change - = - = - = - = -
+			if ControlClass.oldlog == ControlClass.log:
+				continue
+			else:
+				ControlClass.oldlog = ControlClass.log.copy()
+			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
+
 			# removes old text with help of spaces, as curses doesn't do that..
 			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
 			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
@@ -594,7 +613,6 @@ def logprinter():
 			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
 			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
 			ControlClass.screen.refresh()
-			time.sleep(0.2)
 	except:
 		exit_with_exception(traceback.format_exc())
 
