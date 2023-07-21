@@ -50,7 +50,7 @@ def name_shortener(name, symbols):
 	""" Shortens filenames so they fit in the console """
 	if len(name) < symbols:
 		return name
-	return name[0:symbols-3] + "..."
+	return name[0:symbols-3].strip() + "..."
 
 def divide_without_remainder(num):
 	"""
@@ -374,6 +374,7 @@ def main(stdscr):
 	ControlClass.screen = stdscr
 	curses.echo()
 	curses.curs_set(1)
+	ControlClass.screen_height, ControlClass.screen_width = stdscr.getmaxyx()
 
 	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
 	threading.Thread(target=errorprinter, daemon=True).start()
@@ -382,15 +383,21 @@ def main(stdscr):
 	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 	while True:
+		# Get window sizes
+		# Height is not overwritten to ensure normal behavior
+		_, ControlClass.screen_width = stdscr.getmaxyx()
+
 		# Exit with exception
 		if ControlClass.exit:
 			curses.endwin()
 			ControlClass.screen = None
 			print(ControlClass.exception)
 			sys.exit(1)
+
 		# Clipboard auto-paste starter
 		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
 			threading.Thread(target=clipboard_checker, daemon=True).start()
+
 		# removes old text with help of spaces, as curses doesn't do that..
 		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
 		stdscr.addstr(0, 0, clear_old_text)
@@ -423,14 +430,10 @@ class InputProcessed(Exception):
 	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
 
 def input_url(stdscr):
-	# Get window sizes
-	height, width = stdscr.getmaxyx()
-	ControlClass.screen_height, ControlClass.screen_width = height, width
-
 	while True:
 		try:
 			# Create and setting window for text field
-			textwin = curses.newwin(1, width, height-1, 0)
+			textwin = curses.newwin(1, ControlClass.screen_width, ControlClass.screen_height-1, 0)
 			textwin.addstr(0, 0, "Enter URL > ")
 
 			# Get user input
@@ -536,11 +539,11 @@ def input_url(stdscr):
 			exit_with_exception(traceback.format_exc())
 
 def errorprinter():
-	max_error_space = ControlClass.screen_width * 3
 	try:
 		while True:
 			# - = skip, do not re-render if there is no errors - = - = - = - = -
 			if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
+				time.sleep(0.6)
 				continue
 			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - =
 			ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
@@ -562,7 +565,7 @@ def errorprinter():
 				error_text_generator = error_text_generator[0:(ControlClass.screen_width*3 - 5)]
 			# - = - = - = - = -
 
-			error_text_generator = error_text_generator + (" " * (max_error_space - len(error_text_generator)))
+			error_text_generator = error_text_generator + (" " * ((ControlClass.screen_width * 3) - len(error_text_generator)))
 
 			if ControlClass.last_error == "No errors:)":
 				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(3))
@@ -583,15 +586,14 @@ def errorprinter():
 		exit_with_exception("last error:\n" + ControlClass.last_error + str(traceback.format_exc()))
 
 def logprinter():
-	ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -")
-	ControlClass.screen.refresh()
 	temp1 = " "*ControlClass.screen_width
 	try:
 		while True:
-			time.sleep(0.2)
+			ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -" + " "*(ControlClass.screen_width-5))
 
 			# skip, do not re-render if it doesn't change - = - = - = - = -
 			if ControlClass.oldlog == ControlClass.log:
+				time.sleep(0.5)
 				continue
 			else:
 				ControlClass.oldlog = ControlClass.log.copy()
@@ -613,6 +615,7 @@ def logprinter():
 			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
 			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
 			ControlClass.screen.refresh()
+			time.sleep(0.2)
 	except:
 		exit_with_exception(traceback.format_exc())
 
@@ -658,7 +661,7 @@ def clipboard_checker():
 					logger.debug(new_clip)
 					journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
 			old_clip = new_clip
-			time.sleep(0.5)
+			time.sleep(2)
 	except:
 		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
 
