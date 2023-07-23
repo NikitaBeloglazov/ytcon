@@ -6,7 +6,8 @@ import logging
 import threading
 import traceback
 import pprint
-import curses
+#import curses
+import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 # import notify2
@@ -121,8 +122,8 @@ class JournalClass:
 
 		del ControlClass.log[0]
 		msg = msg.replace("\n", "")
-		if len(msg) > ControlClass.screen_width:
-			temp1 = ControlClass.screen_width - 3
+		if len(msg) > RenderClass.width:
+			temp1 = RenderClass.width - 3
 			ControlClass.log.append(msg[0:temp1]+"...")
 		else:
 			ControlClass.log.append(msg)
@@ -145,6 +146,14 @@ class ControlClass_base:
 		self.special_mode = False
 		self.clipboard_checker_state = True
 		self.clipboard_checker_state_launched = False
+
+class RenderClass_base:
+	def __init__(self):
+		pass
+
+	def add_row(self, text):
+		top_pile.contents = top_pile.contents + [[urwid.Text(text), top_pile.options()],]
+		return None
 
 def hook(d):
 	try:
@@ -370,39 +379,11 @@ class MapVariablesClass:
 
 map_variables = MapVariablesClass()
 
-def main(stdscr):
-	ControlClass.screen = stdscr
-	curses.echo()
-	curses.curs_set(1)
-	ControlClass.screen_height, ControlClass.screen_width = stdscr.getmaxyx()
-
-	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
-	threading.Thread(target=errorprinter, daemon=True).start()
-	threading.Thread(target=logprinter, daemon=True).start()
+def render_tasks(loop, user_data):
 	# for testing purposes
 	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 	while True:
-		# Get window sizes
-		# Height is not overwritten to ensure normal behavior
-		_, ControlClass.screen_width = stdscr.getmaxyx()
-
-		# Exit with exception
-		if ControlClass.exit:
-			curses.endwin()
-			ControlClass.screen = None
-			print(ControlClass.exception)
-			sys.exit(1)
-
-		# Clipboard auto-paste starter
-		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
-			threading.Thread(target=clipboard_checker, daemon=True).start()
-
-		# removes old text with help of spaces, as curses doesn't do that..
-		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
-		stdscr.addstr(0, 0, clear_old_text)
-		# # #
-
 		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
 			stdscr.addstr(0, 0, "No tasks")
 		else:
@@ -538,84 +519,75 @@ def input_url(stdscr):
 		except:
 			exit_with_exception(traceback.format_exc())
 
-def errorprinter():
+def errorprinter(loop, user_data):
 	try:
-		while True:
-			# - = skip, do not re-render if there is no errors - = - = - = - = -
-			if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
-				time.sleep(0.6)
-				continue
-			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - =
-			ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
-			ControlClass.screen.refresh()
+		"""# - = skip, do not re-render if there is no errors - = - = - = - = -
+		if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
+			time.sleep(0.6)
+			continue
+		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - ="""
+		to_render = []
+		to_render.append("- - -\n")
+		# logic
+		if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
+			ControlClass.error_countdown = 0
+			journal.clear_errors()
+		#
 
-			if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
-				ControlClass.error_countdown = 0
+		if ControlClass.error_countdown != 0:
+			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
+		else:
+			error_text_generator = str(ControlClass.last_error)
+
+		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
+
+		if ControlClass.last_error == "No errors:)":
+			to_render.append((RenderClass.cyan, error_text_generator))
+		else:
+			to_render.append((RenderClass.red, error_text_generator))
+
+		#to_render.append((RenderClass.red, error_text_generator))
+		if (RenderClass.width) > len(error_text_generator):
+			to_render.append("\n\n")
+		elif (RenderClass.width * 2) > len(error_text_generator):
+			to_render.append("\n")
+		#elif (RenderClass.width * 3) > len(error_text_generator):
+		#	pass
+
+		ControlClass.prev_last_error = ControlClass.last_error
+		ControlClass.prev_error_countdown = ControlClass.error_countdown
+
+		if ControlClass.error_countdown != 0:
+			ControlClass.error_countdown = ControlClass.error_countdown - 1
+			if ControlClass.error_countdown == 0:
 				journal.clear_errors()
 
-			if ControlClass.error_countdown != 0:
-				error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
-			else:
-				error_text_generator = str(ControlClass.last_error)
-
-			error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
-
-			# avoid situations when the text goes beyond the window due to too long url
-			if len(error_text_generator) > ControlClass.screen_width*3 - 5:
-				error_text_generator = error_text_generator[0:(ControlClass.screen_width*3 - 5)]
-			# - = - = - = - = -
-
-			error_text_generator = error_text_generator + (" " * ((ControlClass.screen_width * 3) - len(error_text_generator)))
-
-			if ControlClass.last_error == "No errors:)":
-				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(3))
-				ControlClass.screen.refresh()
-			else:
-				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(1))
-				ControlClass.screen.refresh()
-
-			ControlClass.prev_last_error = ControlClass.last_error
-			ControlClass.prev_error_countdown = ControlClass.error_countdown
-
-			if ControlClass.error_countdown != 0:
-				ControlClass.error_countdown = ControlClass.error_countdown - 1
-				if ControlClass.error_countdown == 0:
-					journal.clear_errors()
-			time.sleep(1)
+		error_widget.set_text(to_render)
+		loop.set_alarm_in(0.3, errorprinter)
 	except:
-		exit_with_exception("last error:\n" + ControlClass.last_error + str(traceback.format_exc()))
+		exit_with_exception(str(traceback.format_exc()))
 
-def logprinter():
-	temp1 = " "*ControlClass.screen_width
+def logprinter(loop, _):
 	try:
-		while True:
-			ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -" + " "*(ControlClass.screen_width-5))
+		to_render = "- - -\n"
 
-			# skip, do not re-render if it doesn't change - = - = - = - = -
-			if ControlClass.oldlog == ControlClass.log:
-				time.sleep(0.5)
-				continue
-			else:
-				ControlClass.oldlog = ControlClass.log.copy()
-			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
+		# skip, do not re-render if it doesn't change - = - = - = - = -
+		"""if ControlClass.oldlog == ControlClass.log:
+			time.sleep(0.5)
+			continue
+		else:
+			ControlClass.oldlog = ControlClass.log.copy()"""
+		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
-			# removes old text with help of spaces, as curses doesn't do that..
-			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-9,  0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-8,  0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, temp1)
-			# # #
+		to_render += ControlClass.log[0] + "\n"
+		to_render += ControlClass.log[1] + "\n"
+		to_render += ControlClass.log[2] + "\n"
+		to_render += ControlClass.log[3] + "\n"
+		to_render += ControlClass.log[4] + "\n"
+		to_render += ControlClass.log[5]
+		log_widget.set_text(to_render)
 
-			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, ControlClass.log[0])
-			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, ControlClass.log[1])
-			ControlClass.screen.addstr(ControlClass.screen_height-9,  0, ControlClass.log[2])
-			ControlClass.screen.addstr(ControlClass.screen_height-8,  0, ControlClass.log[3])
-			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
-			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
-			ControlClass.screen.refresh()
-			time.sleep(0.2)
+		loop.set_alarm_in(0.3, logprinter)
 	except:
 		exit_with_exception(traceback.format_exc())
 
@@ -696,7 +668,7 @@ ControlClass.ydl_opts = {
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
 	#'restrictfilenames': True
-	'trim_file_name': 150,
+	'trim_file_name': 60,
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
@@ -704,19 +676,76 @@ ControlClass.ydl_opts = {
 	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
 
-# Init screen
-curses.update_lines_cols()
-curses.initscr()
+RenderClass = RenderClass_base()
 
-# Init colors
-curses.start_color()
-curses.use_default_colors()
+RenderClass.red = urwid.AttrSpec('dark red', 'default')
+RenderClass.cyan = urwid.AttrSpec('dark cyan', 'default')
 
+"""
 curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
 curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
 curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
 curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+"""
 
-# curses.raw() # TODO: ??? can simplify some points in the program
-# Start
-curses.wrapper(main)
+"""
+def on_alarm(loop, user_data):
+	global counter
+	#print(user_data)
+	#counter += 1
+	number_widget.set_text(f"Counter: {counter}")
+	loop.set_alarm_in(0.3, on_alarm)
+"""
+
+def exit_on_q(key):
+	if key in ('q', 'Q'):
+		raise urwid.ExitMainLoop()
+
+class InputBox(urwid.Edit):
+	def keypress(self, size, key):
+		if key != 'enter':
+			return super(InputBox, self).keypress(size, key)
+		threading.Thread(target=downloadd, args=(self.get_edit_text(),), daemon=True).start()
+		RenderClass.add_row("test")
+		logger.debug(pprint.pformat(top_pile.contents))
+		self.set_edit_text("")
+
+"""
+def calculate_widget_height(widget):
+    if isinstance(widget, urwid.Text):
+        # Возвращает количество строк текста в виджете
+        return len(widget.text.split('\n'))
+    elif isinstance(widget, urwid.Pile):
+        # Рекурсивно суммирует высоты виджетов внутри Pile-контейнера
+        return sum(calculate_widget_height(item[0]) for item in widget.contents)
+    else:
+        # Возвращаем 0 для неподдерживаемых типов виджетов
+        return 0
+"""
+
+processes_widget = urwid.Text("Initializing...")
+lol = urwid.Text("lol")
+
+top_pile = urwid.Pile([lol, processes_widget])
+
+#logger.debug(pprint.pformat(top_pile.contents))
+#logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
+
+log_widget = urwid.Text("Initializing...")
+error_widget = urwid.Text("Initializing...")
+input_widget = InputBox("Enter URL > ")
+
+#fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+
+loop = urwid.MainLoop(fill, unhandled_input=exit_on_q)
+
+# ширина, высота # width height
+RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
+
+logger.debug(RenderClass.width)
+logger.debug(RenderClass.height)
+loop.set_alarm_in(0, logprinter)
+loop.set_alarm_in(0, errorprinter)
+
+loop.run()
