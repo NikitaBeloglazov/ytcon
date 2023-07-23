@@ -155,6 +155,24 @@ class RenderClass_base:
 		top_pile.contents = top_pile.contents + [[urwid.Text(text), top_pile.options()],]
 		return None
 
+	def edit_or_add_row(self, text, pos):
+		if pos > self.calculate_widget_height(top_pile) - 1:
+			self.add_row(text)
+		else:
+			top_pile.contents[pos][0].set_text(text)
+		return None
+
+	def calculate_widget_height(self, widget):
+		if isinstance(widget, urwid.Text):
+			# Returns the number of lines of text in the widget
+			return len(widget.text.split('\n'))
+		elif isinstance(widget, urwid.Pile):
+			# Recursively sums the heights of widgets inside a urwid.Pile container
+			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
+		else:
+			# Return 0 for unsupported widget types (?)
+			return 0
+
 def hook(d):
 	try:
 		# - = - = - log spam filter - = - = - = - =
@@ -382,30 +400,29 @@ map_variables = MapVariablesClass()
 def render_tasks(loop, user_data):
 	# for testing purposes
 	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
-
-	while True:
-		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
-			stdscr.addstr(0, 0, "No tasks")
-		else:
-			r = 0
-			for _, i in ControlClass.queue_list.items():
-				if "meta_index" in i:
-					continue # just ignore meta-downloads
-				temp1 = f'{whitespace_stabilization(i["status_short_display"], 7)}{progressbar_generator(i["percent"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
-				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
-				temp1 = temp1 + fileshortname
-				if i["status"] == "waiting":
-					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
-				elif i["status"] == "exists":
-					stdscr.addstr(r, 0, temp1, curses.color_pair(4))
-				elif i["status"] == "finished":
-					stdscr.addstr(r, 0, temp1, curses.color_pair(2))
-				else:
-					stdscr.addstr(r, 0, temp1)
-				r = r+1
-			# stdscr.addstr(7, 0, str(ControlClass.queue_list))
-		stdscr.refresh()
-		time.sleep(0.1)
+	if not ControlClass.queue_list: # if ControlClass.queue_list == {}
+		RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
+	else:
+		r = 0
+		for _, i in ControlClass.queue_list.items():
+			if "meta_index" in i:
+				continue # just ignore meta-downloads
+			temp1 = f'{whitespace_stabilization(i["status_short_display"], 7)}{progressbar_generator(i["percent"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
+			fileshortname = name_shortener(i["name"], RenderClass.width - len(temp1))
+			temp1 = temp1 + fileshortname
+			
+			if i["status"] == "waiting":
+				RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
+			elif i["status"] == "exists":
+				RenderClass.edit_or_add_row((RenderClass.yellow, temp1), r)
+			elif i["status"] == "finished":
+				RenderClass.edit_or_add_row((RenderClass.green, temp1), r)
+			else:
+				RenderClass.edit_or_add_row(temp1, r)
+			
+			r = r+1
+		# stdscr.addstr(7, 0, str(ControlClass.queue_list))
+	loop.set_alarm_in(0.3, render_tasks)
 
 class InputProcessed(Exception):
 	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
@@ -679,6 +696,8 @@ ControlClass.ydl_opts = {
 RenderClass = RenderClass_base()
 
 RenderClass.red = urwid.AttrSpec('dark red', 'default')
+RenderClass.yellow = urwid.AttrSpec('brown', 'default')
+RenderClass.green = urwid.AttrSpec('dark green', 'default')
 RenderClass.cyan = urwid.AttrSpec('dark cyan', 'default')
 
 """
@@ -706,27 +725,27 @@ class InputBox(urwid.Edit):
 		if key != 'enter':
 			return super(InputBox, self).keypress(size, key)
 		threading.Thread(target=downloadd, args=(self.get_edit_text(),), daemon=True).start()
-		RenderClass.add_row("test")
-		logger.debug(pprint.pformat(top_pile.contents))
+		#RenderClass.add_row("test")
+		#logger.debug(pprint.pformat(top_pile.contents))
 		self.set_edit_text("")
 
 """
 def calculate_widget_height(widget):
-    if isinstance(widget, urwid.Text):
-        # Возвращает количество строк текста в виджете
-        return len(widget.text.split('\n'))
-    elif isinstance(widget, urwid.Pile):
-        # Рекурсивно суммирует высоты виджетов внутри Pile-контейнера
-        return sum(calculate_widget_height(item[0]) for item in widget.contents)
-    else:
-        # Возвращаем 0 для неподдерживаемых типов виджетов
-        return 0
+	if isinstance(widget, urwid.Text):
+		# Возвращает количество строк текста в виджете
+		return len(widget.text.split('\n'))
+	elif isinstance(widget, urwid.Pile):
+		# Рекурсивно суммирует высоты виджетов внутри Pile-контейнера
+		return sum(calculate_widget_height(item[0]) for item in widget.contents)
+	else:
+		# Возвращаем 0 для неподдерживаемых типов виджетов
+		return 0
 """
 
 processes_widget = urwid.Text("Initializing...")
 lol = urwid.Text("lol")
 
-top_pile = urwid.Pile([lol, processes_widget])
+top_pile = urwid.Pile([])
 
 #logger.debug(pprint.pformat(top_pile.contents))
 #logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
@@ -745,6 +764,7 @@ RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
 
 logger.debug(RenderClass.width)
 logger.debug(RenderClass.height)
+loop.set_alarm_in(0, render_tasks)
 loop.set_alarm_in(0, logprinter)
 loop.set_alarm_in(0, errorprinter)
 
