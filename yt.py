@@ -162,6 +162,10 @@ class RenderClass_base:
 			top_pile.contents[pos][0].set_text(text)
 		return None
 
+	def remove_all_widgets(self):
+		top_pile.contents = []
+		return None
+
 	def calculate_widget_height(self, widget):
 		if isinstance(widget, urwid.Text):
 			# Returns the number of lines of text in the widget
@@ -424,9 +428,6 @@ def render_tasks(loop, user_data):
 		# stdscr.addstr(7, 0, str(ControlClass.queue_list))
 	loop.set_alarm_in(0.3, render_tasks)
 
-class InputProcessed(Exception):
-	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
-
 def input_url(stdscr):
 	while True:
 		try:
@@ -536,6 +537,9 @@ def input_url(stdscr):
 		except:
 			exit_with_exception(traceback.format_exc())
 
+class InputProcessed(Exception):
+	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
+
 def errorprinter(loop, user_data):
 	try:
 		"""# - = skip, do not re-render if there is no errors - = - = - = - = -
@@ -610,19 +614,20 @@ def logprinter(loop, _):
 
 def delete_finished():
 	""" Removes all completed operations from ControlClass.queue_list with a loop """
-	#try:
-	temp1 = 0
-	temp2_new = ControlClass.queue_list.copy()
-	for item, item_content in ControlClass.queue_list.copy().items():
-		if item_content["status"] == "exists" or item_content["status"] == "finished":
-			del temp2_new[item]
-			if "meta_index" not in item_content:
-				temp1 = temp1 + 1
-	ControlClass.queue_list = temp2_new
-	logger.debug(ControlClass.queue_list)
-	return str(temp1)
-	#except:
-	#	exit_with_exception(traceback.format_exc())
+	try:
+		temp1 = 0
+		temp2_new = ControlClass.queue_list.copy()
+		for item, item_content in ControlClass.queue_list.copy().items():
+			if item_content["status"] == "exists" or item_content["status"] == "finished":
+				del temp2_new[item]
+				if "meta_index" not in item_content:
+					temp1 = temp1 + 1
+		ControlClass.queue_list = temp2_new
+		logger.debug(ControlClass.queue_list)
+		RenderClass.remove_all_widgets()
+		return str(temp1)
+	except:
+		exit_with_exception(traceback.format_exc())
 
 def clipboard_checker():
 	try:
@@ -656,8 +661,11 @@ def clipboard_checker():
 
 def exit_with_exception(text): # TODO connect to all functions
 	journal.error(text)
-	ControlClass.exit = True
-	ControlClass.exception = text
+	loop.stop()
+	print("An unknown error has occurred!\n")
+	time.sleep(0.5)
+	print(text)
+	exit()
 
 def get_resolution_ffprobe(file):
 	""" Uses ffprobe to get video (even not fully downloaded) resolution """
@@ -685,7 +693,7 @@ ControlClass.ydl_opts = {
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
 	#'restrictfilenames': True
-	'trim_file_name': 60,
+	'trim_file_name': 60, # TODO
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
@@ -716,15 +724,14 @@ def on_alarm(loop, user_data):
 	loop.set_alarm_in(0.3, on_alarm)
 """
 
-def exit_on_q(key):
-	if key in ('q', 'Q'):
-		raise urwid.ExitMainLoop()
-
 class InputBox(urwid.Edit):
 	def keypress(self, size, key):
 		if key != 'enter':
 			return super(InputBox, self).keypress(size, key)
-		threading.Thread(target=downloadd, args=(self.get_edit_text(),), daemon=True).start()
+		elif self.get_edit_text() == "clear":
+			journal.info(f"[clear] {delete_finished()} item(s) removed from list!") # TODO TEMPPPPP!!!!
+		else:
+			threading.Thread(target=downloadd, args=(self.get_edit_text(),), daemon=True).start()
 		#RenderClass.add_row("test")
 		#logger.debug(pprint.pformat(top_pile.contents))
 		self.set_edit_text("")
@@ -757,7 +764,7 @@ input_widget = InputBox("Enter URL > ")
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 
-loop = urwid.MainLoop(fill, unhandled_input=exit_on_q)
+loop = urwid.MainLoop(fill)
 
 # ширина, высота # width height
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
