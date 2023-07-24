@@ -6,12 +6,10 @@ import logging
 import threading
 import traceback
 import pprint
-import curses
+import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 # import notify2
-from colorama import init, Fore
-init()
 import yt_dlp
 
 # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
@@ -40,55 +38,9 @@ logger.debug('== DEBUG LOG FILE ==')
 logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
-def printraw(printraw_msg):
-	""" Outputs pretty-print json """
-	print(Fore.CYAN)
-	pprint.pprint(printraw_msg)
-	print(Fore.RESET)
-
-def name_shortener(name, symbols):
-	""" Shortens filenames so they fit in the console """
-	if len(name) < symbols:
-		return name
-	return name[0:symbols-3].strip() + "..."
-
-def divide_without_remainder(num):
-	"""
-	Division without remainder. Used for centering in the whitespace_stabilization function
-		print(divide(22))  # Out: [11, 11]
-		print(divide(23))  # Out: [11, 12]
-	"""
-	quotient = num // 2
-	remainder = num % 2
-	return [quotient, quotient + remainder]
-
-def whitespace_stabilization(text, needed_space):
-	if len(text) == needed_space:
-		return text
-	if len(text) > needed_space:
-		return text[0:needed_space-2] + ".."
-	white_space = needed_space - len(text)
-	white_space = divide_without_remainder(white_space)
-	return ' '*white_space[0] + text + ' '*white_space[1]
-
-def bettersize(text):
-	""" Rounds up file sizes """
-	if text == "NaN":
-		return "NaN"
-	if len(text.split(".")) == 1:
-		return text
-	return text.split(".")[0] + text[-3:-1] + text[-1]
-
-def progressbar_generator(percent):
-	""" Generates progress bar """
-	percent = int(percent.split(".")[0])
-	progress = round(percent / 4)
-	white_space = 25 - progress
-	return f"|{'█'*progress}{' '*white_space}|"
-
 class JournalClass:
 	def debug(self, msg):
-		""" For yt-dlp """
+		""" !!! For yt-dlp """
 		if msg.startswith('[debug] '):
 			logger.debug(msg)
 		else:
@@ -121,8 +73,8 @@ class JournalClass:
 
 		del ControlClass.log[0]
 		msg = msg.replace("\n", "")
-		if len(msg) > ControlClass.screen_width:
-			temp1 = ControlClass.screen_width - 3
+		if len(msg) > RenderClass.width:
+			temp1 = RenderClass.width - 3
 			ControlClass.log.append(msg[0:temp1]+"...")
 		else:
 			ControlClass.log.append(msg)
@@ -145,6 +97,81 @@ class ControlClass_base:
 		self.special_mode = False
 		self.clipboard_checker_state = True
 		self.clipboard_checker_state_launched = False
+
+class RenderClass_base:
+	def __init__(self):
+		self.methods = self.MethodsClass()
+
+	def add_row(self, text):
+		top_pile.contents = top_pile.contents + [[urwid.Text(text), top_pile.options()],]
+		return None
+
+	def edit_or_add_row(self, text, pos):
+		if pos > self.calculate_widget_height(top_pile) - 1:
+			self.add_row(text)
+		else:
+			top_pile.contents[pos][0].set_text(text)
+		return None
+
+	def remove_all_widgets(self):
+		top_pile.contents = []
+		return None
+
+	def calculate_widget_height(self, widget):
+		if isinstance(widget, urwid.Text):
+			# Returns the number of lines of text in the widget
+			return len(widget.text.split('\n'))
+		elif isinstance(widget, urwid.Pile):
+			# Recursively sums the heights of widgets inside a urwid.Pile container
+			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
+		else:
+			# Return 0 for unsupported widget types (?)
+			return 0
+
+	class MethodsClass:
+		""" Minor methods mostly needed by render_tasks """
+		def __init__(self):
+			logger.debug("MethodsClass init")
+
+		def name_shortener(self, name, symbols):
+			""" Shortens filenames so they fit in the console """
+			if len(name) < symbols:
+				return name
+			return name[0:symbols-3].strip() + "..."
+
+		def bettersize(self, text):
+			""" Rounds up file sizes """
+			if text == "NaN":
+				return "NaN"
+			if len(text.split(".")) == 1:
+				return text
+			return text.split(".")[0] + text[-3:-1] + text[-1]
+
+		def divide_without_remainder(self, num):
+			"""
+			Division without remainder. Used for centering in the whitespace_stabilization function
+				print(divide(22))  # Out: [11, 11]
+				print(divide(23))  # Out: [11, 12]
+			"""
+			quotient = num // 2
+			remainder = num % 2
+			return [quotient, quotient + remainder]
+
+		def whitespace_stabilization(self, text, needed_space):
+			if len(text) == needed_space:
+				return text
+			if len(text) > needed_space:
+				return text[0:needed_space-2] + ".."
+			white_space = needed_space - len(text)
+			white_space = self.divide_without_remainder(white_space)
+			return ' '*white_space[0] + text + ' '*white_space[1]
+
+		def progressbar_generator(self, percent):
+			""" Generates progress bar """
+			percent = int(percent.split(".")[0])
+			progress = round(percent / 4)
+			white_space = 25 - progress
+			return f"|{'█'*progress}{' '*white_space}|"
 
 def hook(d):
 	try:
@@ -217,12 +244,6 @@ def hook(d):
 		d["info_dict"]["thumbnails"] = []
 		d["info_dict"]["subtitles"] = []
 		d["info_dict"]["fragments"] = []
-
-		# DEBUG
-		# os.system("clear")
-		# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
-		# printraw(d)
-		# time.sleep(20)
 
 		logger.debug(pprint.pformat(ControlClass.queue_list))
 		return None
@@ -370,160 +391,110 @@ class MapVariablesClass:
 
 map_variables = MapVariablesClass()
 
-def main(stdscr):
-	ControlClass.screen = stdscr
-	curses.echo()
-	curses.curs_set(1)
-	ControlClass.screen_height, ControlClass.screen_width = stdscr.getmaxyx()
+def render_tasks(loop, user_data):
+	if not ControlClass.queue_list: # if ControlClass.queue_list == {}
+		RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
+	else:
+		r = 0
+		for _, i in ControlClass.queue_list.items():
+			if "meta_index" in i:
+				continue # just ignore meta-downloads
 
-	threading.Thread(target=input_url, args=(stdscr,), daemon=True).start()
-	threading.Thread(target=errorprinter, daemon=True).start()
-	threading.Thread(target=logprinter, daemon=True).start()
-	# for testing purposes
-	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
+			rcm = RenderClass.methods
+			ws = rcm.whitespace_stabilization
+			temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"])}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
+			fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
+			temp1 = temp1 + fileshortname
+			
+			if i["status"] == "waiting":
+				RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
+			elif i["status"] == "exists":
+				RenderClass.edit_or_add_row((RenderClass.yellow, temp1), r)
+			elif i["status"] == "finished":
+				RenderClass.edit_or_add_row((RenderClass.green, temp1), r)
+			else:
+				RenderClass.edit_or_add_row(temp1, r)
+			
+			r = r+1
+	loop.set_alarm_in(0.3, render_tasks)
 
-	while True:
-		# Get window sizes
-		# Height is not overwritten to ensure normal behavior
-		_, ControlClass.screen_width = stdscr.getmaxyx()
 
-		# Exit with exception
-		if ControlClass.exit:
-			curses.endwin()
-			ControlClass.screen = None
-			print(ControlClass.exception)
-			sys.exit(1)
+class InputHandlerClass:
+	"""
+		In the days of curses, this was a full-fledged widget tucked into one function,
+		but now it plays the role of just processing user input, another class is responsible for accepting
+	"""
+	class InputProcessed(Exception):
+		""" Dummy exception, when called means that the processing of this request is completed. """
 
-		# Clipboard auto-paste starter
-		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
-			threading.Thread(target=clipboard_checker, daemon=True).start()
-
-		# removes old text with help of spaces, as curses doesn't do that..
-		clear_old_text = " " * ((ControlClass.screen_height - 12) * ControlClass.screen_width)
-		stdscr.addstr(0, 0, clear_old_text)
-		# # #
-
-		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
-			stdscr.addstr(0, 0, "No tasks")
-		else:
-			r = 0
-			for _, i in ControlClass.queue_list.items():
-				if "meta_index" in i:
-					continue # just ignore meta-downloads
-				temp1 = f'{whitespace_stabilization(i["status_short_display"], 7)}{progressbar_generator(i["percent"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
-				fileshortname = name_shortener(i["name"], ControlClass.screen_width - len(temp1))
-				temp1 = temp1 + fileshortname
-				if i["status"] == "waiting":
-					stdscr.addstr(r, 0, temp1, curses.color_pair(3))
-				elif i["status"] == "exists":
-					stdscr.addstr(r, 0, temp1, curses.color_pair(4))
-				elif i["status"] == "finished":
-					stdscr.addstr(r, 0, temp1, curses.color_pair(2))
-				else:
-					stdscr.addstr(r, 0, temp1)
-				r = r+1
-			# stdscr.addstr(7, 0, str(ControlClass.queue_list))
-		stdscr.refresh()
-		time.sleep(0.1)
-
-class InputProcessed(Exception):
-	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
-
-def input_url(stdscr):
-	while True:
+	def input(self, text):
+		""" Main input handler logic """
 		try:
-			# Create and setting window for text field
-			textwin = curses.newwin(1, ControlClass.screen_width, ControlClass.screen_height-1, 0)
-			textwin.addstr(0, 0, "Enter URL > ")
-
-			# Get user input
-			text = textwin.getstr(0, len("Enter URL > ")) # TODO: get_wch?? # or https://docs.python.org/3/library/curses.html#module-curses.textpad???
-			try:
-				text = text.decode('utf-8')
-			except UnicodeDecodeError:
-				journal.error("[YTCON] An encoding error occurred while entering the url. Please try again. Detailed information is written in debug.log.")
-				logger.debug("ERROR: ")
-				logger.debug(traceback.format_exc())
-				raise InputProcessed
-
-			# stdscr.addstr(height-2, 0, "You entered: " + text)
-			# stdscr.refresh()
+			original_text = text
+			text = text.lower()
 
 			if text == "":
 				# Force refreshing screen...
-				stdscr.refresh()
-				raise InputProcessed
+				loop.draw_screen()
+				raise self.InputProcessed
 
 			journal.info("")
-			journal.info("[input] " + text)
+			journal.info("[YTCON] [INPUT] " + original_text)
 
 			# - = Special mode handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			if text in ("sp", "specialmode"):
-				journal.info("[input] specialmode status: " + str(ControlClass.special_mode))
-				raise InputProcessed
+				journal.info("[YTCON] Specialmode status: " + str(ControlClass.special_mode))
+				raise self.InputProcessed
 
 			if text == "sp1":
-				text = "specialmode 1"
+				self.special_mode_status_set(True)
+				raise self.InputProcessed
 			elif text == "sp0":
-				text = "specialmode 0"
+				self.special_mode_status_set(False)
+				raise self.InputProcessed
 
-			if text.split()[0] == "specialmode" or text.split()[0] == "sp":
-				if text.split()[1] == "1" or text.split()[1].lower() == "true":
-					ControlClass.special_mode = True
-					ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-					journal.info("[YTCON] sp activated! now a different user agent will be used, and cookies will be retrieved from chromium")
-				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
-					ControlClass.special_mode = False
-					if "cookiesfrombrowser" in ControlClass.ydl_opts:
-						del ControlClass.ydl_opts["cookiesfrombrowser"]
-					journal.info("[YTCON] sp deactivated! now a default yt-dlp extractor settings will be used.")
+			if text.split()[0] in ("sp", "specialmode"):
+				if text.split()[1] == "1" or text.split()[1] == "true":
+					self.special_mode_status_set(True)
+				elif text.split()[1] == "0" or text.split()[1] == "false":
+					self.special_mode_status_set(False)
 				else:
-					journal.error("[YTCON] I do not understand you")
-				raise InputProcessed
+					journal.error("[YTCON] failed to set SP status: input not recognized")
+				raise self.InputProcessed
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			# - = Clipboard auto-paste status handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-			if text in ("cb", "clipboard"):
+			if text in ("cb", "clipboard", "clip"):
 				journal.info("[YTCON] Clipboard auto-paste status: " + str(ControlClass.clipboard_checker_state) + ", launched state: " + str(ControlClass.clipboard_checker_state_launched))
-				raise InputProcessed
+				raise self.InputProcessed
 
-			if text == "cb1":
-				text = "clipboard 1"
-			elif text == "cb0":
-				text = "clipboard 0"
+			if text == "cb1" or text == "clip1":
+				self.clipboard_status_set(True)
+				raise self.InputProcessed
+			elif text == "cb0" or text == "clip0":
+				self.clipboard_status_set(False)
+				raise self.InputProcessed
 
-			if text.split()[0] == "clipboard" or text.split()[0] == "cb":
-				if text.split()[1] == "1" or text.split()[1].lower() == "true":
-					if ControlClass.clipboard_checker_state == True:
-						journal.info("[YTCON] Already enabled.")
-					ControlClass.clipboard_checker_state = True
-				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
-					if ControlClass.clipboard_checker_state == False:
-						journal.info("[YTCON] Already disabled.")
-					ControlClass.clipboard_checker_state = False
+			if text.split()[0] in ("cb", "clipboard", "clip"):
+				if text.split()[1] == "1" or text.split()[1] == "true":
+					self.clipboard_status_set(True)
+				elif text.split()[1] == "0" or text.split()[1] == "false":
+					self.clipboard_status_set(False)
 				else:
-					journal.error("[input] I do not understand you")
-				raise InputProcessed
+					journal.error("[YTCON] failed to set clipboard status: input not recognized")
+				raise self.InputProcessed
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			elif text in ("clear", "cls"):
 				journal.clear_errors()
-				temp1 = delete_finished()
-				journal.info(f"[clear] {temp1} item(s) removed from list!")
+				journal.info(f"[YTCON] {delete_finished()} item(s) removed from list!")
 
 			elif text == "logtest":
-				time.sleep(1)
 				logger.debug("[TEST] 1")
-				time.sleep(1)
 				journal.info("[TEST] 2")
-				time.sleep(1)
 				journal.warning("[TEST] 3")
-				time.sleep(1)
 				journal.error("[TEST] 4")
-				time.sleep(1)
 				journal.error("[TEST] 5", show=False)
-				time.sleep(1)
 				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
-				time.sleep(1)
 
 			elif text == "makecrash":
 				try:
@@ -532,108 +503,147 @@ def input_url(stdscr):
 					exit_with_exception(traceback.format_exc())
 
 			else:
-				threading.Thread(target=downloadd, args=(text,), daemon=True).start()
-		except InputProcessed:
+				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
+
+		except self.InputProcessed:
 			pass
 		except:
 			exit_with_exception(traceback.format_exc())
 
-def errorprinter():
-	try:
-		while True:
-			# - = skip, do not re-render if there is no errors - = - = - = - = -
-			if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
-				time.sleep(0.6)
-				continue
-			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - =
-			ControlClass.screen.addstr(ControlClass.screen_height-5, 0, "- - -")
-			ControlClass.screen.refresh()
+	def special_mode_status_set(self, boool):
+		"""
+			special_mode_status_set(True) enables special mode,
+			special_mode_status_set(False) disables it
+		"""
+		if boool: # true
+			ControlClass.special_mode = True
+			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+		elif not boool: # false
+			ControlClass.special_mode = False
+			if "cookiesfrombrowser" in ControlClass.ydl_opts:
+				del ControlClass.ydl_opts["cookiesfrombrowser"]
+			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
+		else:
+			journal.warning("[YTCON] failed to set SP status: input not recognized")
 
-			if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
-				ControlClass.error_countdown = 0
+	def clipboard_status_set(self, boool):
+		"""
+			clipboard_status_set(True) enables clipboard auto-paste thread,
+			clipboard_status_set(False) disables it
+		"""
+		if boool: # true
+			if ControlClass.clipboard_checker_state == True:
+				journal.info("[YTCON] Already enabled.")
+			else:
+				ControlClass.clipboard_checker_state = True
+				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		elif not boool: # false
+			if ControlClass.clipboard_checker_state == False:
+				journal.info("[YTCON] Already disabled.")
+			else:
+				ControlClass.clipboard_checker_state = False
+				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		else:
+			journal.error("[YTCON] failed to set clipboard status: input not recognized")
+
+InputHandler = InputHandlerClass()
+
+
+def errorprinter(loop, user_data):
+	try:
+		"""# - = skip, do not re-render if there is no errors - = - = - = - = -
+		if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
+			time.sleep(0.6)
+			continue
+		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - ="""
+		to_render = []
+		to_render.append("- - -\n")
+		# - = logic # TODO move to JournalClass?
+		if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
+			ControlClass.error_countdown = 0
+			journal.clear_errors()
+		# - = - =
+
+		if ControlClass.error_countdown != 0:
+			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
+		else:
+			error_text_generator = str(ControlClass.last_error)
+
+		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
+
+		if ControlClass.last_error == "No errors:)":
+			to_render.append((RenderClass.cyan, error_text_generator))
+		else:
+			to_render.append((RenderClass.red, error_text_generator))
+
+		#to_render.append((RenderClass.red, error_text_generator))
+		if (RenderClass.width) > len(error_text_generator):
+			to_render.append("\n\n")
+		elif (RenderClass.width * 2) > len(error_text_generator):
+			to_render.append("\n")
+		#elif (RenderClass.width * 3) > len(error_text_generator):
+		#	pass
+
+		ControlClass.prev_last_error = ControlClass.last_error
+		ControlClass.prev_error_countdown = ControlClass.error_countdown
+
+		if ControlClass.error_countdown != 0:
+			ControlClass.error_countdown = ControlClass.error_countdown - 1
+			if ControlClass.error_countdown == 0:
 				journal.clear_errors()
 
-			if ControlClass.error_countdown != 0:
-				error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
-			else:
-				error_text_generator = str(ControlClass.last_error)
-
-			error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
-
-			# avoid situations when the text goes beyond the window due to too long url
-			if len(error_text_generator) > ControlClass.screen_width*3 - 5:
-				error_text_generator = error_text_generator[0:(ControlClass.screen_width*3 - 5)]
-			# - = - = - = - = -
-
-			error_text_generator = error_text_generator + (" " * ((ControlClass.screen_width * 3) - len(error_text_generator)))
-
-			if ControlClass.last_error == "No errors:)":
-				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(3))
-				ControlClass.screen.refresh()
-			else:
-				ControlClass.screen.addstr(ControlClass.screen_height-4, 0, error_text_generator, curses.color_pair(1))
-				ControlClass.screen.refresh()
-
-			ControlClass.prev_last_error = ControlClass.last_error
-			ControlClass.prev_error_countdown = ControlClass.error_countdown
-
-			if ControlClass.error_countdown != 0:
-				ControlClass.error_countdown = ControlClass.error_countdown - 1
-				if ControlClass.error_countdown == 0:
-					journal.clear_errors()
-			time.sleep(1)
+		error_widget.set_text(to_render)
+		loop.set_alarm_in(0.3, errorprinter)
 	except:
-		exit_with_exception("last error:\n" + ControlClass.last_error + str(traceback.format_exc()))
+		exit_with_exception(str(traceback.format_exc()))
 
-def logprinter():
-	temp1 = " "*ControlClass.screen_width
+def logprinter(loop, _):
 	try:
-		while True:
-			ControlClass.screen.addstr(ControlClass.screen_height-12, 0, "- - -" + " "*(ControlClass.screen_width-5))
+		# - = Clipboard thread activator = -
+		# it would be necessary to go somewhere else, but okay, let him stay here for now
+		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
+			threading.Thread(target=clipboard_checker, daemon=True).start()
+		# - = - = - = - = - = - = - = - = -
 
-			# skip, do not re-render if it doesn't change - = - = - = - = -
-			if ControlClass.oldlog == ControlClass.log:
-				time.sleep(0.5)
-				continue
-			else:
-				ControlClass.oldlog = ControlClass.log.copy()
-			# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
+		to_render = "- - -\n"
 
-			# removes old text with help of spaces, as curses doesn't do that..
-			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-9,  0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-8,  0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, temp1)
-			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, temp1)
-			# # #
+		# skip, do not re-render if it doesn't change - = - = - = - = -
+		"""if ControlClass.oldlog == ControlClass.log:
+			time.sleep(0.5)
+			continue
+		else:
+			ControlClass.oldlog = ControlClass.log.copy()"""
+		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
-			ControlClass.screen.addstr(ControlClass.screen_height-11, 0, ControlClass.log[0])
-			ControlClass.screen.addstr(ControlClass.screen_height-10, 0, ControlClass.log[1])
-			ControlClass.screen.addstr(ControlClass.screen_height-9,  0, ControlClass.log[2])
-			ControlClass.screen.addstr(ControlClass.screen_height-8,  0, ControlClass.log[3])
-			ControlClass.screen.addstr(ControlClass.screen_height-7,  0, ControlClass.log[4])
-			ControlClass.screen.addstr(ControlClass.screen_height-6,  0, ControlClass.log[5])
-			ControlClass.screen.refresh()
-			time.sleep(0.2)
+		to_render += ControlClass.log[0] + "\n"
+		to_render += ControlClass.log[1] + "\n"
+		to_render += ControlClass.log[2] + "\n"
+		to_render += ControlClass.log[3] + "\n"
+		to_render += ControlClass.log[4] + "\n"
+		to_render += ControlClass.log[5]
+		log_widget.set_text(to_render)
+
+		loop.set_alarm_in(0.3, logprinter)
 	except:
 		exit_with_exception(traceback.format_exc())
 
 def delete_finished():
 	""" Removes all completed operations from ControlClass.queue_list with a loop """
-	#try:
-	temp1 = 0
-	temp2_new = ControlClass.queue_list.copy()
-	for item, item_content in ControlClass.queue_list.copy().items():
-		if item_content["status"] == "exists" or item_content["status"] == "finished":
-			del temp2_new[item]
-			if "meta_index" not in item_content:
-				temp1 = temp1 + 1
-	ControlClass.queue_list = temp2_new
-	logger.debug(ControlClass.queue_list)
-	return str(temp1)
-	#except:
-	#	exit_with_exception(traceback.format_exc())
+	try:
+		temp1 = 0
+		temp2_new = ControlClass.queue_list.copy()
+		for item, item_content in ControlClass.queue_list.copy().items():
+			if item_content["status"] == "exists" or item_content["status"] == "finished":
+				del temp2_new[item]
+				if "meta_index" not in item_content:
+					temp1 = temp1 + 1
+		ControlClass.queue_list = temp2_new
+		logger.debug(ControlClass.queue_list)
+		RenderClass.remove_all_widgets()
+		return str(temp1)
+	except:
+		exit_with_exception(traceback.format_exc())
 
 def clipboard_checker():
 	try:
@@ -661,14 +671,17 @@ def clipboard_checker():
 					logger.debug(new_clip)
 					journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
 			old_clip = new_clip
-			time.sleep(2)
+			time.sleep(1)
 	except:
 		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
 
 def exit_with_exception(text): # TODO connect to all functions
 	journal.error(text)
-	ControlClass.exit = True
-	ControlClass.exception = text
+	loop.stop()
+	print("An unknown error has occurred!\n")
+	time.sleep(0.5)
+	print(text)
+	sys.exit(1)
 
 def get_resolution_ffprobe(file):
 	""" Uses ffprobe to get video (even not fully downloaded) resolution """
@@ -695,28 +708,57 @@ ControlClass.ydl_opts = {
 	'no_color': True,
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
-	#'restrictfilenames': True
-	'trim_file_name': 150,
+	'trim_file_name': 120, # TODO
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
-	#'download_archive': 'downloaded_videos.txt', # TODO?
+	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO? 
 	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
 
-# Init screen
-curses.update_lines_cols()
-curses.initscr()
+RenderClass = RenderClass_base()
 
-# Init colors
-curses.start_color()
-curses.use_default_colors()
+RenderClass.red = urwid.AttrSpec('dark red', 'default')
+RenderClass.yellow = urwid.AttrSpec('brown', 'default')
+RenderClass.green = urwid.AttrSpec('dark green', 'default')
+RenderClass.cyan = urwid.AttrSpec('dark cyan', 'default')
 
-curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
-curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+class InputBox(urwid.Edit):
+	def keypress(self, size, key):
+		if key != 'enter':
+			return super(InputBox, self).keypress(size, key)
+		else:
+			InputHandler.input(self.get_edit_text())
+		#RenderClass.add_row("test")
+		#logger.debug(pprint.pformat(top_pile.contents))
+		self.set_edit_text("")
 
-# curses.raw() # TODO: ??? can simplify some points in the program
-# Start
-curses.wrapper(main)
+#processes_widget = urwid.Text("Initializing...")
+#lol = urwid.Text("lol")
+
+top_pile = urwid.Pile([])
+
+#logger.debug(pprint.pformat(top_pile.contents))
+#logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
+
+log_widget = urwid.Text("Initializing...")
+error_widget = urwid.Text("Initializing...")
+input_widget = InputBox("Enter URL > ")
+
+#fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+
+loop = urwid.MainLoop(fill)
+
+RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
+
+logger.debug(RenderClass.width)
+logger.debug(RenderClass.height)
+loop.set_alarm_in(0, render_tasks)
+loop.set_alarm_in(0, logprinter)
+loop.set_alarm_in(0, errorprinter)
+
+# for testing purposes?
+# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
+
+loop.run()
