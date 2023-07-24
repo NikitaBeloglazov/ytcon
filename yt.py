@@ -6,13 +6,10 @@ import logging
 import threading
 import traceback
 import pprint
-#import curses
 import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 # import notify2
-from colorama import init, Fore
-init()
 import yt_dlp
 
 # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
@@ -41,55 +38,9 @@ logger.debug('== DEBUG LOG FILE ==')
 logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
-def printraw(printraw_msg):
-	""" Outputs pretty-print json """
-	print(Fore.CYAN)
-	pprint.pprint(printraw_msg)
-	print(Fore.RESET)
-
-def name_shortener(name, symbols):
-	""" Shortens filenames so they fit in the console """
-	if len(name) < symbols:
-		return name
-	return name[0:symbols-3].strip() + "..."
-
-def divide_without_remainder(num):
-	"""
-	Division without remainder. Used for centering in the whitespace_stabilization function
-		print(divide(22))  # Out: [11, 11]
-		print(divide(23))  # Out: [11, 12]
-	"""
-	quotient = num // 2
-	remainder = num % 2
-	return [quotient, quotient + remainder]
-
-def whitespace_stabilization(text, needed_space):
-	if len(text) == needed_space:
-		return text
-	if len(text) > needed_space:
-		return text[0:needed_space-2] + ".."
-	white_space = needed_space - len(text)
-	white_space = divide_without_remainder(white_space)
-	return ' '*white_space[0] + text + ' '*white_space[1]
-
-def bettersize(text):
-	""" Rounds up file sizes """
-	if text == "NaN":
-		return "NaN"
-	if len(text.split(".")) == 1:
-		return text
-	return text.split(".")[0] + text[-3:-1] + text[-1]
-
-def progressbar_generator(percent):
-	""" Generates progress bar """
-	percent = int(percent.split(".")[0])
-	progress = round(percent / 4)
-	white_space = 25 - progress
-	return f"|{'█'*progress}{' '*white_space}|"
-
 class JournalClass:
 	def debug(self, msg):
-		""" For yt-dlp """
+		""" !!! For yt-dlp """
 		if msg.startswith('[debug] '):
 			logger.debug(msg)
 		else:
@@ -149,7 +100,7 @@ class ControlClass_base:
 
 class RenderClass_base:
 	def __init__(self):
-		pass
+		self.methods = self.MethodsClass()
 
 	def add_row(self, text):
 		top_pile.contents = top_pile.contents + [[urwid.Text(text), top_pile.options()],]
@@ -176,6 +127,51 @@ class RenderClass_base:
 		else:
 			# Return 0 for unsupported widget types (?)
 			return 0
+
+	class MethodsClass:
+		""" Minor methods mostly needed by render_tasks """
+		def __init__(self):
+			logger.debug("MethodsClass init")
+
+		def name_shortener(self, name, symbols):
+			""" Shortens filenames so they fit in the console """
+			if len(name) < symbols:
+				return name
+			return name[0:symbols-3].strip() + "..."
+
+		def bettersize(self, text):
+			""" Rounds up file sizes """
+			if text == "NaN":
+				return "NaN"
+			if len(text.split(".")) == 1:
+				return text
+			return text.split(".")[0] + text[-3:-1] + text[-1]
+
+		def divide_without_remainder(self, num):
+			"""
+			Division without remainder. Used for centering in the whitespace_stabilization function
+				print(divide(22))  # Out: [11, 11]
+				print(divide(23))  # Out: [11, 12]
+			"""
+			quotient = num // 2
+			remainder = num % 2
+			return [quotient, quotient + remainder]
+
+		def whitespace_stabilization(self, text, needed_space):
+			if len(text) == needed_space:
+				return text
+			if len(text) > needed_space:
+				return text[0:needed_space-2] + ".."
+			white_space = needed_space - len(text)
+			white_space = self.divide_without_remainder(white_space)
+			return ' '*white_space[0] + text + ' '*white_space[1]
+
+		def progressbar_generator(self, percent):
+			""" Generates progress bar """
+			percent = int(percent.split(".")[0])
+			progress = round(percent / 4)
+			white_space = 25 - progress
+			return f"|{'█'*progress}{' '*white_space}|"
 
 def hook(d):
 	try:
@@ -248,12 +244,6 @@ def hook(d):
 		d["info_dict"]["thumbnails"] = []
 		d["info_dict"]["subtitles"] = []
 		d["info_dict"]["fragments"] = []
-
-		# DEBUG
-		# os.system("clear")
-		# print(f"\b{ControlClass.progress} {progressbar_generator(ControlClass.progress)} {ControlClass.speed} {ControlClass.site} | {ControlClass.name}")
-		# printraw(d)
-		# time.sleep(20)
 
 		logger.debug(pprint.pformat(ControlClass.queue_list))
 		return None
@@ -402,8 +392,6 @@ class MapVariablesClass:
 map_variables = MapVariablesClass()
 
 def render_tasks(loop, user_data):
-	# for testing purposes
-	# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 	if not ControlClass.queue_list: # if ControlClass.queue_list == {}
 		RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
 	else:
@@ -411,8 +399,11 @@ def render_tasks(loop, user_data):
 		for _, i in ControlClass.queue_list.items():
 			if "meta_index" in i:
 				continue # just ignore meta-downloads
-			temp1 = f'{whitespace_stabilization(i["status_short_display"], 7)}{progressbar_generator(i["percent"])}{whitespace_stabilization(i["speed"], 13)}|{whitespace_stabilization(bettersize(i["downloaded"])+"/"+bettersize(i["size"]), 15)}| {whitespace_stabilization(i["eta"], 9)} | {whitespace_stabilization(i["site"], 7)} | {whitespace_stabilization(i["resolution"], 9)} | '
-			fileshortname = name_shortener(i["name"], RenderClass.width - len(temp1))
+
+			rcm = RenderClass.methods
+			ws = rcm.whitespace_stabilization
+			temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"])}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
+			fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
 			temp1 = temp1 + fileshortname
 			
 			if i["status"] == "waiting":
@@ -425,7 +416,6 @@ def render_tasks(loop, user_data):
 				RenderClass.edit_or_add_row(temp1, r)
 			
 			r = r+1
-		# stdscr.addstr(7, 0, str(ControlClass.queue_list))
 	loop.set_alarm_in(0.3, render_tasks)
 
 
@@ -499,19 +489,12 @@ class InputHandlerClass:
 				journal.info(f"[YTCON] {delete_finished()} item(s) removed from list!")
 
 			elif text == "logtest":
-				time.sleep(1)
 				logger.debug("[TEST] 1")
-				time.sleep(1)
 				journal.info("[TEST] 2")
-				time.sleep(1)
 				journal.warning("[TEST] 3")
-				time.sleep(1)
 				journal.error("[TEST] 4")
-				time.sleep(1)
 				journal.error("[TEST] 5", show=False)
-				time.sleep(1)
 				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
-				time.sleep(1)
 
 			elif text == "makecrash":
 				try:
@@ -521,6 +504,7 @@ class InputHandlerClass:
 
 			else:
 				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
+
 		except self.InputProcessed:
 			pass
 		except:
@@ -562,6 +546,7 @@ class InputHandlerClass:
 				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
 		else:
 			journal.error("[YTCON] failed to set clipboard status: input not recognized")
+
 InputHandler = InputHandlerClass()
 
 
@@ -574,11 +559,11 @@ def errorprinter(loop, user_data):
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - ="""
 		to_render = []
 		to_render.append("- - -\n")
-		# logic
+		# - = logic # TODO move to JournalClass?
 		if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
 			ControlClass.error_countdown = 0
 			journal.clear_errors()
-		#
+		# - = - =
 
 		if ControlClass.error_countdown != 0:
 			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
@@ -686,7 +671,7 @@ def clipboard_checker():
 					logger.debug(new_clip)
 					journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
 			old_clip = new_clip
-			time.sleep(2)
+			time.sleep(1)
 	except:
 		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
 
@@ -696,7 +681,7 @@ def exit_with_exception(text): # TODO connect to all functions
 	print("An unknown error has occurred!\n")
 	time.sleep(0.5)
 	print(text)
-	exit()
+	sys.exit(1)
 
 def get_resolution_ffprobe(file):
 	""" Uses ffprobe to get video (even not fully downloaded) resolution """
@@ -723,12 +708,11 @@ ControlClass.ydl_opts = {
 	'no_color': True,
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
-	#'restrictfilenames': True
 	'trim_file_name': 120, # TODO
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
-	#'download_archive': 'downloaded_videos.txt', # TODO?
+	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO? 
 	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
 
@@ -739,49 +723,18 @@ RenderClass.yellow = urwid.AttrSpec('brown', 'default')
 RenderClass.green = urwid.AttrSpec('dark green', 'default')
 RenderClass.cyan = urwid.AttrSpec('dark cyan', 'default')
 
-"""
-curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
-curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
-curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-"""
-
-"""
-def on_alarm(loop, user_data):
-	global counter
-	#print(user_data)
-	#counter += 1
-	number_widget.set_text(f"Counter: {counter}")
-	loop.set_alarm_in(0.3, on_alarm)
-"""
-
 class InputBox(urwid.Edit):
 	def keypress(self, size, key):
 		if key != 'enter':
 			return super(InputBox, self).keypress(size, key)
-		elif self.get_edit_text() == "clear":
-			journal.info(f"[clear] {delete_finished()} item(s) removed from list!") # TODO TEMPPPPP!!!!
 		else:
 			InputHandler.input(self.get_edit_text())
 		#RenderClass.add_row("test")
 		#logger.debug(pprint.pformat(top_pile.contents))
 		self.set_edit_text("")
 
-"""
-def calculate_widget_height(widget):
-	if isinstance(widget, urwid.Text):
-		# Возвращает количество строк текста в виджете
-		return len(widget.text.split('\n'))
-	elif isinstance(widget, urwid.Pile):
-		# Рекурсивно суммирует высоты виджетов внутри Pile-контейнера
-		return sum(calculate_widget_height(item[0]) for item in widget.contents)
-	else:
-		# Возвращаем 0 для неподдерживаемых типов виджетов
-		return 0
-"""
-
-processes_widget = urwid.Text("Initializing...")
-lol = urwid.Text("lol")
+#processes_widget = urwid.Text("Initializing...")
+#lol = urwid.Text("lol")
 
 top_pile = urwid.Pile([])
 
@@ -797,7 +750,6 @@ fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget,
 
 loop = urwid.MainLoop(fill)
 
-# ширина, высота # width height
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
 
 logger.debug(RenderClass.width)
@@ -805,5 +757,8 @@ logger.debug(RenderClass.height)
 loop.set_alarm_in(0, render_tasks)
 loop.set_alarm_in(0, logprinter)
 loop.set_alarm_in(0, errorprinter)
+
+# for testing purposes?
+# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 loop.run()
