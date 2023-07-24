@@ -428,86 +428,75 @@ def render_tasks(loop, user_data):
 		# stdscr.addstr(7, 0, str(ControlClass.queue_list))
 	loop.set_alarm_in(0.3, render_tasks)
 
-def input_url(stdscr):
-	while True:
+
+class InputHandlerClass:
+	"""
+		In the days of curses, this was a full-fledged widget tucked into one function,
+		but now it plays the role of just processing user input, another class is responsible for accepting
+	"""
+	class InputProcessed(Exception):
+		""" Dummy exception, when called means that the processing of this request is completed. """
+
+	def input(self, text):
+		""" Main input handler logic """
 		try:
-			# Create and setting window for text field
-			textwin = curses.newwin(1, ControlClass.screen_width, ControlClass.screen_height-1, 0)
-			textwin.addstr(0, 0, "Enter URL > ")
-
-			# Get user input
-			text = textwin.getstr(0, len("Enter URL > ")) # TODO: get_wch?? # or https://docs.python.org/3/library/curses.html#module-curses.textpad???
-			try:
-				text = text.decode('utf-8')
-			except UnicodeDecodeError:
-				journal.error("[YTCON] An encoding error occurred while entering the url. Please try again. Detailed information is written in debug.log.")
-				logger.debug("ERROR: ")
-				logger.debug(traceback.format_exc())
-				raise InputProcessed
-
-			# stdscr.addstr(height-2, 0, "You entered: " + text)
-			# stdscr.refresh()
+			original_text = text
+			text = text.lower()
 
 			if text == "":
 				# Force refreshing screen...
-				stdscr.refresh()
-				raise InputProcessed
+				loop.draw_screen()
+				raise self.InputProcessed
 
 			journal.info("")
-			journal.info("[input] " + text)
+			journal.info("[YTCON] [INPUT] " + original_text)
 
 			# - = Special mode handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			if text in ("sp", "specialmode"):
-				journal.info("[input] specialmode status: " + str(ControlClass.special_mode))
-				raise InputProcessed
+				journal.info("[YTCON] Specialmode status: " + str(ControlClass.special_mode))
+				raise self.InputProcessed
 
 			if text == "sp1":
-				text = "specialmode 1"
+				self.special_mode_status_set(True)
+				raise self.InputProcessed
 			elif text == "sp0":
-				text = "specialmode 0"
+				self.special_mode_status_set(False)
+				raise self.InputProcessed
 
-			if text.split()[0] == "specialmode" or text.split()[0] == "sp":
-				if text.split()[1] == "1" or text.split()[1].lower() == "true":
-					ControlClass.special_mode = True
-					ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-					journal.info("[YTCON] sp activated! now a different user agent will be used, and cookies will be retrieved from chromium")
-				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
-					ControlClass.special_mode = False
-					if "cookiesfrombrowser" in ControlClass.ydl_opts:
-						del ControlClass.ydl_opts["cookiesfrombrowser"]
-					journal.info("[YTCON] sp deactivated! now a default yt-dlp extractor settings will be used.")
+			if text.split()[0] in ("sp", "specialmode"):
+				if text.split()[1] == "1" or text.split()[1] == "true":
+					self.special_mode_status_set(True)
+				elif text.split()[1] == "0" or text.split()[1] == "false":
+					self.special_mode_status_set(False)
 				else:
-					journal.error("[YTCON] I do not understand you")
-				raise InputProcessed
+					journal.error("[YTCON] failed to set SP status: input not recognized")
+				raise self.InputProcessed
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			# - = Clipboard auto-paste status handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-			if text in ("cb", "clipboard"):
+			if text in ("cb", "clipboard", "clip"):
 				journal.info("[YTCON] Clipboard auto-paste status: " + str(ControlClass.clipboard_checker_state) + ", launched state: " + str(ControlClass.clipboard_checker_state_launched))
-				raise InputProcessed
+				raise self.InputProcessed
 
-			if text == "cb1":
-				text = "clipboard 1"
-			elif text == "cb0":
-				text = "clipboard 0"
+			if text == "cb1" or text == "clip1":
+				self.clipboard_status_set(True)
+				raise self.InputProcessed
+			elif text == "cb0" or text == "clip0":
+				self.clipboard_status_set(False)
+				raise self.InputProcessed
 
-			if text.split()[0] == "clipboard" or text.split()[0] == "cb":
-				if text.split()[1] == "1" or text.split()[1].lower() == "true":
-					if ControlClass.clipboard_checker_state == True:
-						journal.info("[YTCON] Already enabled.")
-					ControlClass.clipboard_checker_state = True
-				elif text.split()[1] == "0" or text.split()[1].lower() == "false":
-					if ControlClass.clipboard_checker_state == False:
-						journal.info("[YTCON] Already disabled.")
-					ControlClass.clipboard_checker_state = False
+			if text.split()[0] in ("cb", "clipboard", "clip"):
+				if text.split()[1] == "1" or text.split()[1] == "true":
+					self.clipboard_status_set(True)
+				elif text.split()[1] == "0" or text.split()[1] == "false":
+					self.clipboard_status_set(False)
 				else:
-					journal.error("[input] I do not understand you")
-				raise InputProcessed
+					journal.error("[YTCON] failed to set clipboard status: input not recognized")
+				raise self.InputProcessed
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			elif text in ("clear", "cls"):
 				journal.clear_errors()
-				temp1 = delete_finished()
-				journal.info(f"[clear] {temp1} item(s) removed from list!")
+				journal.info(f"[YTCON] {delete_finished()} item(s) removed from list!")
 
 			elif text == "logtest":
 				time.sleep(1)
@@ -531,14 +520,50 @@ def input_url(stdscr):
 					exit_with_exception(traceback.format_exc())
 
 			else:
-				threading.Thread(target=downloadd, args=(text,), daemon=True).start()
-		except InputProcessed:
+				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
+		except self.InputProcessed:
 			pass
 		except:
 			exit_with_exception(traceback.format_exc())
 
-class InputProcessed(Exception):
-	""" Dummy exception, when called means that the processing of this request is completed and need to start a new one. """
+	def special_mode_status_set(self, boool):
+		"""
+			special_mode_status_set(True) enables special mode,
+			special_mode_status_set(False) disables it
+		"""
+		if boool: # true
+			ControlClass.special_mode = True
+			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+		elif not boool: # false
+			ControlClass.special_mode = False
+			if "cookiesfrombrowser" in ControlClass.ydl_opts:
+				del ControlClass.ydl_opts["cookiesfrombrowser"]
+			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
+		else:
+			journal.warning("[YTCON] failed to set SP status: input not recognized")
+
+	def clipboard_status_set(self, boool):
+		"""
+			clipboard_status_set(True) enables clipboard auto-paste thread,
+			clipboard_status_set(False) disables it
+		"""
+		if boool: # true
+			if ControlClass.clipboard_checker_state == True:
+				journal.info("[YTCON] Already enabled.")
+			else:
+				ControlClass.clipboard_checker_state = True
+				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		elif not boool: # false
+			if ControlClass.clipboard_checker_state == False:
+				journal.info("[YTCON] Already disabled.")
+			else:
+				ControlClass.clipboard_checker_state = False
+				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		else:
+			journal.error("[YTCON] failed to set clipboard status: input not recognized")
+InputHandler = InputHandlerClass()
+
 
 def errorprinter(loop, user_data):
 	try:
@@ -590,6 +615,12 @@ def errorprinter(loop, user_data):
 
 def logprinter(loop, _):
 	try:
+		# - = Clipboard thread activator = -
+		# it would be necessary to go somewhere else, but okay, let him stay here for now
+		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
+			threading.Thread(target=clipboard_checker, daemon=True).start()
+		# - = - = - = - = - = - = - = - = -
+
 		to_render = "- - -\n"
 
 		# skip, do not re-render if it doesn't change - = - = - = - = -
@@ -693,7 +724,7 @@ ControlClass.ydl_opts = {
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
 	#'restrictfilenames': True
-	'trim_file_name': 60, # TODO
+	'trim_file_name': 120, # TODO
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
@@ -731,7 +762,7 @@ class InputBox(urwid.Edit):
 		elif self.get_edit_text() == "clear":
 			journal.info(f"[clear] {delete_finished()} item(s) removed from list!") # TODO TEMPPPPP!!!!
 		else:
-			threading.Thread(target=downloadd, args=(self.get_edit_text(),), daemon=True).start()
+			InputHandler.input(self.get_edit_text())
 		#RenderClass.add_row("test")
 		#logger.debug(pprint.pformat(top_pile.contents))
 		self.set_edit_text("")
