@@ -601,7 +601,7 @@ class InputHandlerClass:
 				ControlClass.clipboard_checker_state = True
 				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
 		elif not boool: # false
-			if ControlClass.clipboard_checker_state: # == False:
+			if not ControlClass.clipboard_checker_state: # == False:
 				journal.info("[YTCON] Already disabled.")
 			else:
 				ControlClass.clipboard_checker_state = False
