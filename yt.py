@@ -434,31 +434,34 @@ def render_tasks(loop, _):
 	Graphic part of ytcon - draws a colored video queue from ControlClass.queue_list
 	Shows names, extractors, ETAs, generates progress bars, etc.
 	"""
-	if not ControlClass.queue_list: # if ControlClass.queue_list == {}
-		RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
-	else:
-		r = 0
-		for _, i in ControlClass.queue_list.items():
-			if "meta_index" in i:
-				continue # just ignore meta-downloads
+	try:
+		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
+			RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
+		else:
+			r = 0
+			for _, i in ControlClass.queue_list.items():
+				if "meta_index" in i:
+					continue # just ignore meta-downloads
 
-			rcm = RenderClass.methods
-			ws = rcm.whitespace_stabilization
-			temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"])}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
-			fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
-			temp1 = temp1 + fileshortname
+				rcm = RenderClass.methods
+				ws = rcm.whitespace_stabilization
+				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"])}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
+				fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
+				temp1 = temp1 + fileshortname
 
-			if i["status"] == "waiting":
-				RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
-			elif i["status"] == "exists":
-				RenderClass.edit_or_add_row((RenderClass.yellow, temp1), r)
-			elif i["status"] == "finished":
-				RenderClass.edit_or_add_row((RenderClass.green, temp1), r)
-			else:
-				RenderClass.edit_or_add_row(temp1, r)
+				if i["status"] == "waiting":
+					RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
+				elif i["status"] == "exists":
+					RenderClass.edit_or_add_row((RenderClass.yellow, temp1), r)
+				elif i["status"] == "finished":
+					RenderClass.edit_or_add_row((RenderClass.green, temp1), r)
+				else:
+					RenderClass.edit_or_add_row(temp1, r)
 
-			r = r+1
-	loop.set_alarm_in(0.3, render_tasks)
+				r = r+1
+		loop.set_alarm_in(0.3, render_tasks)
+	except:
+		exit_with_exception(traceback.format_exc())
 
 
 class InputHandlerClass:
@@ -725,7 +728,7 @@ def clipboard_checker():
 		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
 		return None
 
-def exit_with_exception(text): # TODO connect to all functions
+def exit_with_exception(text):
 	""" Terminates the pseudo-graphics API and prints an error message, then exits the program """
 	journal.error(text)
 	loop.stop()
