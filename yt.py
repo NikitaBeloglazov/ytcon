@@ -39,6 +39,11 @@ logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 class JournalClass:
+	"""
+	A log wrapper for yt-dlp and a logging class for the whole application.
+	info, warning and error will be added to the logs field. (logprinter())
+	For debug messages it is highly recommended to use logger.debug instead of journal
+	"""
 	def debug(self, msg):
 		""" !!! For yt-dlp """
 		if msg.startswith('[debug] '):
@@ -48,14 +53,17 @@ class JournalClass:
 
 	# show: show in logs field
 	def info(self, msg, show=True):
+		""" info log level """
 		logger.info(msg)
 		if show:
 			self.add_to_logs_field(msg)
 	def warning(self, msg, show=True):
+		""" warning log level """
 		logger.warning(msg)
 		if show:
 			self.add_to_logs_field(msg)
 	def error(self, msg, show=True):
+		""" error log level. The error message will also be added to the errorprinter() """
 		logger.error(msg)
 		ControlClass.last_error = msg
 		ControlClass.error_countdown = 99
@@ -63,10 +71,12 @@ class JournalClass:
 			self.add_to_logs_field(msg)
 
 	def clear_errors(self):
+		""" Clear the errorprinter() field """
 		ControlClass.last_error = "No errors:)"
 		ControlClass.error_countdown = 0
 
 	def add_to_logs_field(self, msg):
+		""" there logs will be added to the logprinter() field. """
 		if "[download]" in msg and "%" in msg and "at" in msg:
 			# awoid logging such as "[download] 100.0% of   52.05MiB at    3.07MiB/s ETA 00:00"
 			return None
@@ -84,7 +94,11 @@ class JournalClass:
 journal = JournalClass()
 
 class ControlClass_base:
+	""" It stores information about the download queue and some information that must be passed through several functions. """
 	def __init__(self):
+		self.queue_list = {}
+		self.ydl_opts = {}
+
 		self.last_error = "No errors:)"
 		self.error_countdown = 0
 		self.prev_last_error = ""
@@ -99,34 +113,44 @@ class ControlClass_base:
 		self.clipboard_checker_state_launched = False
 
 class RenderClass_base:
+	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
 	def __init__(self):
 		self.methods = self.MethodsClass()
 
+		# Init colors
+		self.red = urwid.AttrSpec('dark red', 'default')
+		self.yellow = urwid.AttrSpec('brown', 'default')
+		self.green = urwid.AttrSpec('dark green', 'default')
+		self.cyan = urwid.AttrSpec('dark cyan', 'default')
+
 	def add_row(self, text):
+		""" Add an additional widget to top_pile for drawing a new task """
 		top_pile.contents = top_pile.contents + [[urwid.Text(text), top_pile.options()],]
-		return None
 
 	def edit_or_add_row(self, text, pos):
+		""" Edit a widget with a specific serial number, and if there is none, then create a new one """
 		if pos > self.calculate_widget_height(top_pile) - 1:
 			self.add_row(text)
 		else:
 			top_pile.contents[pos][0].set_text(text)
-		return None
 
 	def remove_all_widgets(self):
+		"""
+		If there are obsolete widgets in top_pile that will not be changed, they are considered garbage,
+		for this you need to call remove_all_widgets, all widgets, including unnecessary old ones, 
+		will be removed, but will be recreated if needed
+		"""
 		top_pile.contents = []
-		return None
 
 	def calculate_widget_height(self, widget):
+		""" (recursively) Counts how many rows the widget occupies in height """
 		if isinstance(widget, urwid.Text):
 			# Returns the number of lines of text in the widget
 			return len(widget.text.split('\n'))
-		elif isinstance(widget, urwid.Pile):
+		if isinstance(widget, urwid.Pile):
 			# Recursively sums the heights of widgets inside a urwid.Pile container
 			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
-		else:
-			# Return 0 for unsupported widget types (?)
-			return 0
+		return 0 # Return 0 for unsupported widget types (?)
 
 	class MethodsClass:
 		""" Minor methods mostly needed by render_tasks """
@@ -158,6 +182,11 @@ class RenderClass_base:
 			return [quotient, quotient + remainder]
 
 		def whitespace_stabilization(self, text, needed_space):
+			""" Reserves space for a certain number of spaces, and centers the information within a line,
+			using divide_without_remainder to count the free space.
+
+			If the free space cannot be divided entirely, then the text is centered slightly to the left
+			"""
 			if len(text) == needed_space:
 				return text
 			if len(text) > needed_space:
@@ -174,6 +203,8 @@ class RenderClass_base:
 			return f"|{'█'*progress}{' '*white_space}|"
 
 def hook(d):
+	""" A hook that is called every time by yt-dlp when the state of the task changes (example percent changed),
+	and the hook writes the necessary information to the class in order to draw it later """
 	try:
 		# - = - = - log spam filter - = - = - = - =
 		if "automatic_captions" in d["info_dict"]:
@@ -193,7 +224,7 @@ def hook(d):
 		# - = - resolution detector - = - = - = - = - = - = - = - = - = -
 		if ControlClass.queue_list[indexx]["resolution"].find("???") > -1 and (ControlClass.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and ControlClass.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
 			# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
-			logger.debug("DOWNBYTES: " + str(d["downloaded_bytes"]))
+			logger.debug("DOWNBYTES: %s", str(d["downloaded_bytes"]))
 			temp1 = get_resolution_ffprobe(d["tmpfilename"])
 			temp2 = str(ControlClass.queue_list[indexx].get("resolution_detection_tries", 0)+1)
 
@@ -208,7 +239,7 @@ def hook(d):
 
 		ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
 		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
-			return None
+			raise InputHandler.InputProcessed
 		ControlClass.queue_list[indexx]["status"] = d["status"]
 
 		if int(d["_percent_str"].strip().split(".")[0]) > 100:
@@ -246,15 +277,22 @@ def hook(d):
 		d["info_dict"]["fragments"] = []
 
 		logger.debug(pprint.pformat(ControlClass.queue_list))
-		return None
+	except InputHandler.InputProcessed:
+		pass
 	except:
 		exit_with_exception(traceback.format_exc())
 
 def downloadd(url):
+	""" 
+	The main component of ytcon, this class sets the basic parameters for the video,
+	composes the title and starts downloading.
+
+	For each link one thread (exception: playlists)
+	"""
 	try:
 		if url in ControlClass.queue_list:
 			if ControlClass.queue_list[url]["status"] not in ("exists", "finished"):
-				journal.error(f"[YTCON] Video link \"{name_shortener(url, 40)}\" is already downloading!")
+				journal.error(f"[YTCON] Video link \"{RenderClass.methods.name_shortener(url, 40)}\" is already downloading!")
 				return None
 
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
@@ -360,10 +398,10 @@ class MapVariablesClass:
 				ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
 				self.map_variables(temp1_index, infolist, i, filename)
 			return temp1_index
-		else:
-			temp1_index = infolist["original_url"]
-			self.map_variables(temp1_index, infolist, infolist, filename)
-			return temp1_index
+		# else:
+		temp1_index = infolist["original_url"]
+		self.map_variables(temp1_index, infolist, infolist, filename)
+		return temp1_index
 
 	def map_variables(self, temp1_index, infolist, i, filename):
 		""" Main parameter assigner. In some cases, it can be used in a loop """
@@ -391,7 +429,11 @@ class MapVariablesClass:
 
 map_variables = MapVariablesClass()
 
-def render_tasks(loop, user_data):
+def render_tasks(loop, _):
+	"""
+	Graphic part of ytcon - draws a colored video queue from ControlClass.queue_list
+	Shows names, extractors, ETAs, generates progress bars, etc.
+	"""
 	if not ControlClass.queue_list: # if ControlClass.queue_list == {}
 		RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
 	else:
@@ -405,7 +447,7 @@ def render_tasks(loop, user_data):
 			temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"])}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
 			fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
 			temp1 = temp1 + fileshortname
-			
+
 			if i["status"] == "waiting":
 				RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
 			elif i["status"] == "exists":
@@ -414,7 +456,7 @@ def render_tasks(loop, user_data):
 				RenderClass.edit_or_add_row((RenderClass.green, temp1), r)
 			else:
 				RenderClass.edit_or_add_row(temp1, r)
-			
+
 			r = r+1
 	loop.set_alarm_in(0.3, render_tasks)
 
@@ -449,7 +491,7 @@ class InputHandlerClass:
 			if text == "sp1":
 				self.special_mode_status_set(True)
 				raise self.InputProcessed
-			elif text == "sp0":
+			if text == "sp0":
 				self.special_mode_status_set(False)
 				raise self.InputProcessed
 
@@ -467,10 +509,10 @@ class InputHandlerClass:
 				journal.info("[YTCON] Clipboard auto-paste status: " + str(ControlClass.clipboard_checker_state) + ", launched state: " + str(ControlClass.clipboard_checker_state_launched))
 				raise self.InputProcessed
 
-			if text == "cb1" or text == "clip1":
+			if text in ("cb1", "clip1"):
 				self.clipboard_status_set(True)
 				raise self.InputProcessed
-			elif text == "cb0" or text == "clip0":
+			if text in ("cb0", "clip0"):
 				self.clipboard_status_set(False)
 				raise self.InputProcessed
 
@@ -484,7 +526,7 @@ class InputHandlerClass:
 				raise self.InputProcessed
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
-			elif text in ("clear", "cls"):
+			if text in ("clear", "cls"):
 				journal.clear_errors()
 				journal.info(f"[YTCON] {delete_finished()} item(s) removed from list!")
 
@@ -533,13 +575,13 @@ class InputHandlerClass:
 			clipboard_status_set(False) disables it
 		"""
 		if boool: # true
-			if ControlClass.clipboard_checker_state == True:
+			if ControlClass.clipboard_checker_state: # == True
 				journal.info("[YTCON] Already enabled.")
 			else:
 				ControlClass.clipboard_checker_state = True
 				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
 		elif not boool: # false
-			if ControlClass.clipboard_checker_state == False:
+			if ControlClass.clipboard_checker_state: # == False:
 				journal.info("[YTCON] Already disabled.")
 			else:
 				ControlClass.clipboard_checker_state = False
@@ -550,13 +592,14 @@ class InputHandlerClass:
 InputHandler = InputHandlerClass()
 
 
-def errorprinter(loop, user_data):
+def errorprinter(loop, _):
+	""" Draws errors in error_widget in red, after some time (specified in the timer) removes error messages """
 	try:
-		"""# - = skip, do not re-render if there is no errors - = - = - = - = -
-		if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
-			time.sleep(0.6)
-			continue
-		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = - ="""
+		# - = skip, do not re-render if there is no errors - = - = - = - = -
+		# if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
+		#	time.sleep(0.6)
+		#	continue
+		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = -
 		to_render = []
 		to_render.append("- - -\n")
 		# - = logic # TODO move to JournalClass?
@@ -566,7 +609,7 @@ def errorprinter(loop, user_data):
 		# - = - =
 
 		if ControlClass.error_countdown != 0:
-			error_text_generator = "[" + whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
+			error_text_generator = "[" + RenderClass.methods.whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
 		else:
 			error_text_generator = str(ControlClass.last_error)
 
@@ -599,21 +642,22 @@ def errorprinter(loop, user_data):
 		exit_with_exception(str(traceback.format_exc()))
 
 def logprinter(loop, _):
+	""" Prints the last 6 lines of logs in log_widget """
 	try:
 		# - = Clipboard thread activator = -
 		# it would be necessary to go somewhere else, but okay, let him stay here for now
-		if ControlClass.clipboard_checker_state == True and ControlClass.clipboard_checker_state_launched is not True:
+		if ControlClass.clipboard_checker_state and ControlClass.clipboard_checker_state_launched is not True:
 			threading.Thread(target=clipboard_checker, daemon=True).start()
 		# - = - = - = - = - = - = - = - = -
 
 		to_render = "- - -\n"
 
 		# skip, do not re-render if it doesn't change - = - = - = - = -
-		"""if ControlClass.oldlog == ControlClass.log:
-			time.sleep(0.5)
-			continue
-		else:
-			ControlClass.oldlog = ControlClass.log.copy()"""
+		# if ControlClass.oldlog == ControlClass.log:
+		#	time.sleep(0.5)
+		#	continue
+		# else:
+		#	ControlClass.oldlog = ControlClass.log.copy()
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
 		to_render += ControlClass.log[0] + "\n"
@@ -644,8 +688,13 @@ def delete_finished():
 		return str(temp1)
 	except:
 		exit_with_exception(traceback.format_exc())
+	return None
 
 def clipboard_checker():
+	"""
+	Checks the clipboard for new entries against old ones.
+	If it sees new material on the clipboard, it will check whether this is a site, if it detects site, download starts
+	"""
 	try:
 		ControlClass.clipboard_checker_state_launched = True
 		journal.info("[YTCON] Clipboard auto-paste is ON.")
@@ -657,7 +706,7 @@ def clipboard_checker():
 		old_clip = new_clip
 
 		while True:
-			if ControlClass.clipboard_checker_state == False:
+			if ControlClass.clipboard_checker_state is False:
 				ControlClass.clipboard_checker_state_launched = False
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
@@ -674,8 +723,10 @@ def clipboard_checker():
 			time.sleep(1)
 	except:
 		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
+		return None
 
 def exit_with_exception(text): # TODO connect to all functions
+	""" Terminates the pseudo-graphics API and prints an error message, then exits the program """
 	journal.error(text)
 	loop.stop()
 	print("An unknown error has occurred!\n")
@@ -700,7 +751,6 @@ def get_resolution_ffprobe(file):
 
 # - = - = -
 ControlClass = ControlClass_base()
-ControlClass.queue_list = {}
 
 ControlClass.ydl_opts = {
 	'logger': journal,
@@ -712,26 +762,22 @@ ControlClass.ydl_opts = {
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
-	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO? 
+	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
 
 RenderClass = RenderClass_base()
 
-RenderClass.red = urwid.AttrSpec('dark red', 'default')
-RenderClass.yellow = urwid.AttrSpec('brown', 'default')
-RenderClass.green = urwid.AttrSpec('dark green', 'default')
-RenderClass.cyan = urwid.AttrSpec('dark cyan', 'default')
-
 class InputBox(urwid.Edit):
+	""" TODO """ # TODO
 	def keypress(self, size, key):
 		if key != 'enter':
-			return super(InputBox, self).keypress(size, key)
-		else:
-			InputHandler.input(self.get_edit_text())
+			return super().keypress(size, key)
+		InputHandler.input(self.get_edit_text())
 		#RenderClass.add_row("test")
 		#logger.debug(pprint.pformat(top_pile.contents))
 		self.set_edit_text("")
+		return None
 
 #processes_widget = urwid.Text("Initializing...")
 #lol = urwid.Text("lol")
