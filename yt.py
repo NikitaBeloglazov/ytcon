@@ -64,11 +64,15 @@ class JournalClass:
 			self.add_to_logs_field(msg)
 	def error(self, msg, show=True):
 		""" error log level. The error message will also be added to the errorprinter() """
+		if msg == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
+			return None # Outdated: does not appear in yt-dlp on python3.11
+
 		logger.error(msg)
 		ControlClass.last_error = msg
 		ControlClass.error_countdown = 99
 		if show:
 			self.add_to_logs_field(msg)
+		return None
 
 	def clear_errors(self):
 		""" Clear the errorprinter() field """
@@ -605,11 +609,6 @@ def errorprinter(loop, _):
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = -
 		to_render = []
 		to_render.append("- - -\n")
-		# - = logic # TODO move to JournalClass?
-		if ControlClass.last_error == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
-			ControlClass.error_countdown = 0
-			journal.clear_errors()
-		# - = - =
 
 		if ControlClass.error_countdown != 0:
 			error_text_generator = "[" + RenderClass.methods.whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
