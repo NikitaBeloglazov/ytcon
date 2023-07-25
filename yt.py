@@ -470,13 +470,26 @@ def render_tasks(loop, _):
 
 class InputHandlerClass:
 	"""
-		In the days of curses, this was a full-fledged widget tucked into one function,
-		but now it plays the role of just processing user input, another class is responsible for accepting
+		Class for processing user input.
+		Contains a modified Urwid.edit widget and functions for processing commands and URLs
 	"""
+	class InputBox(urwid.Edit):
+		""" 
+			A modified urwid.Edit Widget.
+			If the user presses Enter, it collects text and sent text to input_handler,
+			and after that is it cleans the input field
+		""" 
+		def keypress(self, size, key): # TODO alt key handler?
+			if key != 'enter':
+				return super().keypress(size, key)
+			InputHandler.input_handler(self.get_edit_text())
+			self.set_edit_text("")
+			return None
+
 	class InputProcessed(Exception):
 		""" Dummy exception, when called means that the processing of this request is completed. """
 
-	def input(self, text):
+	def input_handler(self, text):
 		""" Main input handler logic """
 		try:
 			original_text = text
@@ -770,17 +783,6 @@ ControlClass.ydl_opts = {
 
 RenderClass = RenderClass_base()
 
-class InputBox(urwid.Edit):
-	""" TODO """ # TODO
-	def keypress(self, size, key):
-		if key != 'enter':
-			return super().keypress(size, key)
-		InputHandler.input(self.get_edit_text())
-		#RenderClass.add_row("test")
-		#logger.debug(pprint.pformat(top_pile.contents))
-		self.set_edit_text("")
-		return None
-
 #processes_widget = urwid.Text("Initializing...")
 #lol = urwid.Text("lol")
 
@@ -791,7 +793,7 @@ top_pile = urwid.Pile([])
 
 log_widget = urwid.Text("Initializing...")
 error_widget = urwid.Text("Initializing...")
-input_widget = InputBox("Enter URL > ")
+input_widget = InputHandler.InputBox("Enter URL > ")
 
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
