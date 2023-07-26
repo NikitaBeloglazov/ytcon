@@ -199,11 +199,13 @@ class RenderClass_base:
 			white_space = self.divide_without_remainder(white_space)
 			return ' '*white_space[0] + text + ' '*white_space[1]
 
-		def progressbar_generator(self, percent):
+		def progressbar_generator(self, percent, error=False):
 			""" Generates progress bar """
 			percent = int(percent.split(".")[0])
 			progress = round(percent / 4)
 			white_space = 25 - progress
+			if error:
+				return f"| {'='*(white_space-2)} |"
 			return f"|{'█'*progress}{' '*white_space}|"
 
 def hook(d):
@@ -329,11 +331,22 @@ def downloadd(url):
 				return None
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
-			# - Name fiter + assemble - = - = - = - = - = - = - = - = - = - = -
+			# - Name fiter + assemble - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"].replace("&", "and")) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
 			temp1 = " ".join(temp1.removesuffix(" 1").split()) # remove space duplicates and remove 1 in the end because for some reason yt-dlp adds it on its own
-			filename = f'{temp1} [{infolist["id"].removesuffix("-1")}].{infolist["ext"]}'
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			id_in_filename = infolist["id"].removesuffix("-1")
+			filename = f'{temp1} [{id_in_filename}].{infolist["ext"]}'
+
+			# Name too long handler (https://github.com/ytdl-org/youtube-dl/issues/29912 and more more more issues)
+			if len(filename.encode('utf-8')) > 254:
+				# ^^^^^^^^^^^^^^^^^^^^^^^ counting bytes in filename
+				logger.debug("ERROR: FILENAME MORE THAN 255 BYTES. SHORTING...")
+				while len(filename.encode('utf-8')) > 254:
+					temp1 = " ".join(temp1.split()[:-1]) # remove 1 last word
+					filename = f'{temp1} [{id_in_filename}].{infolist["ext"]}'
+					logger.debug(filename)
+					logger.debug(len(filename.encode('utf-8')))
+			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			# Check if file exists
 			exists = os.path.exists(filename)
@@ -365,25 +378,32 @@ def downloadd(url):
 
 			with yt_dlp.YoutubeDL(ControlClass.ydl_opts | {"outtmpl": filename}) as ydl2:
 				logger.debug(ydl2.download(url))
+				if ControlClass.last_error.find("[Errno 36] File name too long") > -1:
+					raise yt_dlp.utils.DownloadError(ControlClass.last_error)
 			# - = Mark meta as finished = -
 			if "meta_index" in ControlClass.queue_list[infolist["original_url"]]:
 				ControlClass.queue_list[infolist["original_url"]]["status"] = "finished"
 
 	except yt_dlp.utils.DownloadError as e:
 		journal.error(str(e), show=False)
+		map_variables.mark_as_error(url)
 		return None
 	except:
 		exit_with_exception(traceback.format_exc())
 
 	# - = - = - = [Post-processing] = - = - = - #
-	if ControlClass.queue_list[temp1_index]["status"] == "exists":
-		return None # skip post-process if file already exists
-	# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
-	os.utime(ControlClass.queue_list[temp1_index]["file"])
+	try:
+		if ControlClass.queue_list[temp1_index]["status"] == "exists":
+			return None # skip post-process if file already exists
+		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
+		os.utime(ControlClass.queue_list[temp1_index]["file"])
 
-	# Remove file after downloading for testing purposes
-	# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
-	# os.remove(ControlClass.queue_list[temp1_index]["file"])
+		# Remove file after downloading for testing purposes
+		# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
+		# os.remove(ControlClass.queue_list[temp1_index]["file"])
+	except:
+		exit_with_exception(traceback.format_exc())
+
 	return None
 
 class MapVariablesClass:
@@ -431,6 +451,16 @@ class MapVariablesClass:
 		ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
 		ControlClass.queue_list[temp1_index]["file"] = filename
 
+	def mark_as_error(self, url):
+		ControlClass.queue_list[url]["status"] = "error"
+		if "multiple_formats" in ControlClass.queue_list[url]:
+			for i in url["formats"]:
+				temp1_index = url + ":" + i
+				ControlClass.queue_list[temp1_index]["status"] = "error"
+				ControlClass.queue_list[temp1_index]["status_short_display"] = "Error"
+		else:
+			ControlClass.queue_list[url]["status_short_display"] = "Error"
+
 map_variables = MapVariablesClass()
 
 def render_tasks(loop, _):
@@ -449,12 +479,18 @@ def render_tasks(loop, _):
 
 				rcm = RenderClass.methods
 				ws = rcm.whitespace_stabilization
-				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"])}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
+				if i["status"] == "error":
+					errorr = True
+				else:
+					errorr = False
+				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"], errorr)}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
 				fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
 				temp1 = temp1 + fileshortname
 
 				if i["status"] == "waiting":
 					RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
+				elif i["status"] == "error":
+					RenderClass.edit_or_add_row((RenderClass.red, temp1), r)
 				elif i["status"] == "exists":
 					RenderClass.edit_or_add_row((RenderClass.yellow, temp1), r)
 				elif i["status"] == "finished":
@@ -773,7 +809,6 @@ ControlClass.ydl_opts = {
 	'no_color': True,
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
-	'trim_file_name': 120, # TODO
 	'retries': 20,
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
