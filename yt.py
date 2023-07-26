@@ -219,6 +219,8 @@ def hook(d):
 			del d["info_dict"]["formats"]
 		if "thumbnails" in d["info_dict"]:
 			del d["info_dict"]["thumbnails"]
+		if "heatmap" in d["info_dict"]:
+			del d["info_dict"]["heatmap"]
 		# - = - = - = - = - = - = - = - = - = - = -
 
 		logger.debug(pprint.pformat(d))
@@ -319,6 +321,8 @@ def downloadd(url):
 				del infolist["formats"]
 			if "thumbnails" in infolist:
 				del infolist["thumbnails"]
+			if "heatmap" in infolist:
+				del infolist["heatmap"]
 			logger.debug(pprint.pformat(infolist))
 			# - = - = - = - = - = - = - = - = - = - = -
 
@@ -452,14 +456,16 @@ class MapVariablesClass:
 		ControlClass.queue_list[temp1_index]["file"] = filename
 
 	def mark_as_error(self, url):
-		ControlClass.queue_list[url]["status"] = "error"
-		if "multiple_formats" in ControlClass.queue_list[url]:
-			for i in url["formats"]:
-				temp1_index = url + ":" + i
-				ControlClass.queue_list[temp1_index]["status"] = "error"
-				ControlClass.queue_list[temp1_index]["status_short_display"] = "Error"
-		else:
-			ControlClass.queue_list[url]["status_short_display"] = "Error"
+		""" Change the status of the downloaded link to Error if such link exists """
+		if url in ControlClass.queue_list:
+			ControlClass.queue_list[url]["status"] = "error"
+			if "multiple_formats" in ControlClass.queue_list[url]:
+				for i in url["formats"]:
+					temp1_index = url + ":" + i
+					ControlClass.queue_list[temp1_index]["status"] = "error"
+					ControlClass.queue_list[temp1_index]["status_short_display"] = "Error"
+			else:
+				ControlClass.queue_list[url]["status_short_display"] = "Error"
 
 map_variables = MapVariablesClass()
 
@@ -514,7 +520,7 @@ class InputHandlerClass:
 			A modified urwid.Edit Widget.
 			If the user presses Enter, it collects text and sent text to input_handler,
 			and after that is it cleans the input field
-		""" 
+		"""
 		def keypress(self, size, key): # TODO alt key handler?
 			if key != 'enter':
 				return super().keypress(size, key)
@@ -695,12 +701,6 @@ def errorprinter(loop, _):
 def logprinter(loop, _):
 	""" Prints the last 6 lines of logs in log_widget """
 	try:
-		# - = Clipboard thread activator = -
-		# it would be necessary to go somewhere else, but okay, let him stay here for now
-		if ControlClass.clipboard_checker_state and ControlClass.clipboard_checker_state_launched is not True:
-			threading.Thread(target=clipboard_checker, daemon=True).start()
-		# - = - = - = - = - = - = - = - = -
-
 		to_render = "- - -\n"
 
 		# skip, do not re-render if it doesn't change - = - = - = - = -
@@ -722,6 +722,29 @@ def logprinter(loop, _):
 		loop.set_alarm_in(0.3, logprinter)
 	except:
 		exit_with_exception(traceback.format_exc())
+
+def tick_handler(loop, _):
+	""" It just checks some conditions every few seconds and executes them. Not responsible for rendering. """
+
+	# - = Clipboard thread activator = -
+	if ControlClass.clipboard_checker_state and ControlClass.clipboard_checker_state_launched is not True:
+		threading.Thread(target=clipboard_checker, daemon=True).start()
+	# - = - = - = - = - = - = - = - = -
+
+	# - = - = - = - = - = - = - = - = -
+	# The error handler, if it sees ControlClass.exit = True,
+	# then exits the program commenting this with the text from ControlClass.exception.
+	# The parent function of such actions: exit_with_exception()
+	if ControlClass.exit is True:
+		loop.stop()
+		print("An unknown error has occurred!\n")
+		time.sleep(0.5)
+		print(ControlClass.exception)
+		sys.exit(1)
+	# - = - = - = - = - = - = - = - = -
+
+	# - =
+	loop.set_alarm_in(0.3, tick_handler)
 
 def delete_finished():
 	""" Removes all completed operations from ControlClass.queue_list with a loop """
@@ -779,11 +802,8 @@ def clipboard_checker():
 def exit_with_exception(text):
 	""" Terminates the pseudo-graphics API and prints an error message, then exits the program """
 	journal.error(text)
-	loop.stop()
-	print("An unknown error has occurred!\n")
-	time.sleep(0.5)
-	print(text)
-	sys.exit(1)
+	ControlClass.exit = True
+	ControlClass.exception = text
 
 def get_resolution_ffprobe(file):
 	""" Uses ffprobe to get video (even not fully downloaded) resolution """
@@ -842,6 +862,7 @@ logger.debug(RenderClass.height)
 loop.set_alarm_in(0, render_tasks)
 loop.set_alarm_in(0, logprinter)
 loop.set_alarm_in(0, errorprinter)
+loop.set_alarm_in(0, tick_handler)
 
 # for testing purposes?
 # threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
