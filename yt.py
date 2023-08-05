@@ -120,6 +120,7 @@ class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
 	def __init__(self):
 		self.methods = self.MethodsClass()
+		self.settings_show = False
 
 		# Init colors
 		self.red = urwid.AttrSpec('dark red', 'default')
@@ -606,6 +607,11 @@ class InputHandlerClass:
 				except:
 					exit_with_exception(traceback.format_exc())
 
+			elif text == "set 0":
+				RenderClass.settings_show = False
+			elif text == "set 1":
+				RenderClass.settings_show = True
+
 			else:
 				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
 
@@ -743,6 +749,19 @@ def tick_handler(loop, _):
 		sys.exit(1)
 	# - = - = - = - = - = - = - = - = -
 
+	# - = - = - = - = - = - = - = - = -
+	if RenderClass.settings_show is True and loop.widget is not settings_widget:
+		try:
+			loop.widget = settings_widget
+		except:
+			exit_with_exception(traceback.format_exc())
+	if RenderClass.settings_show is False and loop.widget is not main_widget:
+		try:
+			loop.widget = main_widget
+		except:
+			exit_with_exception(traceback.format_exc())
+	# - = - = - = - = - = - = - = - = -
+
 	# - =
 	loop.set_alarm_in(0.3, tick_handler)
 
@@ -851,9 +870,69 @@ error_widget = urwid.Text("Initializing...")
 input_widget = InputHandler.InputBox("Enter URL > ")
 
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
-fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+main_widget = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 
-loop = urwid.MainLoop(fill)
+# - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = 
+
+def on_checkbox_change(checkbox, state, user_data=None):
+	if state:
+		status_text.set_text("CheckBox включен")
+	else:
+		status_text.set_text("CheckBox выключен")
+
+def exit_settings_call(_):
+	RenderClass.settings_show = False
+
+# Создаем CheckBox для каждой опции настроек
+checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=on_checkbox_change)
+checkbox2 = urwid.CheckBox("Special mode", on_state_change=on_checkbox_change)
+checkbox3 = urwid.CheckBox("Delete after download", on_state_change=on_checkbox_change)
+checkbox4 = urwid.CheckBox("!just test", on_state_change=on_checkbox_change)
+
+# Создаем виджет urwid.Text для отображения состояния CheckBox
+status_text = urwid.Text("")
+
+# Создаем Pile-контейнер, который содержит CheckBox и заполнители
+pile = urwid.Pile([
+	urwid.Divider(),
+	checkbox1,
+	urwid.Divider(),
+	checkbox2,
+	urwid.Divider(),
+	checkbox3,
+	urwid.Divider(),
+	checkbox4,
+	urwid.Divider(),
+	status_text
+])
+
+# Создаем Filler-контейнер, чтобы отцентрировать Pile по вертикали
+filler = urwid.Filler(pile, valign='top')
+
+# Оборачиваем содержимое в urwid.Padding с отступами по 2 символа с каждой стороны
+padding = urwid.Padding(filler, left=4, right=4, align='center')
+
+header_text = urwid.Padding(urwid.Text(" - = Settings = - "), align='center')
+header_widget = urwid.AttrMap(header_text, 'header')
+
+exit_settings_button = urwid.Padding(urwid.Button("exit button", on_press=exit_settings_call), width=15)
+
+footer_widget = urwid.Pile([
+	log_widget,
+	urwid.Text("- - -"),
+	exit_settings_button
+])
+
+# Создаем фрейм с обрамлением
+settings_widget = urwid.Frame(padding, header=header_widget, footer=footer_widget)
+# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+
+custom_palette = [
+	('header', 'standout', ''),  # ('name_of_style', 'color_text', 'color_background')
+	# tip: standout = reversed
+]
+
+loop = urwid.MainLoop(main_widget, palette=custom_palette)
 
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
 
