@@ -86,7 +86,7 @@ class JournalClass:
 			return None
 
 		del ControlClass.log[0]
-		msg = msg.replace("\n", "")
+		msg = str(msg).replace("\n", "")
 		if len(msg) > RenderClass.width:
 			temp1 = RenderClass.width - 3
 			ControlClass.log.append(msg[0:temp1]+"...")
@@ -96,6 +96,52 @@ class JournalClass:
 		return None
 
 journal = JournalClass()
+
+class SettingsClass:
+	def __init__(self):
+
+		# Default settings
+		self.settings = {"special_mode": False, "clipboard_autopaste": True}
+
+	class SettingNotFoundError(Exception):
+		pass
+
+	def get_setting(self, setting_name):
+		# Здесь предполагается код для получения настройки из базы данных
+		# Если настройка не найдена, вызываем исключение SettingNotFoundError
+		try:
+			return self.settings[setting_name]
+		except KeyError:
+			raise self.SettingNotFoundError
+
+	def write_setting(self, setting_name, setting_content):
+		self.settings[setting_name] = setting_content
+
+	def special_mode_switch(self, _=None, _1=None):
+		journal.info("")
+		if self.get_setting("special_mode"): # true
+			self.write_setting("special_mode", False)
+			if "cookiesfrombrowser" in ControlClass.ydl_opts:
+				del ControlClass.ydl_opts["cookiesfrombrowser"]
+			journal.info("[YTCON] special_mode: True -> False")
+			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
+		elif not self.get_setting("special_mode"): # false
+			self.write_setting("special_mode", True)
+			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+			journal.info("[YTCON] special_mode: False -> True")
+			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+
+	def clipboard_autopaste_switch(self, _=None, _1=None):
+		journal.info("")
+		if self.get_setting("clipboard_autopaste"): # true
+			self.write_setting("clipboard_autopaste", False)
+			journal.info("[YTCON] clipboard_autopaste: True -> False")
+		elif not self.get_setting("clipboard_autopaste"): # false
+			self.write_setting("clipboard_autopaste", True)
+			journal.info("[YTCON] clipboard_autopaste: False -> True")
+		journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+
+settings = SettingsClass()
 
 class ControlClass_base:
 	""" It stores information about the download queue and some information that must be passed through several functions. """
@@ -112,8 +158,6 @@ class ControlClass_base:
 		self.oldlog = ["", "", "", "", "", ""]
 		self.exit = False
 		self.exception = ""
-		self.special_mode = False
-		self.clipboard_checker_state = True
 		self.clipboard_checker_state_launched = False
 
 class RenderClass_base:
@@ -304,10 +348,11 @@ def downloadd(url):
 				journal.error(f"[YTCON] Video link \"{RenderClass.methods.name_shortener(url, 40)}\" is already downloading!")
 				return None
 
+		# TODOOOOOO
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
 			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
-			if ControlClass.special_mode:
+			if settings.get_setting("special_mode"):
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading formats (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
@@ -546,48 +591,17 @@ class InputHandlerClass:
 			journal.info("")
 			journal.info("[YTCON] [INPUT] " + original_text)
 
-			# - = Special mode handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			# - = Special mode handler = -
 			if text in ("sp", "specialmode"):
-				journal.info("[YTCON] Specialmode status: " + str(ControlClass.special_mode))
+				settings.special_mode_switch()
 				raise self.InputProcessed
+			# - = - = - = - = - = - = - = 
 
-			if text == "sp1":
-				self.special_mode_status_set(True)
-				raise self.InputProcessed
-			if text == "sp0":
-				self.special_mode_status_set(False)
-				raise self.InputProcessed
-
-			if text.split()[0] in ("sp", "specialmode"):
-				if text.split()[1] == "1" or text.split()[1] == "true":
-					self.special_mode_status_set(True)
-				elif text.split()[1] == "0" or text.split()[1] == "false":
-					self.special_mode_status_set(False)
-				else:
-					journal.error("[YTCON] failed to set SP status: input not recognized")
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
-			# - = Clipboard auto-paste status handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+			# - = Clipboard auto-paste = -
 			if text in ("cb", "clipboard", "clip"):
-				journal.info("[YTCON] Clipboard auto-paste status: " + str(ControlClass.clipboard_checker_state) + ", launched state: " + str(ControlClass.clipboard_checker_state_launched))
+				settings.clipboard_autopaste_switch()
 				raise self.InputProcessed
-
-			if text in ("cb1", "clip1"):
-				self.clipboard_status_set(True)
-				raise self.InputProcessed
-			if text in ("cb0", "clip0"):
-				self.clipboard_status_set(False)
-				raise self.InputProcessed
-
-			if text.split()[0] in ("cb", "clipboard", "clip"):
-				if text.split()[1] == "1" or text.split()[1] == "true":
-					self.clipboard_status_set(True)
-				elif text.split()[1] == "0" or text.split()[1] == "false":
-					self.clipboard_status_set(False)
-				else:
-					journal.error("[YTCON] failed to set clipboard status: input not recognized")
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			# - = - = - = - = - = - = - = 
 
 			if text in ("clear", "cls"):
 				journal.clear_errors()
@@ -612,6 +626,9 @@ class InputHandlerClass:
 			elif text == "set 1":
 				RenderClass.settings_show = True
 
+			elif text == "set ls":
+				journal.info(settings.settings)
+
 			else:
 				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
 
@@ -619,43 +636,6 @@ class InputHandlerClass:
 			pass
 		except:
 			exit_with_exception(traceback.format_exc())
-
-	def special_mode_status_set(self, boool):
-		"""
-			special_mode_status_set(True) enables special mode,
-			special_mode_status_set(False) disables it
-		"""
-		if boool: # true
-			ControlClass.special_mode = True
-			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
-		elif not boool: # false
-			ControlClass.special_mode = False
-			if "cookiesfrombrowser" in ControlClass.ydl_opts:
-				del ControlClass.ydl_opts["cookiesfrombrowser"]
-			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
-		else:
-			journal.warning("[YTCON] failed to set SP status: input not recognized")
-
-	def clipboard_status_set(self, boool):
-		"""
-			clipboard_status_set(True) enables clipboard auto-paste thread,
-			clipboard_status_set(False) disables it
-		"""
-		if boool: # true
-			if ControlClass.clipboard_checker_state: # == True
-				journal.info("[YTCON] Already enabled.")
-			else:
-				ControlClass.clipboard_checker_state = True
-				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
-		elif not boool: # false
-			if not ControlClass.clipboard_checker_state: # == False:
-				journal.info("[YTCON] Already disabled.")
-			else:
-				ControlClass.clipboard_checker_state = False
-				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
-		else:
-			journal.error("[YTCON] failed to set clipboard status: input not recognized")
 
 InputHandler = InputHandlerClass()
 
@@ -733,7 +713,7 @@ def tick_handler(loop, _):
 	""" It just checks some conditions every few seconds and executes them. Not responsible for rendering. """
 
 	# - = Clipboard thread activator = -
-	if ControlClass.clipboard_checker_state and ControlClass.clipboard_checker_state_launched is not True:
+	if settings.get_setting("clipboard_autopaste") and ControlClass.clipboard_checker_state_launched is not True:
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
 
@@ -752,6 +732,7 @@ def tick_handler(loop, _):
 	# - = - = - = - = - = - = - = - = -
 	if RenderClass.settings_show is True and loop.widget is not settings_widget:
 		try:
+			update_checkboxes()
 			loop.widget = settings_widget
 		except:
 			exit_with_exception(traceback.format_exc())
@@ -799,7 +780,7 @@ def clipboard_checker():
 		old_clip = new_clip
 
 		while True:
-			if ControlClass.clipboard_checker_state is False:
+			if settings.get_setting("clipboard_autopaste") is False:
 				ControlClass.clipboard_checker_state_launched = False
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
@@ -815,7 +796,7 @@ def clipboard_checker():
 			old_clip = new_clip
 			time.sleep(1)
 	except:
-		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
+		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)") # TODO REWRITE
 		return None
 
 def exit_with_exception(text):
@@ -884,10 +865,17 @@ def exit_settings_call(_):
 	RenderClass.settings_show = False
 
 # Создаем CheckBox для каждой опции настроек
-checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=on_checkbox_change)
-checkbox2 = urwid.CheckBox("Special mode", on_state_change=on_checkbox_change)
+def update_checkboxes():
+	checkbox1.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+	checkbox2.set_state(settings.get_setting("special_mode"), do_callback=False)
+	#checkbox1.set_state(settings.get_setting(clipboard_autopaste))
+	#checkbox1.set_state(settings.get_setting(clipboard_autopaste))
+
+checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
+checkbox2 = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
 checkbox3 = urwid.CheckBox("Delete after download", on_state_change=on_checkbox_change)
 checkbox4 = urwid.CheckBox("!just test", on_state_change=on_checkbox_change)
+update_checkboxes()
 
 # Создаем виджет urwid.Text для отображения состояния CheckBox
 status_text = urwid.Text("")
