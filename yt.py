@@ -79,7 +79,7 @@ class JournalClass:
 
 	def clear_errors(self):
 		""" Clear the errorprinter() field """
-		ControlClass.last_error = "No errors:)"
+		ControlClass.last_error = ""
 		ControlClass.error_countdown = 0
 
 	def add_to_logs_field(self, msg):
@@ -169,7 +169,7 @@ class ControlClass_base:
 		self.queue_list = {}
 		self.ydl_opts = {}
 
-		self.last_error = "No errors:)"
+		self.last_error = ""
 		self.error_countdown = 0
 		self.prev_last_error = ""
 		self.prev_error_countdown = 0
@@ -185,6 +185,8 @@ class RenderClass_base:
 	def __init__(self):
 		self.methods = self.MethodsClass()
 		self.settings_show = False
+
+		self.errorprinter_animation = 3
 
 		# Init colors
 		self.red = urwid.AttrSpec('dark red', 'default')
@@ -697,7 +699,7 @@ def errorprinter(loop, _):
 
 		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
 
-		if ControlClass.last_error == "No errors:)":
+		if ControlClass.last_error == "":
 			to_render.append((RenderClass.cyan, error_text_generator))
 		else:
 			to_render.append((RenderClass.red, error_text_generator))
@@ -710,6 +712,30 @@ def errorprinter(loop, _):
 		#elif (RenderClass.width * 3) > len(error_text_generator):
 		#	pass
 
+		# - = - = - = - = - = - unfold animation - = - = - = - = - = - 
+		if RenderClass.errorprinter_animation == 0:
+			error_widget.set_text(to_render)
+		elif RenderClass.errorprinter_animation == 1:
+			error_widget.set_text(to_render[:-1])
+		elif RenderClass.errorprinter_animation == 2:
+			if to_render[:-2] == ["- - -\n"]:
+				error_widget.set_text("- - -")
+			else:
+				error_widget.set_text(to_render[:-2])
+		elif RenderClass.errorprinter_animation == 3:
+			if to_render[:-3] == []:
+				error_widget.set_text("")
+			else:
+				error_widget.set_text(to_render[:-3])
+
+		if ControlClass.last_error == "":
+			if RenderClass.errorprinter_animation < 3 and RenderClass.errorprinter_animation >= 0:
+				RenderClass.errorprinter_animation += 1
+		else:
+			if RenderClass.errorprinter_animation <= 3 and RenderClass.errorprinter_animation > 0:
+				RenderClass.errorprinter_animation = RenderClass.errorprinter_animation - 1
+		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+
 		ControlClass.prev_last_error = ControlClass.last_error
 		ControlClass.prev_error_countdown = ControlClass.error_countdown
 
@@ -718,7 +744,7 @@ def errorprinter(loop, _):
 			if ControlClass.error_countdown == 0:
 				journal.clear_errors()
 
-		error_widget.set_text(to_render)
+		#error_widget.set_text(to_render)
 		loop.set_alarm_in(0.3, errorprinter)
 	except:
 		exit_with_exception(str(traceback.format_exc()))
@@ -726,8 +752,6 @@ def errorprinter(loop, _):
 def logprinter(loop, _):
 	""" Prints the last 6 lines of logs in log_widget """
 	try:
-		to_render = "- - -\n"
-
 		# skip, do not re-render if it doesn't change - = - = - = - = -
 		# if ControlClass.oldlog == ControlClass.log:
 		#	time.sleep(0.5)
@@ -736,7 +760,7 @@ def logprinter(loop, _):
 		#	ControlClass.oldlog = ControlClass.log.copy()
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
-		to_render += ControlClass.log[0] + "\n"
+		to_render = ControlClass.log[0] + "\n"
 		to_render += ControlClass.log[1] + "\n"
 		to_render += ControlClass.log[2] + "\n"
 		to_render += ControlClass.log[3] + "\n"
@@ -897,8 +921,10 @@ main_widget = urwid.Frame(
 	urwid.Filler(top_pile, "top"),
 	footer=urwid.Pile(
 		[
-		log_widget,
 		error_widget,
+		urwid.Text("- - -"),
+		log_widget,
+		urwid.Text("- - -"),
 		input_widget,
 		urwid.Text("- - -"),
 		main_footer_buttons,
@@ -962,6 +988,7 @@ load_settings_button = urwid.Button("Load from config file", on_press=settings.l
 footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
 footer_widget = urwid.Pile([
+	urwid.Text("- - -"),
 	log_widget,
 	urwid.Text("- - -"),
 	footer_buttons
