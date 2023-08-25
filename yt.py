@@ -889,8 +889,21 @@ log_widget = urwid.Text("Initializing...")
 error_widget = urwid.Text("Initializing...")
 input_widget = InputHandler.InputBox("Enter URL > ")
 
+main_settings_button = urwid.Button("Settings")
+main_footer_buttons = urwid.AttrMap(urwid.Padding(urwid.GridFlow([main_settings_button], cell_width=15, h_sep=2, v_sep=1, align="left")), "reversed")
+
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
-main_widget = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+main_widget = urwid.Frame(
+	urwid.Filler(top_pile, "top"),
+	footer=urwid.Pile(
+		[
+		log_widget,
+		error_widget,
+		input_widget,
+		urwid.Text("- - -"),
+		main_footer_buttons,
+		]), 
+	focus_part='footer')
 
 # - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = 
 
@@ -920,7 +933,7 @@ update_checkboxes()
 status_text = urwid.Text("")
 
 # Создаем Pile-контейнер, который содержит CheckBox и заполнители
-pile = urwid.Pile([
+settings_pile = urwid.Pile([
 	urwid.Divider(),
 	checkbox1,
 	urwid.Divider(),
@@ -934,10 +947,10 @@ pile = urwid.Pile([
 ])
 
 # Создаем Filler-контейнер, чтобы отцентрировать Pile по вертикали
-filler = urwid.Filler(pile, valign='top')
+settings_filler = urwid.Filler(settings_pile, valign='top')
 
 # Оборачиваем содержимое в urwid.Padding с отступами по 2 символа с каждой стороны
-padding = urwid.Padding(filler, left=4, right=4, align='center')
+settings_padding = urwid.Padding(settings_filler, left=4, right=4, align='center')
 
 header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
 
@@ -955,7 +968,7 @@ footer_widget = urwid.Pile([
 ])
 
 # Создаем фрейм с обрамлением
-settings_widget = urwid.Frame(padding, header=header_widget, footer=footer_widget)
+settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=footer_widget)
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 custom_palette = [
