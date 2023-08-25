@@ -77,7 +77,7 @@ class JournalClass:
 			self.add_to_logs_field(msg)
 		return None
 
-	def clear_errors(self):
+	def clear_errors(self, _=None):
 		""" Clear the errorprinter() field """
 		ControlClass.last_error = ""
 		ControlClass.error_countdown = 0
@@ -108,6 +108,9 @@ class SettingsClass:
 
 	class SettingNotFoundError(Exception):
 		pass
+
+	def show_settings_call(self, _=None):
+		RenderClass.settings_show = not RenderClass.settings_show
 
 	def get_setting(self, setting_name):
 		# Здесь предполагается код для получения настройки из базы данных
@@ -141,13 +144,10 @@ class SettingsClass:
 		journal.info("")
 		if self.get_setting("special_mode"): # true
 			self.write_setting("special_mode", False)
-			if "cookiesfrombrowser" in ControlClass.ydl_opts:
-				del ControlClass.ydl_opts["cookiesfrombrowser"]
 			journal.info("[YTCON] special_mode: True -> False")
 			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
 		elif not self.get_setting("special_mode"): # false
 			self.write_setting("special_mode", True)
-			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
 			journal.info("[YTCON] special_mode: False -> True")
 			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
 
@@ -179,6 +179,28 @@ class ControlClass_base:
 		self.exit = False
 		self.exception = ""
 		self.clipboard_checker_state_launched = False
+
+	def delete_finished(self):
+		""" Removes all completed operations from ControlClass.queue_list with a loop """
+		try:
+			temp1 = 0
+			temp2_new = self.queue_list.copy()
+			for item, item_content in self.queue_list.copy().items():
+				if item_content["status"] == "exists" or item_content["status"] == "finished":
+					del temp2_new[item]
+					if "meta_index" not in item_content:
+						temp1 = temp1 + 1
+			self.queue_list = temp2_new
+			logger.debug(self.queue_list)
+			RenderClass.remove_all_widgets()
+			return str(temp1)
+		except:
+			exit_with_exception(traceback.format_exc())
+		return None
+
+	def clear(self, _=None):
+		journal.clear_errors()
+		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -386,8 +408,9 @@ def downloadd(url):
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
 			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
-			if settings.get_setting("special_mode"):
-				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+			if settings.get_setting("special_mode") is True:
+				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+				# "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading formats (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
 
@@ -477,6 +500,7 @@ def downloadd(url):
 
 	# - = - = - = [Post-processing] = - = - = - #
 	try:
+		del ydl
 		if ControlClass.queue_list[temp1_index]["status"] == "exists":
 			return None # skip post-process if file already exists
 		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
@@ -638,8 +662,7 @@ class InputHandlerClass:
 			# - = - = - = - = - = - = - = 
 
 			if text in ("clear", "cls"):
-				journal.clear_errors()
-				journal.info(f"[YTCON] {delete_finished()} item(s) removed from list!")
+				ControlClass.clear()
 
 			elif text == "logtest":
 				logger.debug("[TEST] 1")
@@ -780,6 +803,13 @@ def tick_handler(loop, _):
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
 
+	# - = Special mode cookie extractor activator = -
+	if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in ControlClass.ydl_opts:
+		ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+	elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in ControlClass.ydl_opts:
+		del ControlClass.ydl_opts["cookiesfrombrowser"]
+	# - = - = - = - = - = - = - = - = - = - = - = - =
+
 	# - = - = - = - = - = - = - = - = -
 	# The error handler, if it sees ControlClass.exit = True,
 	# then exits the program commenting this with the text from ControlClass.exception.
@@ -806,26 +836,9 @@ def tick_handler(loop, _):
 			exit_with_exception(traceback.format_exc())
 	# - = - = - = - = - = - = - = - = -
 
+	main_footer.set_focus(input_widget)
 	# - =
 	loop.set_alarm_in(0.3, tick_handler)
-
-def delete_finished():
-	""" Removes all completed operations from ControlClass.queue_list with a loop """
-	try:
-		temp1 = 0
-		temp2_new = ControlClass.queue_list.copy()
-		for item, item_content in ControlClass.queue_list.copy().items():
-			if item_content["status"] == "exists" or item_content["status"] == "finished":
-				del temp2_new[item]
-				if "meta_index" not in item_content:
-					temp1 = temp1 + 1
-		ControlClass.queue_list = temp2_new
-		logger.debug(ControlClass.queue_list)
-		RenderClass.remove_all_widgets()
-		return str(temp1)
-	except:
-		exit_with_exception(traceback.format_exc())
-	return None
 
 def clipboard_checker():
 	"""
@@ -913,22 +926,27 @@ log_widget = urwid.Text("Initializing...")
 error_widget = urwid.Text("Initializing...")
 input_widget = InputHandler.InputBox("Enter URL > ")
 
-main_settings_button = urwid.Button("Settings")
-main_footer_buttons = urwid.AttrMap(urwid.Padding(urwid.GridFlow([main_settings_button, urwid.Button("Button2"), urwid.Button("Button3")], cell_width=12, h_sep=2, v_sep=1, align="left")), "buttons_footer")
+main_settings_button = urwid.Button("Settings", on_press=settings.show_settings_call)
+main_clear_button = urwid.Button("Clear", on_press=ControlClass.clear)
 
+main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, urwid.Button("Button3")], cell_width=12, h_sep=2, v_sep=1, align="left")
+main_footer_buttons_with_attrmap = urwid.AttrMap(main_footer_buttons, "buttons_footer")
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
-main_widget = urwid.Frame(
-	urwid.Filler(top_pile, "top"),
-	footer=urwid.Pile(
+
+main_footer = urwid.Pile(
 		[
 		error_widget,
 		urwid.Text("- - -"),
 		log_widget,
 		urwid.Text("- - -"),
 		input_widget,
+		urwid.Divider(),
 		urwid.Text("- - -"),
-		main_footer_buttons,
-		]), 
+		main_footer_buttons_with_attrmap,
+		])
+main_widget = urwid.Frame(
+	urwid.Filler(top_pile, "top"),
+	footer=main_footer, 
 	focus_part='footer')
 
 # - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = 
@@ -938,9 +956,6 @@ def on_checkbox_change(checkbox, state, user_data=None):
 		status_text.set_text("CheckBox включен")
 	else:
 		status_text.set_text("CheckBox выключен")
-
-def exit_settings_call(_):
-	RenderClass.settings_show = False
 
 # Создаем CheckBox для каждой опции настроек
 def update_checkboxes():
@@ -980,7 +995,7 @@ settings_padding = urwid.Padding(settings_filler, left=4, right=4, align='center
 
 header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
 
-exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=exit_settings_call), "reversed")
+exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=settings.show_settings_call), "reversed")
 
 save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
 load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
