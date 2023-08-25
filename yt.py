@@ -890,7 +890,7 @@ error_widget = urwid.Text("Initializing...")
 input_widget = InputHandler.InputBox("Enter URL > ")
 
 main_settings_button = urwid.Button("Settings")
-main_footer_buttons = urwid.AttrMap(urwid.Padding(urwid.GridFlow([main_settings_button], cell_width=15, h_sep=2, v_sep=1, align="left")), "reversed")
+main_footer_buttons = urwid.AttrMap(urwid.Padding(urwid.GridFlow([main_settings_button, urwid.Button("Button2"), urwid.Button("Button3")], cell_width=12, h_sep=2, v_sep=1, align="left")), "buttons_footer")
 
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 main_widget = urwid.Frame(
@@ -974,6 +974,7 @@ settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=foo
 custom_palette = [
 	('reversed', 'standout', ''),  # ('name_of_style', 'color_text', 'color_background')
 	# tip: standout = reversed
+	('buttons_footer', 'light green', '')
 ]
 
 loop = urwid.MainLoop(main_widget, palette=custom_palette)
