@@ -5,11 +5,13 @@ import time
 import logging
 import threading
 import traceback
+from pathlib import Path
 import pprint
+import pickle
 import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
-# import notify2
+# import notify2 # TODO
 import yt_dlp
 
 # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
@@ -37,6 +39,7 @@ logger.addHandler(debug_file_handler)
 logger.debug('== DEBUG LOG FILE ==')
 logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+configpath = os.path.expanduser("~") + "/.config/ytcon/"
 
 class JournalClass:
 	"""
@@ -116,6 +119,23 @@ class SettingsClass:
 
 	def write_setting(self, setting_name, setting_content):
 		self.settings[setting_name] = setting_content
+
+	def save(self, button=None): # in the second argument urwid puts the button of which the function was called
+		logger.debug(Path(configpath).mkdir(parents=True, exist_ok=True))
+		pickle.dump(self.settings, open(configpath + "settings.db", "wb"))
+		journal.info(f"[YTCON] {configpath}settings.db saved")
+		RenderClass.flash_button_text(button, RenderClass.green)
+
+	def load(self, button=None): # in the second argument urwid puts the button of which the function was called
+		global update_checkboxes
+		try:
+			self.settings = pickle.load(open(configpath + "settings.db", "rb"))
+			journal.info(f"[YTCON] {configpath}settings.db loaded")
+			update_checkboxes()
+			RenderClass.flash_button_text(button, RenderClass.green)
+		except FileNotFoundError:
+			journal.warning(f"[YTCON] Saved settings load failed: FileNotFoundError: {configpath}settings.db")
+			RenderClass.flash_button_text(button, RenderClass.red)
 
 	def special_mode_switch(self, _=None, _1=None):
 		journal.info("")
@@ -200,6 +220,18 @@ class RenderClass_base:
 			# Recursively sums the heights of widgets inside a urwid.Pile container
 			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
 		return 0 # Return 0 for unsupported widget types (?)
+
+	def flash_button_text(self, button, color):
+		if button == None:
+			return None
+		temp1 = button.get_label()
+		for i in range(1, 5): # 4 times
+			button.set_label((color, temp1))
+			RenderClass.loop.draw_screen()
+			time.sleep(0.1)
+			button.set_label(temp1)
+			RenderClass.loop.draw_screen()
+			time.sleep(0.1)
 
 	class MethodsClass:
 		""" Minor methods mostly needed by render_tasks """
@@ -629,6 +661,13 @@ class InputHandlerClass:
 			elif text == "set ls":
 				journal.info(settings.settings)
 
+			elif text == "save":
+				settings.save()
+				journal.info(settings.settings)
+			elif text == "load":
+				settings.load()
+				journal.info(settings.settings)
+
 			else:
 				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
 
@@ -900,15 +939,19 @@ filler = urwid.Filler(pile, valign='top')
 # Оборачиваем содержимое в urwid.Padding с отступами по 2 символа с каждой стороны
 padding = urwid.Padding(filler, left=4, right=4, align='center')
 
-header_text = urwid.Padding(urwid.Text(" - = Settings = - "), align='center')
-header_widget = urwid.AttrMap(header_text, 'header')
+header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
 
-exit_settings_button = urwid.Padding(urwid.Button("exit button", on_press=exit_settings_call), width=15)
+exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=exit_settings_call), "reversed")
+
+save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
+load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
+
+footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
 footer_widget = urwid.Pile([
 	log_widget,
 	urwid.Text("- - -"),
-	exit_settings_button
+	footer_buttons
 ])
 
 # Создаем фрейм с обрамлением
@@ -916,16 +959,20 @@ settings_widget = urwid.Frame(padding, header=header_widget, footer=footer_widge
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 custom_palette = [
-	('header', 'standout', ''),  # ('name_of_style', 'color_text', 'color_background')
+	('reversed', 'standout', ''),  # ('name_of_style', 'color_text', 'color_background')
 	# tip: standout = reversed
 ]
 
 loop = urwid.MainLoop(main_widget, palette=custom_palette)
 
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
+RenderClass.loop = loop
 
 logger.debug(RenderClass.width)
 logger.debug(RenderClass.height)
+
+settings.load()
+
 loop.set_alarm_in(0, render_tasks)
 loop.set_alarm_in(0, logprinter)
 loop.set_alarm_in(0, errorprinter)
