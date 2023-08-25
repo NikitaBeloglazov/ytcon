@@ -101,36 +101,39 @@ class JournalClass:
 journal = JournalClass()
 
 class SettingsClass:
+	""" Сontains settings data and methods for them """
 	def __init__(self):
 
 		# Default settings
 		self.settings = {"special_mode": False, "clipboard_autopaste": True}
 
 	class SettingNotFoundError(Exception):
-		pass
+		""" Called if the specified setting is not found (see def get_setting) """
 
 	def show_settings_call(self, _=None):
+		""" Settings display state switch, made for urwid.Button(on_press=show_settings_call) """
 		RenderClass.settings_show = not RenderClass.settings_show
 
 	def get_setting(self, setting_name):
-		# Здесь предполагается код для получения настройки из базы данных
-		# Если настройка не найдена, вызываем исключение SettingNotFoundError
+		""" Get setting, if it not found, calls SettingNotFoundError """
 		try:
 			return self.settings[setting_name]
-		except KeyError:
-			raise self.SettingNotFoundError
+		except KeyError as exc:
+			raise self.SettingNotFoundError from exc
 
 	def write_setting(self, setting_name, setting_content):
+		""" Writes the settings to the memory. Made for the possible use of some "hooks" in the future """
 		self.settings[setting_name] = setting_content
 
 	def save(self, button=None): # in the second argument urwid puts the button of which the function was called
+		""" Uses pickle for saving settings from memory to ~/.config/settings.db"""
 		logger.debug(Path(configpath).mkdir(parents=True, exist_ok=True))
 		pickle.dump(self.settings, open(configpath + "settings.db", "wb"))
 		journal.info(f"[YTCON] {configpath}settings.db saved")
 		RenderClass.flash_button_text(button, RenderClass.green)
 
 	def load(self, button=None): # in the second argument urwid puts the button of which the function was called
-		global update_checkboxes
+		""" Uses pickle for loading settings from ~/.config/settings.db to memory """
 		try:
 			self.settings = pickle.load(open(configpath + "settings.db", "rb"))
 			journal.info(f"[YTCON] {configpath}settings.db loaded")
@@ -141,6 +144,7 @@ class SettingsClass:
 			RenderClass.flash_button_text(button, RenderClass.red)
 
 	def special_mode_switch(self, _=None, _1=None):
+		""" Special mode switch function for urwid.Button's """
 		journal.info("")
 		if self.get_setting("special_mode"): # true
 			self.write_setting("special_mode", False)
@@ -152,6 +156,7 @@ class SettingsClass:
 			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
 
 	def clipboard_autopaste_switch(self, _=None, _1=None):
+		""" Clipboard autopaste switch function for urwid.Button's """
 		journal.info("")
 		if self.get_setting("clipboard_autopaste"): # true
 			self.write_setting("clipboard_autopaste", False)
@@ -199,6 +204,7 @@ class ControlClass_base:
 		return None
 
 	def clear(self, _=None):
+		""" Clears errors and finished downloads from memory """
 		journal.clear_errors()
 		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
 
@@ -246,16 +252,18 @@ class RenderClass_base:
 		return 0 # Return 0 for unsupported widget types (?)
 
 	def flash_button_text(self, button, color):
-		if button == None:
+		""" Makes the button to blink in the specified color """
+		if button is None:
 			return None
 		temp1 = button.get_label()
-		for i in range(1, 5): # 4 times
+		for _ in range(1, 5): # 4 times
 			button.set_label((color, temp1))
 			RenderClass.loop.draw_screen()
 			time.sleep(0.1)
 			button.set_label(temp1)
 			RenderClass.loop.draw_screen()
 			time.sleep(0.1)
+		return None
 
 	class MethodsClass:
 		""" Minor methods mostly needed by render_tasks """
@@ -404,7 +412,6 @@ def downloadd(url):
 				journal.error(f"[YTCON] Video link \"{RenderClass.methods.name_shortener(url, 40)}\" is already downloading!")
 				return None
 
-		# TODOOOOOO
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
 			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
@@ -589,10 +596,9 @@ def render_tasks(loop, _):
 
 				rcm = RenderClass.methods
 				ws = rcm.whitespace_stabilization
-				if i["status"] == "error":
-					errorr = True
-				else:
-					errorr = False
+
+				errorr = i["status"] == "error"
+
 				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"], errorr)}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
 				fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
 				temp1 = temp1 + fileshortname
@@ -653,13 +659,13 @@ class InputHandlerClass:
 			if text in ("sp", "specialmode"):
 				settings.special_mode_switch()
 				raise self.InputProcessed
-			# - = - = - = - = - = - = - = 
+			# - = - = - = - = - = - = - =
 
 			# - = Clipboard auto-paste = -
 			if text in ("cb", "clipboard", "clip"):
 				settings.clipboard_autopaste_switch()
 				raise self.InputProcessed
-			# - = - = - = - = - = - = - = 
+			# - = - = - = - = - = - = - =
 
 			if text in ("clear", "cls"):
 				ControlClass.clear()
@@ -735,7 +741,7 @@ def errorprinter(loop, _):
 		#elif (RenderClass.width * 3) > len(error_text_generator):
 		#	pass
 
-		# - = - = - = - = - = - unfold animation - = - = - = - = - = - 
+		# - = - = - = - = - = - unfold animation - = - = - = - = - = -
 		if RenderClass.errorprinter_animation == 0:
 			error_widget.set_text(to_render)
 		elif RenderClass.errorprinter_animation == 1:
@@ -746,7 +752,7 @@ def errorprinter(loop, _):
 			else:
 				error_widget.set_text(to_render[:-2])
 		elif RenderClass.errorprinter_animation == 3:
-			if to_render[:-3] == []:
+			if not to_render[:-3]:
 				error_widget.set_text("")
 			else:
 				error_widget.set_text(to_render[:-3])
@@ -861,7 +867,7 @@ def clipboard_checker():
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
 
-			new_clip = pyperclip.paste()
+			new_clip = pyperclip.paste() # TODO replace it
 			if new_clip != old_clip:
 				if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
 					journal.info("[CLIP] New URL detected: " + new_clip)
@@ -946,19 +952,20 @@ main_footer = urwid.Pile(
 		])
 main_widget = urwid.Frame(
 	urwid.Filler(top_pile, "top"),
-	footer=main_footer, 
+	footer=main_footer,
 	focus_part='footer')
 
-# - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = 
+# - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
-def on_checkbox_change(checkbox, state, user_data=None):
+def on_checkbox_change(_, state, _1=None):
+	""" test    checkbox, state, user_data=None """ # TODO REMOVE IT
 	if state:
 		status_text.set_text("CheckBox включен")
 	else:
 		status_text.set_text("CheckBox выключен")
 
-# Создаем CheckBox для каждой опции настроек
 def update_checkboxes():
+	""" Update the state of the checkboxes so that they do not show false information """
 	checkbox1.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
 	checkbox2.set_state(settings.get_setting("special_mode"), do_callback=False)
 	#checkbox1.set_state(settings.get_setting(clipboard_autopaste))
@@ -970,10 +977,9 @@ checkbox3 = urwid.CheckBox("Delete after download", on_state_change=on_checkbox_
 checkbox4 = urwid.CheckBox("!just test", on_state_change=on_checkbox_change)
 update_checkboxes()
 
-# Создаем виджет urwid.Text для отображения состояния CheckBox
+# test: urwid.Text to display the state of the CheckBox
 status_text = urwid.Text("")
 
-# Создаем Pile-контейнер, который содержит CheckBox и заполнители
 settings_pile = urwid.Pile([
 	urwid.Divider(),
 	checkbox1,
@@ -984,13 +990,13 @@ settings_pile = urwid.Pile([
 	urwid.Divider(),
 	checkbox4,
 	urwid.Divider(),
-	status_text
+	status_text # test: urwid.Text to display the state of the CheckBox
 ])
 
-# Создаем Filler-контейнер, чтобы отцентрировать Pile по вертикали
+# Filler container to center Pile vertically
 settings_filler = urwid.Filler(settings_pile, valign='top')
 
-# Оборачиваем содержимое в urwid.Padding с отступами по 2 символа с каждой стороны
+# Wrap content in urwid.Padding with 4 character padding on each side
 settings_padding = urwid.Padding(settings_filler, left=4, right=4, align='center')
 
 header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
@@ -1009,7 +1015,6 @@ footer_widget = urwid.Pile([
 	footer_buttons
 ])
 
-# Создаем фрейм с обрамлением
 settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=footer_widget)
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
