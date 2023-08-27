@@ -207,6 +207,8 @@ class ControlClass_base:
 		""" Clears errors and finished downloads from memory """
 		journal.clear_errors()
 		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
+		RenderClass.flash_button_text(main_clear_button, RenderClass.light_yellow)
+
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -218,7 +220,9 @@ class RenderClass_base:
 
 		# Init colors
 		self.red = urwid.AttrSpec('dark red', 'default')
+		self.light_red = urwid.AttrSpec('light red', 'default')
 		self.yellow = urwid.AttrSpec('brown', 'default')
+		self.light_yellow = urwid.AttrSpec('yellow', 'default')
 		self.green = urwid.AttrSpec('dark green', 'default')
 		self.cyan = urwid.AttrSpec('dark cyan', 'default')
 
@@ -802,7 +806,21 @@ def logprinter(loop, _):
 		exit_with_exception(traceback.format_exc())
 
 def tick_handler(loop, _):
-	""" It just checks some conditions every few seconds and executes them. Not responsible for rendering. """
+	""" It just checks some conditions every few seconds and executes them. --Not responsible for rendering.(wrong)-- """ # TODO
+
+	# - = - = - = - = - = - = - = - = -
+	# Autopaste button color changer
+	# TODO OPTIMIZE IT
+	if (settings.get_setting("clipboard_autopaste") is True and ControlClass.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and ControlClass.clipboard_checker_state_launched is not False):
+		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "yellow"), main_footer_buttons.contents[2][1])
+		#journal.info("yellow")
+	elif ControlClass.clipboard_checker_state_launched is not True:
+		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "light_red"), main_footer_buttons.contents[2][1])
+		#journal.info("red")
+	elif ControlClass.clipboard_checker_state_launched is True:
+		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "buttons_footer"), main_footer_buttons.contents[2][1])
+		#journal.info("green")
+	# - = - = - = - = - = - = - = - = -
 
 	# - = Clipboard thread activator = -
 	if settings.get_setting("clipboard_autopaste") and ControlClass.clipboard_checker_state_launched is not True:
@@ -829,6 +847,7 @@ def tick_handler(loop, _):
 	# - = - = - = - = - = - = - = - = -
 
 	# - = - = - = - = - = - = - = - = -
+	# Settings page show handler
 	if RenderClass.settings_show is True and loop.widget is not settings_widget:
 		try:
 			update_checkboxes()
@@ -850,7 +869,7 @@ def clipboard_checker():
 	"""
 	Checks the clipboard for new entries against old ones.
 	If it sees new material on the clipboard, it will check whether this is a site, if it detects site, download starts
-	"""
+	""" # TODO: move to tick_handler?
 	try:
 		ControlClass.clipboard_checker_state_launched = True
 		journal.info("[YTCON] Clipboard auto-paste is ON.")
@@ -867,7 +886,7 @@ def clipboard_checker():
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
 
-			new_clip = pyperclip.paste() # TODO replace it
+			new_clip = pyperclip.paste() # TODO change paste method
 			if new_clip != old_clip:
 				if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
 					journal.info("[CLIP] New URL detected: " + new_clip)
@@ -934,8 +953,10 @@ input_widget = InputHandler.InputBox("Enter URL > ")
 
 main_settings_button = urwid.Button("Settings", on_press=settings.show_settings_call)
 main_clear_button = urwid.Button("Clear", on_press=ControlClass.clear)
+main_footer_clipboard_autopaste_button = urwid.Button("Autopaste", on_press=settings.clipboard_autopaste_switch)
 
-main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, urwid.Button("Button3")], cell_width=12, h_sep=2, v_sep=1, align="left")
+main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, main_footer_clipboard_autopaste_button], cell_width=13, h_sep=2, v_sep=1, align="left")
+logger.debug(main_footer_buttons.contents)
 main_footer_buttons_with_attrmap = urwid.AttrMap(main_footer_buttons, "buttons_footer")
 #fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 
@@ -957,12 +978,14 @@ main_widget = urwid.Frame(
 
 # - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
+"""
 def on_checkbox_change(_, state, _1=None):
-	""" test    checkbox, state, user_data=None """ # TODO REMOVE IT
+	"\"" test    checkbox, state, user_data=None "\"" # TODO REMOVE IT
 	if state:
 		status_text.set_text("CheckBox включен")
 	else:
 		status_text.set_text("CheckBox выключен")
+"""
 
 def update_checkboxes():
 	""" Update the state of the checkboxes so that they do not show false information """
@@ -973,8 +996,8 @@ def update_checkboxes():
 
 checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
 checkbox2 = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
-checkbox3 = urwid.CheckBox("Delete after download", on_state_change=on_checkbox_change)
-checkbox4 = urwid.CheckBox("!just test", on_state_change=on_checkbox_change)
+#checkbox3 = urwid.CheckBox("Delete after download", on_state_change=on_checkbox_change) # TODO
+#checkbox4 = urwid.CheckBox("!just test", on_state_change=on_checkbox_change) # remove
 update_checkboxes()
 
 # test: urwid.Text to display the state of the CheckBox
@@ -985,12 +1008,12 @@ settings_pile = urwid.Pile([
 	checkbox1,
 	urwid.Divider(),
 	checkbox2,
-	urwid.Divider(),
-	checkbox3,
-	urwid.Divider(),
-	checkbox4,
-	urwid.Divider(),
-	status_text # test: urwid.Text to display the state of the CheckBox
+	#urwid.Divider(),
+	#checkbox3,
+	#urwid.Divider(),
+	#checkbox4,
+	#urwid.Divider(),
+	#status_text # test: urwid.Text to display the state of the CheckBox
 ])
 
 # Filler container to center Pile vertically
@@ -1021,7 +1044,9 @@ settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=foo
 custom_palette = [
 	('reversed', 'standout', ''),  # ('name_of_style', 'color_text', 'color_background')
 	# tip: standout = reversed
-	('buttons_footer', 'light green', '')
+	('buttons_footer', 'light green', ''),
+	('light_red', 'light red', ''),
+	('yellow', 'yellow', ''),
 ]
 
 loop = urwid.MainLoop(main_widget, palette=custom_palette)
