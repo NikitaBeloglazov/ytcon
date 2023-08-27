@@ -179,6 +179,8 @@ class ControlClass_base:
 		self.prev_last_error = ""
 		self.prev_error_countdown = 0
 
+		self.delete_after_download = False
+
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
 		self.oldlog = ["", "", "", "", "", ""]
 		self.exit = False
@@ -207,8 +209,19 @@ class ControlClass_base:
 		""" Clears errors and finished downloads from memory """
 		journal.clear_errors()
 		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
-		RenderClass.flash_button_text(main_clear_button, RenderClass.light_yellow)
+		RenderClass.flash_button_text(main_clear_button, RenderClass.light_yellow, 2)
 
+	def delete_after_download_switch(self, _=None, _1=None):
+		""" Special mode switch function for urwid.Button's """
+		journal.info("")
+		if self.delete_after_download: # true
+			self.delete_after_download = False
+			journal.info("[YTCON] Delete after download disabled!")
+		elif not self.delete_after_download: # false
+			self.delete_after_download = True
+			journal.error("[YTCON] Delete after download ENABLED!")
+			journal.info("[YTCON] This means that the downloaded files WILL NOT BE SAVED!")
+			journal.info("[YTCON] This setting will NOT be saved in the config file anyway. Made for test purposes.")
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -255,12 +268,12 @@ class RenderClass_base:
 			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
 		return 0 # Return 0 for unsupported widget types (?)
 
-	def flash_button_text(self, button, color):
+	def flash_button_text(self, button, color, times=4):
 		""" Makes the button to blink in the specified color """
 		if button is None:
 			return None
 		temp1 = button.get_label()
-		for _ in range(1, 5): # 4 times
+		for _ in range(1, times+1):
 			button.set_label((color, temp1))
 			RenderClass.loop.draw_screen()
 			time.sleep(0.1)
@@ -517,9 +530,10 @@ def downloadd(url):
 		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
 		os.utime(ControlClass.queue_list[temp1_index]["file"])
 
-		# Remove file after downloading for testing purposes
-		# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
-		# os.remove(ControlClass.queue_list[temp1_index]["file"])
+		# Remove file after downloading
+		if ControlClass.delete_after_download is True:
+			journal.warning(f"[YTCON] REMOVING {ControlClass.queue_list[temp1_index]['file']}...")
+			os.remove(ControlClass.queue_list[temp1_index]["file"])
 	except:
 		exit_with_exception(traceback.format_exc())
 
@@ -668,6 +682,12 @@ class InputHandlerClass:
 			# - = Clipboard auto-paste = -
 			if text in ("cb", "clipboard", "clip"):
 				settings.clipboard_autopaste_switch()
+				raise self.InputProcessed
+			# - = - = - = - = - = - = - =
+
+			# - = Delete after download = -
+			if text in ("dad", "delete after download"):
+				ControlClass.delete_after_download_switch()
 				raise self.InputProcessed
 			# - = - = - = - = - = - = - =
 
@@ -977,27 +997,15 @@ main_widget = urwid.Frame(
 	focus_part='footer')
 
 # - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-
-"""
-def on_checkbox_change(_, state, _1=None):
-	"\"" test    checkbox, state, user_data=None "\"" # TODO REMOVE IT
-	if state:
-		status_text.set_text("CheckBox включен")
-	else:
-		status_text.set_text("CheckBox выключен")
-"""
-
 def update_checkboxes():
-	""" Update the state of the checkboxes so that they do not show false information """
+	""" Update the state of the checkboxes to setting state, for prevention telling wrong info """
 	checkbox1.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
 	checkbox2.set_state(settings.get_setting("special_mode"), do_callback=False)
-	#checkbox1.set_state(settings.get_setting(clipboard_autopaste))
-	#checkbox1.set_state(settings.get_setting(clipboard_autopaste))
+	checkbox3.set_state(ControlClass.delete_after_download, do_callback=False)
 
 checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
 checkbox2 = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
-#checkbox3 = urwid.CheckBox("Delete after download", on_state_change=on_checkbox_change) # TODO
-#checkbox4 = urwid.CheckBox("!just test", on_state_change=on_checkbox_change) # remove
+checkbox3 = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
 update_checkboxes()
 
 # test: urwid.Text to display the state of the CheckBox
@@ -1008,12 +1016,9 @@ settings_pile = urwid.Pile([
 	checkbox1,
 	urwid.Divider(),
 	checkbox2,
-	#urwid.Divider(),
-	#checkbox3,
-	#urwid.Divider(),
-	#checkbox4,
-	#urwid.Divider(),
-	#status_text # test: urwid.Text to display the state of the CheckBox
+	urwid.Divider(),
+	checkbox3,
+	urwid.Divider(),
 ])
 
 # Filler container to center Pile vertically
@@ -1032,6 +1037,7 @@ load_settings_button = urwid.Button("Load from config file", on_press=settings.l
 footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
 footer_widget = urwid.Pile([
+	error_widget,
 	urwid.Text("- - -"),
 	log_widget,
 	urwid.Text("- - -"),
