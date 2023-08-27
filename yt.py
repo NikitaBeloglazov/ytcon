@@ -173,6 +173,9 @@ class ControlClass_base:
 	def __init__(self):
 		self.queue_list = {}
 		self.ydl_opts = {}
+		
+		self.temp = {}
+		self.temp["autopaste_button_color"] = "" # some kind of cache, see tick_handler
 
 		self.last_error = ""
 		self.error_countdown = 0
@@ -826,20 +829,19 @@ def logprinter(loop, _):
 		exit_with_exception(traceback.format_exc())
 
 def tick_handler(loop, _):
-	""" It just checks some conditions every few seconds and executes them. --Not responsible for rendering.(wrong)-- """ # TODO
+	""" It just checks some conditions every few seconds and executes them. Directly not responsible for rendering, but changes some buttons color """
 
 	# - = - = - = - = - = - = - = - = -
 	# Autopaste button color changer
-	# TODO OPTIMIZE IT
 	if (settings.get_setting("clipboard_autopaste") is True and ControlClass.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and ControlClass.clipboard_checker_state_launched is not False):
 		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "yellow"), main_footer_buttons.contents[2][1])
-		#journal.info("yellow")
-	elif ControlClass.clipboard_checker_state_launched is not True:
+		ControlClass.temp["autopaste_button_color"] = "yellow" # some kind of cache
+	elif ControlClass.clipboard_checker_state_launched is not True and ControlClass.temp["autopaste_button_color"] != "light_red":
 		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "light_red"), main_footer_buttons.contents[2][1])
-		#journal.info("red")
-	elif ControlClass.clipboard_checker_state_launched is True:
+		ControlClass.temp["autopaste_button_color"] = "light_red" # some kind of cache
+	elif ControlClass.clipboard_checker_state_launched is True and ControlClass.temp["autopaste_button_color"] != "buttons_footer":
 		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "buttons_footer"), main_footer_buttons.contents[2][1])
-		#journal.info("green")
+		ControlClass.temp["autopaste_button_color"] = "buttons_footer" # some kind of cache
 	# - = - = - = - = - = - = - = - = -
 
 	# - = Clipboard thread activator = -
@@ -959,16 +961,13 @@ ControlClass.ydl_opts = {
 
 RenderClass = RenderClass_base()
 
-#processes_widget = urwid.Text("Initializing...")
-#lol = urwid.Text("lol")
-
 top_pile = urwid.Pile([])
 
 #logger.debug(pprint.pformat(top_pile.contents))
 #logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
 
-log_widget = urwid.Text("Initializing...")
-error_widget = urwid.Text("Initializing...")
+log_widget = urwid.Text("Initializing, please wait")
+error_widget = urwid.Text("Initializing, please wait")
 input_widget = InputHandler.InputBox("Enter URL > ")
 
 main_settings_button = urwid.Button("Settings", on_press=settings.show_settings_call)
@@ -978,7 +977,6 @@ main_footer_clipboard_autopaste_button = urwid.Button("Autopaste", on_press=sett
 main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, main_footer_clipboard_autopaste_button], cell_width=13, h_sep=2, v_sep=1, align="left")
 logger.debug(main_footer_buttons.contents)
 main_footer_buttons_with_attrmap = urwid.AttrMap(main_footer_buttons, "buttons_footer")
-#fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
 
 main_footer = urwid.Pile(
 		[
@@ -1007,9 +1005,6 @@ checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clip
 checkbox2 = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
 checkbox3 = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
 update_checkboxes()
-
-# test: urwid.Text to display the state of the CheckBox
-status_text = urwid.Text("")
 
 settings_pile = urwid.Pile([
 	urwid.Divider(),
@@ -1048,8 +1043,8 @@ settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=foo
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 custom_palette = [
-	('reversed', 'standout', ''),  # ('name_of_style', 'color_text', 'color_background')
-	# tip: standout = reversed
+	# ('name_of_style', 'color_text', 'color_background')
+	('reversed', 'standout', ''),
 	('buttons_footer', 'light green', ''),
 	('light_red', 'light red', ''),
 	('yellow', 'yellow', ''),
