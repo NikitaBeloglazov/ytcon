@@ -127,21 +127,33 @@ class SettingsClass:
 
 	def save(self, button=None): # in the second argument urwid puts the button of which the function was called
 		""" Uses pickle for saving settings from memory to ~/.config/settings.db"""
-		logger.debug(Path(configpath).mkdir(parents=True, exist_ok=True))
-		pickle.dump(self.settings, open(configpath + "settings.db", "wb"))
+		logger.debug(Path(configpath).mkdir(parents=True, exist_ok=True)) # Create dirs if they don't already exist
+		with open(configpath + "settings.db", "wb") as filee:
+			pickle.dump(self.settings, filee)
 		journal.info(f"[YTCON] {configpath}settings.db saved")
 		RenderClass.flash_button_text(button, RenderClass.green)
 
 	def load(self, button=None): # in the second argument urwid puts the button of which the function was called
 		""" Uses pickle for loading settings from ~/.config/settings.db to memory """
 		try:
-			self.settings = pickle.load(open(configpath + "settings.db", "rb"))
+			with open(configpath + "settings.db", "rb") as filee:
+				self.settings = pickle.load(filee)
 			journal.info(f"[YTCON] {configpath}settings.db loaded")
 			update_checkboxes()
 			RenderClass.flash_button_text(button, RenderClass.green)
 		except FileNotFoundError:
+			# If file not found
 			journal.warning(f"[YTCON] Saved settings load failed: FileNotFoundError: {configpath}settings.db")
 			RenderClass.flash_button_text(button, RenderClass.red)
+		except EOFError as exc:
+			# If save file is corrupted
+			logger.debug(traceback.format_exc())
+			journal.warning(f"[YTCON] Saved settings load FAILED: EOFError: {exc}: {configpath}settings.db")
+			journal.error("[YTCON] YOUR SETTINGS FILE IS CORRUPTED. Default settings restored and corrupted save file removed.")
+			self.write_setting("clipboard_autopaste", False)
+			update_checkboxes()
+			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
+			logger.debug(os.remove(f"{configpath}settings.db"))
 
 	def special_mode_switch(self, _=None, _1=None):
 		""" Special mode switch function for urwid.Button's """
@@ -154,6 +166,7 @@ class SettingsClass:
 			self.write_setting("special_mode", True)
 			journal.info("[YTCON] special_mode: False -> True")
 			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+		update_checkboxes()
 
 	def clipboard_autopaste_switch(self, _=None, _1=None):
 		""" Clipboard autopaste switch function for urwid.Button's """
@@ -165,6 +178,7 @@ class SettingsClass:
 			self.write_setting("clipboard_autopaste", True)
 			journal.info("[YTCON] clipboard_autopaste: False -> True")
 		journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		update_checkboxes()
 
 settings = SettingsClass()
 
@@ -173,7 +187,7 @@ class ControlClass_base:
 	def __init__(self):
 		self.queue_list = {}
 		self.ydl_opts = {}
-		
+
 		self.temp = {}
 		self.temp["autopaste_button_color"] = "" # some kind of cache, see tick_handler
 
@@ -222,9 +236,9 @@ class ControlClass_base:
 			journal.info("[YTCON] Delete after download disabled!")
 		elif not self.delete_after_download: # false
 			self.delete_after_download = True
-			journal.error("[YTCON] Delete after download ENABLED!")
-			journal.info("[YTCON] This means that the downloaded files WILL NOT BE SAVED!")
-			journal.info("[YTCON] This setting will NOT be saved in the config file anyway. Made for test purposes.")
+			journal.error("[YTCON] Delete after download ENABLED! This means that the downloaded files WILL NOT BE SAVED!")
+			journal.warning("[YTCON] Anyway this setting state will NOT be saved in the settings save file.")
+			journal.warning("[YTCON] It resets every time when the utility is restarted. Made for test purposes.")
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -883,6 +897,7 @@ def tick_handler(loop, _):
 			exit_with_exception(traceback.format_exc())
 	# - = - = - = - = - = - = - = - = -
 
+	# Prevent focus from remaining on footer buttons after pressing them
 	main_footer.set_focus(input_widget)
 	# - =
 	loop.set_alarm_in(0.3, tick_handler)
