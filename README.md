@@ -52,7 +52,7 @@ python3 yt.py
 ### Main screen
 ![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/main_screenshot.jpg)
 ### Settings screen
-![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/settings_screenshot.jpg)
+![Settings screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/settings_screenshot.jpg)
 
 # Settings save file
 The save file is located at `~/.config/ytcon`
