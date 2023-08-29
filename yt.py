@@ -1012,22 +1012,22 @@ main_widget = urwid.Frame(
 # - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 def update_checkboxes():
 	""" Update the state of the checkboxes to setting state, for prevention telling wrong info """
-	checkbox1.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
-	checkbox2.set_state(settings.get_setting("special_mode"), do_callback=False)
-	checkbox3.set_state(ControlClass.delete_after_download, do_callback=False)
+	settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+	settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+	settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
 
-checkbox1 = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
-checkbox2 = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
-checkbox3 = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
+settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
+settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
+settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
 update_checkboxes()
 
 settings_pile = urwid.Pile([
 	urwid.Divider(),
-	checkbox1,
+	settings_checkbox_clipboard,
 	urwid.Divider(),
-	checkbox2,
+	settings_checkbox_sp,
 	urwid.Divider(),
-	checkbox3,
+	settings_checkbox_delete_af,
 	urwid.Divider(),
 ])
 
