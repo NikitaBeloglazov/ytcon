@@ -31,18 +31,31 @@ git clone https://github.com/NikitaBeloglazov/ytcon && cd ytcon
 ```
 Then install modules
 ```shell
-WORKING
+WORKING ON IT
 ```
 And then run it
 ```shell
 python3 yt.py
 ```
 
-# Screenshots
-working on it...
+# Support
+```
+•‎ 🟩 Linux - FULL SUPPORT
+•‎ 🟨 Android - Pydroid 3 terminal doesn't work, Termux works fine
+  but with some directory path changes, and clipboard auto-paste doesn't work because pyperclip doesn't support Android
+  ---
+•‎ ◻️ Windows - Unknown, everything should work with some directories path modifications
+•‎ ◻️ MacOS - Unknown, i don't have a Mac 🤷‍♂️
+```
 
-# Config
-WORKING
+# Screenshots
+### Main screen
+![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/main_screenshot.jpg)
+### Settings screen
+![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/settings_screenshot.jpg)
+
+# Settings save file
+The save file is located at `~/.config/ytcon`
 
 # Testing / Debug / Troubleshooting
 * See `/tmp/debug.log` and `/tmp/info.log`. They are cleared every new launch of the utility.
@@ -51,13 +64,13 @@ WORKING
 # Contribution / Issues
 * Pull requests are welcome!
 * Feel free to write Issues! The developer can answer you in the following languages: Ukrainian, English, Russian.
-* To speed up the process write to [developer](https://github.com/NikitaBeloglazov)
+* If you encounter a problem, please see "Troubleshooting" section. Don't forget to attach logs :)
+* To speed up the process write to [maintainer](https://github.com/NikitaBeloglazov)
 
 # License
 This code is under [Mozilla Public License Version 2.0](/../../blob/main/LICENSE).
 
-# Changelog
-
-* 0.0.0 ALPHA:
-  * WORKING: WORKING
-  * WORKING: WORKING
+<!-- # Changelog          -->
+<!-- * 0.0.0 ALPHA:       -->
+<!--   * WORKING: WORKING -->
+<!--   * WORKING: WORKING -->
