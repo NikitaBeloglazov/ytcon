@@ -5,11 +5,13 @@ import time
 import logging
 import threading
 import traceback
+from pathlib import Path
 import pprint
+import pickle
 import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
-# import notify2
+# import notify2 # TODO
 import yt_dlp
 
 # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
@@ -37,6 +39,7 @@ logger.addHandler(debug_file_handler)
 logger.debug('== DEBUG LOG FILE ==')
 logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+configpath = os.path.expanduser("~") + "/.config/ytcon/"
 
 class JournalClass:
 	"""
@@ -74,9 +77,9 @@ class JournalClass:
 			self.add_to_logs_field(msg)
 		return None
 
-	def clear_errors(self):
+	def clear_errors(self, _=None):
 		""" Clear the errorprinter() field """
-		ControlClass.last_error = "No errors:)"
+		ControlClass.last_error = ""
 		ControlClass.error_countdown = 0
 
 	def add_to_logs_field(self, msg):
@@ -86,7 +89,7 @@ class JournalClass:
 			return None
 
 		del ControlClass.log[0]
-		msg = msg.replace("\n", "")
+		msg = str(msg).replace("\n", "")
 		if len(msg) > RenderClass.width:
 			temp1 = RenderClass.width - 3
 			ControlClass.log.append(msg[0:temp1]+"...")
@@ -97,33 +100,159 @@ class JournalClass:
 
 journal = JournalClass()
 
+class SettingsClass:
+	""" Сontains settings data and methods for them """
+	def __init__(self):
+
+		# Default settings
+		self.settings = {"special_mode": False, "clipboard_autopaste": True}
+
+	class SettingNotFoundError(Exception):
+		""" Called if the specified setting is not found (see def get_setting) """
+
+	def show_settings_call(self, _=None):
+		""" Settings display state switch, made for urwid.Button(on_press=show_settings_call) """
+		RenderClass.settings_show = not RenderClass.settings_show
+
+	def get_setting(self, setting_name):
+		""" Get setting, if it not found, calls SettingNotFoundError """
+		try:
+			return self.settings[setting_name]
+		except KeyError as exc:
+			raise self.SettingNotFoundError from exc
+
+	def write_setting(self, setting_name, setting_content):
+		""" Writes the settings to the memory. Made for the possible use of some "hooks" in the future """
+		self.settings[setting_name] = setting_content
+
+	def save(self, button=None): # in the second argument urwid puts the button of which the function was called
+		""" Uses pickle for saving settings from memory to ~/.config/settings.db"""
+		logger.debug(Path(configpath).mkdir(parents=True, exist_ok=True)) # Create dirs if they don't already exist
+		with open(configpath + "settings.db", "wb") as filee:
+			pickle.dump(self.settings, filee)
+		journal.info(f"[YTCON] {configpath}settings.db saved")
+		RenderClass.flash_button_text(button, RenderClass.green)
+
+	def load(self, button=None): # in the second argument urwid puts the button of which the function was called
+		""" Uses pickle for loading settings from ~/.config/settings.db to memory """
+		try:
+			with open(configpath + "settings.db", "rb") as filee:
+				self.settings = pickle.load(filee)
+			journal.info(f"[YTCON] {configpath}settings.db loaded")
+			update_checkboxes()
+			RenderClass.flash_button_text(button, RenderClass.green)
+		except FileNotFoundError:
+			# If file not found
+			journal.warning(f"[YTCON] Saved settings load failed: FileNotFoundError: {configpath}settings.db")
+			RenderClass.flash_button_text(button, RenderClass.red)
+		except EOFError as exc:
+			# If save file is corrupted
+			logger.debug(traceback.format_exc())
+			journal.warning(f"[YTCON] Saved settings load FAILED: EOFError: {exc}: {configpath}settings.db")
+			journal.error("[YTCON] YOUR SETTINGS FILE IS CORRUPTED. Default settings restored and corrupted save file removed.")
+			self.write_setting("clipboard_autopaste", False)
+			update_checkboxes()
+			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
+			logger.debug(os.remove(f"{configpath}settings.db"))
+
+	def special_mode_switch(self, _=None, _1=None):
+		""" Special mode switch function for urwid.Button's """
+		journal.info("")
+		if self.get_setting("special_mode"): # true
+			self.write_setting("special_mode", False)
+			journal.info("[YTCON] special_mode: True -> False")
+			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
+		elif not self.get_setting("special_mode"): # false
+			self.write_setting("special_mode", True)
+			journal.info("[YTCON] special_mode: False -> True")
+			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+		update_checkboxes()
+
+	def clipboard_autopaste_switch(self, _=None, _1=None):
+		""" Clipboard autopaste switch function for urwid.Button's """
+		journal.info("")
+		if self.get_setting("clipboard_autopaste"): # true
+			self.write_setting("clipboard_autopaste", False)
+			journal.info("[YTCON] clipboard_autopaste: True -> False")
+		elif not self.get_setting("clipboard_autopaste"): # false
+			self.write_setting("clipboard_autopaste", True)
+			journal.info("[YTCON] clipboard_autopaste: False -> True")
+		journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		update_checkboxes()
+
+settings = SettingsClass()
+
 class ControlClass_base:
 	""" It stores information about the download queue and some information that must be passed through several functions. """
 	def __init__(self):
 		self.queue_list = {}
 		self.ydl_opts = {}
 
-		self.last_error = "No errors:)"
+		self.temp = {}
+		self.temp["autopaste_button_color"] = "" # some kind of cache, see tick_handler
+
+		self.last_error = ""
 		self.error_countdown = 0
 		self.prev_last_error = ""
 		self.prev_error_countdown = 0
+
+		self.delete_after_download = False
 
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
 		self.oldlog = ["", "", "", "", "", ""]
 		self.exit = False
 		self.exception = ""
-		self.special_mode = False
-		self.clipboard_checker_state = True
 		self.clipboard_checker_state_launched = False
+
+	def delete_finished(self):
+		""" Removes all completed operations from ControlClass.queue_list with a loop """
+		try:
+			temp1 = 0
+			temp2_new = self.queue_list.copy()
+			for item, item_content in self.queue_list.copy().items():
+				if item_content["status"] == "exists" or item_content["status"] == "finished":
+					del temp2_new[item]
+					if "meta_index" not in item_content:
+						temp1 = temp1 + 1
+			self.queue_list = temp2_new
+			logger.debug(self.queue_list)
+			RenderClass.remove_all_widgets()
+			return str(temp1)
+		except:
+			exit_with_exception(traceback.format_exc())
+		return None
+
+	def clear(self, _=None):
+		""" Clears errors and finished downloads from memory """
+		journal.clear_errors()
+		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
+		RenderClass.flash_button_text(main_clear_button, RenderClass.light_yellow, 2)
+
+	def delete_after_download_switch(self, _=None, _1=None):
+		""" Special mode switch function for urwid.Button's """
+		journal.info("")
+		if self.delete_after_download: # true
+			self.delete_after_download = False
+			journal.info("[YTCON] Delete after download disabled!")
+		elif not self.delete_after_download: # false
+			self.delete_after_download = True
+			journal.error("[YTCON] Delete after download ENABLED! This means that the downloaded files WILL NOT BE SAVED!")
+			journal.warning("[YTCON] Anyway this setting state will NOT be saved in the settings save file.")
+			journal.warning("[YTCON] It resets every time when the utility is restarted. Made for test purposes.")
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
 	def __init__(self):
 		self.methods = self.MethodsClass()
+		self.settings_show = False
+
+		self.errorprinter_animation = 3
 
 		# Init colors
 		self.red = urwid.AttrSpec('dark red', 'default')
+		self.light_red = urwid.AttrSpec('light red', 'default')
 		self.yellow = urwid.AttrSpec('brown', 'default')
+		self.light_yellow = urwid.AttrSpec('yellow', 'default')
 		self.green = urwid.AttrSpec('dark green', 'default')
 		self.cyan = urwid.AttrSpec('dark cyan', 'default')
 
@@ -155,6 +284,20 @@ class RenderClass_base:
 			# Recursively sums the heights of widgets inside a urwid.Pile container
 			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
 		return 0 # Return 0 for unsupported widget types (?)
+
+	def flash_button_text(self, button, color, times=4):
+		""" Makes the button to blink in the specified color """
+		if button is None:
+			return None
+		temp1 = button.get_label()
+		for _ in range(1, times+1):
+			button.set_label((color, temp1))
+			RenderClass.loop.draw_screen()
+			time.sleep(0.1)
+			button.set_label(temp1)
+			RenderClass.loop.draw_screen()
+			time.sleep(0.1)
+		return None
 
 	class MethodsClass:
 		""" Minor methods mostly needed by render_tasks """
@@ -306,8 +449,9 @@ def downloadd(url):
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
 			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
-			if ControlClass.special_mode:
-				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+			if settings.get_setting("special_mode") is True:
+				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+				# "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading formats (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
 
@@ -397,14 +541,16 @@ def downloadd(url):
 
 	# - = - = - = [Post-processing] = - = - = - #
 	try:
+		del ydl
 		if ControlClass.queue_list[temp1_index]["status"] == "exists":
 			return None # skip post-process if file already exists
 		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
 		os.utime(ControlClass.queue_list[temp1_index]["file"])
 
-		# Remove file after downloading for testing purposes
-		# journal.warning(f"[NOTSAVE] Removing {ControlClass.queue_list[temp1_index]['file']}...")
-		# os.remove(ControlClass.queue_list[temp1_index]["file"])
+		# Remove file after downloading
+		if ControlClass.delete_after_download is True:
+			journal.warning(f"[YTCON] REMOVING {ControlClass.queue_list[temp1_index]['file']}...")
+			os.remove(ControlClass.queue_list[temp1_index]["file"])
 	except:
 		exit_with_exception(traceback.format_exc())
 
@@ -485,10 +631,9 @@ def render_tasks(loop, _):
 
 				rcm = RenderClass.methods
 				ws = rcm.whitespace_stabilization
-				if i["status"] == "error":
-					errorr = True
-				else:
-					errorr = False
+
+				errorr = i["status"] == "error"
+
 				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"], errorr)}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
 				fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
 				temp1 = temp1 + fileshortname
@@ -545,52 +690,26 @@ class InputHandlerClass:
 			journal.info("")
 			journal.info("[YTCON] [INPUT] " + original_text)
 
-			# - = Special mode handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			# - = Special mode handler = -
 			if text in ("sp", "specialmode"):
-				journal.info("[YTCON] Specialmode status: " + str(ControlClass.special_mode))
+				settings.special_mode_switch()
 				raise self.InputProcessed
+			# - = - = - = - = - = - = - =
 
-			if text == "sp1":
-				self.special_mode_status_set(True)
-				raise self.InputProcessed
-			if text == "sp0":
-				self.special_mode_status_set(False)
-				raise self.InputProcessed
-
-			if text.split()[0] in ("sp", "specialmode"):
-				if text.split()[1] == "1" or text.split()[1] == "true":
-					self.special_mode_status_set(True)
-				elif text.split()[1] == "0" or text.split()[1] == "false":
-					self.special_mode_status_set(False)
-				else:
-					journal.error("[YTCON] failed to set SP status: input not recognized")
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
-			# - = Clipboard auto-paste status handler = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+			# - = Clipboard auto-paste = -
 			if text in ("cb", "clipboard", "clip"):
-				journal.info("[YTCON] Clipboard auto-paste status: " + str(ControlClass.clipboard_checker_state) + ", launched state: " + str(ControlClass.clipboard_checker_state_launched))
+				settings.clipboard_autopaste_switch()
 				raise self.InputProcessed
+			# - = - = - = - = - = - = - =
 
-			if text in ("cb1", "clip1"):
-				self.clipboard_status_set(True)
+			# - = Delete after download = -
+			if text in ("dad", "delete after download"):
+				ControlClass.delete_after_download_switch()
 				raise self.InputProcessed
-			if text in ("cb0", "clip0"):
-				self.clipboard_status_set(False)
-				raise self.InputProcessed
-
-			if text.split()[0] in ("cb", "clipboard", "clip"):
-				if text.split()[1] == "1" or text.split()[1] == "true":
-					self.clipboard_status_set(True)
-				elif text.split()[1] == "0" or text.split()[1] == "false":
-					self.clipboard_status_set(False)
-				else:
-					journal.error("[YTCON] failed to set clipboard status: input not recognized")
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			# - = - = - = - = - = - = - =
 
 			if text in ("clear", "cls"):
-				journal.clear_errors()
-				journal.info(f"[YTCON] {delete_finished()} item(s) removed from list!")
+				ControlClass.clear()
 
 			elif text == "logtest":
 				logger.debug("[TEST] 1")
@@ -606,6 +725,21 @@ class InputHandlerClass:
 				except:
 					exit_with_exception(traceback.format_exc())
 
+			elif text == "set 0":
+				RenderClass.settings_show = False
+			elif text == "set 1":
+				RenderClass.settings_show = True
+
+			elif text == "set ls":
+				journal.info(settings.settings)
+
+			elif text == "save":
+				settings.save()
+				journal.info(settings.settings)
+			elif text == "load":
+				settings.load()
+				journal.info(settings.settings)
+
 			else:
 				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
 
@@ -613,43 +747,6 @@ class InputHandlerClass:
 			pass
 		except:
 			exit_with_exception(traceback.format_exc())
-
-	def special_mode_status_set(self, boool):
-		"""
-			special_mode_status_set(True) enables special mode,
-			special_mode_status_set(False) disables it
-		"""
-		if boool: # true
-			ControlClass.special_mode = True
-			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
-		elif not boool: # false
-			ControlClass.special_mode = False
-			if "cookiesfrombrowser" in ControlClass.ydl_opts:
-				del ControlClass.ydl_opts["cookiesfrombrowser"]
-			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
-		else:
-			journal.warning("[YTCON] failed to set SP status: input not recognized")
-
-	def clipboard_status_set(self, boool):
-		"""
-			clipboard_status_set(True) enables clipboard auto-paste thread,
-			clipboard_status_set(False) disables it
-		"""
-		if boool: # true
-			if ControlClass.clipboard_checker_state: # == True
-				journal.info("[YTCON] Already enabled.")
-			else:
-				ControlClass.clipboard_checker_state = True
-				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
-		elif not boool: # false
-			if not ControlClass.clipboard_checker_state: # == False:
-				journal.info("[YTCON] Already disabled.")
-			else:
-				ControlClass.clipboard_checker_state = False
-				journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
-		else:
-			journal.error("[YTCON] failed to set clipboard status: input not recognized")
 
 InputHandler = InputHandlerClass()
 
@@ -672,7 +769,7 @@ def errorprinter(loop, _):
 
 		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
 
-		if ControlClass.last_error == "No errors:)":
+		if ControlClass.last_error == "":
 			to_render.append((RenderClass.cyan, error_text_generator))
 		else:
 			to_render.append((RenderClass.red, error_text_generator))
@@ -685,6 +782,30 @@ def errorprinter(loop, _):
 		#elif (RenderClass.width * 3) > len(error_text_generator):
 		#	pass
 
+		# - = - = - = - = - = - unfold animation - = - = - = - = - = -
+		if RenderClass.errorprinter_animation == 0:
+			error_widget.set_text(to_render)
+		elif RenderClass.errorprinter_animation == 1:
+			error_widget.set_text(to_render[:-1])
+		elif RenderClass.errorprinter_animation == 2:
+			if to_render[:-2] == ["- - -\n"]:
+				error_widget.set_text("- - -")
+			else:
+				error_widget.set_text(to_render[:-2])
+		elif RenderClass.errorprinter_animation == 3:
+			if not to_render[:-3]:
+				error_widget.set_text("")
+			else:
+				error_widget.set_text(to_render[:-3])
+
+		if ControlClass.last_error == "":
+			if RenderClass.errorprinter_animation < 3 and RenderClass.errorprinter_animation >= 0:
+				RenderClass.errorprinter_animation += 1
+		else:
+			if RenderClass.errorprinter_animation <= 3 and RenderClass.errorprinter_animation > 0:
+				RenderClass.errorprinter_animation = RenderClass.errorprinter_animation - 1
+		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+
 		ControlClass.prev_last_error = ControlClass.last_error
 		ControlClass.prev_error_countdown = ControlClass.error_countdown
 
@@ -693,7 +814,7 @@ def errorprinter(loop, _):
 			if ControlClass.error_countdown == 0:
 				journal.clear_errors()
 
-		error_widget.set_text(to_render)
+		#error_widget.set_text(to_render)
 		loop.set_alarm_in(0.3, errorprinter)
 	except:
 		exit_with_exception(str(traceback.format_exc()))
@@ -701,8 +822,6 @@ def errorprinter(loop, _):
 def logprinter(loop, _):
 	""" Prints the last 6 lines of logs in log_widget """
 	try:
-		to_render = "- - -\n"
-
 		# skip, do not re-render if it doesn't change - = - = - = - = -
 		# if ControlClass.oldlog == ControlClass.log:
 		#	time.sleep(0.5)
@@ -711,7 +830,7 @@ def logprinter(loop, _):
 		#	ControlClass.oldlog = ControlClass.log.copy()
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
-		to_render += ControlClass.log[0] + "\n"
+		to_render = ControlClass.log[0] + "\n"
 		to_render += ControlClass.log[1] + "\n"
 		to_render += ControlClass.log[2] + "\n"
 		to_render += ControlClass.log[3] + "\n"
@@ -724,12 +843,32 @@ def logprinter(loop, _):
 		exit_with_exception(traceback.format_exc())
 
 def tick_handler(loop, _):
-	""" It just checks some conditions every few seconds and executes them. Not responsible for rendering. """
+	""" It just checks some conditions every few seconds and executes them. Directly not responsible for rendering, but changes some buttons color """
+
+	# - = - = - = - = - = - = - = - = -
+	# Autopaste button color changer
+	if (settings.get_setting("clipboard_autopaste") is True and ControlClass.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and ControlClass.clipboard_checker_state_launched is not False):
+		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "yellow"), main_footer_buttons.contents[2][1])
+		ControlClass.temp["autopaste_button_color"] = "yellow" # some kind of cache
+	elif ControlClass.clipboard_checker_state_launched is not True and ControlClass.temp["autopaste_button_color"] != "light_red":
+		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "light_red"), main_footer_buttons.contents[2][1])
+		ControlClass.temp["autopaste_button_color"] = "light_red" # some kind of cache
+	elif ControlClass.clipboard_checker_state_launched is True and ControlClass.temp["autopaste_button_color"] != "buttons_footer":
+		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "buttons_footer"), main_footer_buttons.contents[2][1])
+		ControlClass.temp["autopaste_button_color"] = "buttons_footer" # some kind of cache
+	# - = - = - = - = - = - = - = - = -
 
 	# - = Clipboard thread activator = -
-	if ControlClass.clipboard_checker_state and ControlClass.clipboard_checker_state_launched is not True:
+	if settings.get_setting("clipboard_autopaste") and ControlClass.clipboard_checker_state_launched is not True:
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
+
+	# - = Special mode cookie extractor activator = -
+	if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in ControlClass.ydl_opts:
+		ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+	elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in ControlClass.ydl_opts:
+		del ControlClass.ydl_opts["cookiesfrombrowser"]
+	# - = - = - = - = - = - = - = - = - = - = - = - =
 
 	# - = - = - = - = - = - = - = - = -
 	# The error handler, if it sees ControlClass.exit = True,
@@ -743,32 +882,31 @@ def tick_handler(loop, _):
 		sys.exit(1)
 	# - = - = - = - = - = - = - = - = -
 
+	# - = - = - = - = - = - = - = - = -
+	# Settings page show handler
+	if RenderClass.settings_show is True and loop.widget is not settings_widget:
+		try:
+			update_checkboxes()
+			loop.widget = settings_widget
+		except:
+			exit_with_exception(traceback.format_exc())
+	if RenderClass.settings_show is False and loop.widget is not main_widget:
+		try:
+			loop.widget = main_widget
+		except:
+			exit_with_exception(traceback.format_exc())
+	# - = - = - = - = - = - = - = - = -
+
+	# Prevent focus from remaining on footer buttons after pressing them
+	main_footer.set_focus(input_widget)
 	# - =
 	loop.set_alarm_in(0.3, tick_handler)
-
-def delete_finished():
-	""" Removes all completed operations from ControlClass.queue_list with a loop """
-	try:
-		temp1 = 0
-		temp2_new = ControlClass.queue_list.copy()
-		for item, item_content in ControlClass.queue_list.copy().items():
-			if item_content["status"] == "exists" or item_content["status"] == "finished":
-				del temp2_new[item]
-				if "meta_index" not in item_content:
-					temp1 = temp1 + 1
-		ControlClass.queue_list = temp2_new
-		logger.debug(ControlClass.queue_list)
-		RenderClass.remove_all_widgets()
-		return str(temp1)
-	except:
-		exit_with_exception(traceback.format_exc())
-	return None
 
 def clipboard_checker():
 	"""
 	Checks the clipboard for new entries against old ones.
 	If it sees new material on the clipboard, it will check whether this is a site, if it detects site, download starts
-	"""
+	""" # TODO: move to tick_handler?
 	try:
 		ControlClass.clipboard_checker_state_launched = True
 		journal.info("[YTCON] Clipboard auto-paste is ON.")
@@ -780,12 +918,12 @@ def clipboard_checker():
 		old_clip = new_clip
 
 		while True:
-			if ControlClass.clipboard_checker_state is False:
+			if settings.get_setting("clipboard_autopaste") is False:
 				ControlClass.clipboard_checker_state_launched = False
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
 
-			new_clip = pyperclip.paste()
+			new_clip = pyperclip.paste() # TODO change paste method
 			if new_clip != old_clip:
 				if re.fullmatch(r"(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", new_clip):
 					journal.info("[CLIP] New URL detected: " + new_clip)
@@ -796,7 +934,7 @@ def clipboard_checker():
 			old_clip = new_clip
 			time.sleep(1)
 	except:
-		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)")
+		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)") # TODO REWRITE
 		return None
 
 def exit_with_exception(text):
@@ -838,27 +976,105 @@ ControlClass.ydl_opts = {
 
 RenderClass = RenderClass_base()
 
-#processes_widget = urwid.Text("Initializing...")
-#lol = urwid.Text("lol")
-
 top_pile = urwid.Pile([])
 
 #logger.debug(pprint.pformat(top_pile.contents))
 #logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
 
-log_widget = urwid.Text("Initializing...")
-error_widget = urwid.Text("Initializing...")
+log_widget = urwid.Text("Initializing, please wait")
+error_widget = urwid.Text("Initializing, please wait")
 input_widget = InputHandler.InputBox("Enter URL > ")
 
-#fill = urwid.Frame(urwid.Filler(lol, "top"), header=processes_widget, footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
-fill = urwid.Frame(urwid.Filler(top_pile, "top"), footer=urwid.Pile([log_widget, error_widget, input_widget]), focus_part='footer')
+main_settings_button = urwid.Button("Settings", on_press=settings.show_settings_call)
+main_clear_button = urwid.Button("Clear", on_press=ControlClass.clear)
+main_footer_clipboard_autopaste_button = urwid.Button("Autopaste", on_press=settings.clipboard_autopaste_switch)
 
-loop = urwid.MainLoop(fill)
+main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, main_footer_clipboard_autopaste_button], cell_width=13, h_sep=2, v_sep=1, align="left")
+logger.debug(main_footer_buttons.contents)
+main_footer_buttons_with_attrmap = urwid.AttrMap(main_footer_buttons, "buttons_footer")
+
+main_footer = urwid.Pile(
+		[
+		error_widget,
+		urwid.Text("- - -"),
+		log_widget,
+		urwid.Text("- - -"),
+		input_widget,
+		urwid.Divider(),
+		urwid.Text("- - -"),
+		main_footer_buttons_with_attrmap,
+		])
+main_widget = urwid.Frame(
+	urwid.Filler(top_pile, "top"),
+	footer=main_footer,
+	focus_part='footer')
+
+# - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+def update_checkboxes():
+	""" Update the state of the checkboxes to setting state, for prevention telling wrong info """
+	settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+	settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+	settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
+
+settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
+settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
+settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
+update_checkboxes()
+
+settings_pile = urwid.Pile([
+	urwid.Divider(),
+	settings_checkbox_clipboard,
+	urwid.Divider(),
+	settings_checkbox_sp,
+	urwid.Divider(),
+	settings_checkbox_delete_af,
+	urwid.Divider(),
+])
+
+# Filler container to center Pile vertically
+settings_filler = urwid.Filler(settings_pile, valign='top')
+
+# Wrap content in urwid.Padding with 4 character padding on each side
+settings_padding = urwid.Padding(settings_filler, left=4, right=4, align='center')
+
+header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
+
+exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=settings.show_settings_call), "reversed")
+
+save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
+load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
+
+footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
+
+footer_widget = urwid.Pile([
+	error_widget,
+	urwid.Text("- - -"),
+	log_widget,
+	urwid.Text("- - -"),
+	footer_buttons
+])
+
+settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=footer_widget)
+# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+
+custom_palette = [
+	# ('name_of_style', 'color_text', 'color_background')
+	('reversed', 'standout', ''),
+	('buttons_footer', 'light green', ''),
+	('light_red', 'light red', ''),
+	('yellow', 'yellow', ''),
+]
+
+loop = urwid.MainLoop(main_widget, palette=custom_palette)
 
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
+RenderClass.loop = loop
 
 logger.debug(RenderClass.width)
 logger.debug(RenderClass.height)
+
+settings.load()
+
 loop.set_alarm_in(0, render_tasks)
 loop.set_alarm_in(0, logprinter)
 loop.set_alarm_in(0, errorprinter)
