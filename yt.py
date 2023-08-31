@@ -1,29 +1,98 @@
+# - = Standart modules = -
 import os
-import sys
 import re
+import sys
 import time
+import pickle
+import pprint
 import logging
 import threading
 import traceback
+import subprocess
 from pathlib import Path
-import pprint
-import pickle
+# - = - = - = - = - = - = -
 import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
-# import notify2 # TODO
+
+# - = - Check ffmpeg installed in system - = -
+try:
+	# Try to launch it
+	subprocess.run("ffmpeg -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	subprocess.run("ffprobe -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+except subprocess.CalledProcessError as e:
+	# If there was a command execution error, ffmpeg is not installed
+	print("\n[!!] FFMPEG and FFPROBE is not installed in your system. Install it with system package manager:\n  sudo apt install ffmpeg\n  sudo dnf install ffmpeg\n  sudo zypper install ffmpeg\n  sudo pacman -S ffmpeg.\n\nProgram execution cannot be continued. YTCON will be exit now.\n")
+	sys.exit(1)
+# - = - = - = - = - = - = - = - = - = - = - = -
+
 import yt_dlp
+#import notify2
+
+# - = CHECK SYSTEM PATHS PART 1 - = - = - = - = - = - = - = - =
+logs_that_will_be_printed_later = []
+# - - - - - - - - - - - - -
+# Check if it is android termux emulator and change dir to user-reachable internal storage
+this_is_android_device = False
+if os.getcwd().find("com.termux") != -1:
+	print("[YTCON] Termux not user-reachable directory detected. Changing to /storage/emulated/0...")
+	logs_that_will_be_printed_later.append("[YTCON] Termux not user-reachable directory detected.")
+	logs_that_will_be_printed_later.append("[YTCON] Changing to /storage/emulated/0...")
+	os.chdir("/storage/emulated/0")
+	this_is_android_device = True
+# - - - - - - - - - - - - -
+# Current folder permissions check 
+try:
+	with open("write_test", "wb") as filee:
+		pass
+	os.remove("write_test")
+except:
+	print(os.getcwd())
+	print("[!!] Current folder is unwritable!")
+	if this_is_android_device:
+		print("Maybe Termux doesn't have storage permissions?")
+	sys.exit(1)
+# - - - - - - - - - - - - -
+# /tmp folder check (For android and windows compability)
+try:
+	with open("/tmp/write_test", "wb") as filee:
+		pass
+	os.remove("/tmp/write_test")
+	log_folder = "/tmp/"
+except:
+	print("[YTCON] /tmp folder is unavalible (windows, android?). setting current dir for logs..")
+	logs_that_will_be_printed_later.append("[YTCON] /tmp folder is unavalible (windows, android?). setting current dir for logs..")
+	log_folder = ""
+# - - - - - - - - - - - - -
+# Save file folder check
+if "XDG_CONFIG_HOME" in os.environ:
+	configpath = os.path.expanduser(os.environ["XDG_CONFIG_HOME"] + "/ytcon/")
+else:
+	configpath = os.path.expanduser("~/.config/ytcon/")
+
+try:
+	Path(configpath).mkdir(parents=True, exist_ok=True)
+	with open(configpath + "write_test", "wb") as filee:
+		pass
+	os.remove(configpath + "write_test")
+except:
+	print(traceback.format_exc())
+	print("= = =\n[!!] An error was occurred!\n")
+	print("Save file folder check failed. Maybe XDG_CONFIG_HOME env or dir permissions broken?")
+	print("The following path has problems: " + configpath)
+	sys.exit(1)
+# - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
 logger = logging.getLogger('main_logger')
 logger.setLevel(logging.DEBUG)
 
 # Create handler for the INFO level
-info_file_handler = logging.FileHandler('/tmp/info.log', mode='w')
+info_file_handler = logging.FileHandler(log_folder+'info.log', mode='w')
 info_file_handler.setLevel(logging.INFO)
 
 # Create handler for the DEBUG level
-debug_file_handler = logging.FileHandler('/tmp/debug.log', mode='w')
+debug_file_handler = logging.FileHandler(log_folder+'debug.log', mode='w')
 debug_file_handler.setLevel(logging.DEBUG)
 
 # Add formatter
@@ -39,7 +108,6 @@ logger.addHandler(debug_file_handler)
 logger.debug('== DEBUG LOG FILE ==')
 logger.info('== INFO LOG FILE ==')
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-configpath = os.path.expanduser("~") + "/.config/ytcon/"
 
 class JournalClass:
 	"""
@@ -199,7 +267,6 @@ class ControlClass_base:
 		self.delete_after_download = False
 
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
-		self.oldlog = ["", "", "", "", "", ""]
 		self.exit = False
 		self.exception = ""
 		self.clipboard_checker_state_launched = False
@@ -822,12 +889,15 @@ def errorprinter(loop, _):
 def logprinter(loop, _):
 	""" Prints the last 6 lines of logs in log_widget """
 	try:
-		# skip, do not re-render if it doesn't change - = - = - = - = -
+		# - = skip, do not re-render if it doesn't change - = - = - =
 		# if ControlClass.oldlog == ControlClass.log:
 		#	time.sleep(0.5)
 		#	continue
 		# else:
 		#	ControlClass.oldlog = ControlClass.log.copy()
+		#
+		# controlclass snippet:
+		# self.oldlog = ["", "", "", "", "", ""]
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
 		to_render = ControlClass.log[0] + "\n"
@@ -933,8 +1003,15 @@ def clipboard_checker():
 					journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
 			old_clip = new_clip
 			time.sleep(1)
+	except pyperclip.PyperclipException:
+		logger.debug(traceback.format_exc())
+		journal.error("[YTCON] pyperclip module says your platform is unsupported (android?). Turning off Clipboard auto-paste..")
+		settings.write_setting("clipboard_autopaste", False)
+		update_checkboxes()
+		ControlClass.clipboard_checker_state_launched = False
+		return None
 	except:
-		exit_with_exception(str(traceback.format_exc()) + "\n[!] There was a clear error with the clipboard. To fix it, you can use self.clipboard_checker_state = True in ControlClass_base and rewrite it to False if your system has issues with clipboard support. (Android, etc)") # TODO REWRITE
+		exit_with_exception(str(traceback.format_exc()))
 		return None
 
 def exit_with_exception(text):
@@ -964,7 +1041,7 @@ ControlClass = ControlClass_base()
 ControlClass.ydl_opts = {
 	'logger': journal,
 	'progress_hooks': [hook],
-	'no_color': True,
+	'color': 'no_color',
 	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
 	'socket_timeout': 15,
 	'retries': 20,
@@ -1070,8 +1147,16 @@ loop = urwid.MainLoop(main_widget, palette=custom_palette)
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
 RenderClass.loop = loop
 
-logger.debug(RenderClass.width)
-logger.debug(RenderClass.height)
+# - = - = - = - = - = - = -
+# Some debug info writer
+logger.debug("width: %s", RenderClass.width)
+logger.debug("height: %s", RenderClass.height)
+logger.debug("config path: %s", configpath)
+
+# Output collected to-later-print logs
+for i in logs_that_will_be_printed_later:
+	journal.info(i)
+# - = - = - = - = - = - = -
 
 settings.load()
 
