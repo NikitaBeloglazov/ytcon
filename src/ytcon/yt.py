@@ -41,7 +41,7 @@ if os.getcwd().find("com.termux") != -1:
 	os.chdir("/storage/emulated/0")
 	this_is_android_device = True
 # - - - - - - - - - - - - -
-# Current folder permissions check 
+# Current folder permissions check
 try:
 	with open("write_test", "wb") as filee:
 		pass
