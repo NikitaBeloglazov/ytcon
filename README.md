@@ -21,8 +21,8 @@
 #### TODO:
 * Change clipboard module
 * Desktop notifications support
+* Auto-updates feature
 * RPM packaging
-
 
 and more.. 
 
@@ -49,7 +49,7 @@ pip3 install -r requirements.txt
 
 And then run it
 ```shell
-python3 yt.py
+cd src/ytcon && python3 yt.py
 ```
 
 # Support

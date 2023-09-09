@@ -310,6 +310,11 @@ class ControlClass_base:
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
 	def __init__(self):
+		self.version = "?.?.?"
+		self.install_source = "???"
+		self.pypi_version = "?.?.?"
+		self.tried_check_pypi_version = False
+
 		self.methods = self.MethodsClass()
 		self.settings_show = False
 
@@ -817,7 +822,6 @@ class InputHandlerClass:
 
 InputHandler = InputHandlerClass()
 
-
 def errorprinter(loop, _):
 	""" Draws errors in error_widget in red, after some time (specified in the timer) removes error messages """
 	try:
@@ -967,6 +971,31 @@ def tick_handler(loop, _):
 			exit_with_exception(traceback.format_exc())
 	# - = - = - = - = - = - = - = - = -
 
+	# - = - = - = - = - = - = - = - = -
+	# GET LATEST VERSION NUMBER FROM PYPI
+	if RenderClass.tried_check_pypi_version is False:
+		#print("Check updates.. :)")
+		try:
+			import requests
+			RenderClass.pypi_version = requests.get("https://pypi.org/pypi/ytcon/json", timeout=20).json()["info"]["version"]
+		except:
+			pass
+
+		textt = f"Your YTCON version: {RenderClass.version} (from {RenderClass.install_source}) / Actual YTCON version: {RenderClass.pypi_version}"
+
+		if RenderClass.version == "?.?.?" or RenderClass.pypi_version == "?.?.?":
+			settings_version_text.set_text((RenderClass.yellow, textt))
+		elif RenderClass.version == RenderClass.pypi_version:
+			settings_version_text.set_text((RenderClass.green, textt))
+		elif RenderClass.version != RenderClass.pypi_version:
+			if RenderClass.install_source == "pip":
+				textt = textt + "\n\nUpdate using pipx or pip:\n - pipx upgrade ytcon\n OR\n - pip3 install -U ytcon\n"
+			if RenderClass.install_source == "git":
+				textt = textt + "\n\nUpdate using git:\n - git clone https://github.com/NikitaBeloglazov/ytcon\n"
+
+			settings_version_text.set_text((RenderClass.red, textt))
+	# - = - = - = - = - = - = - = - = -
+
 	# Prevent focus from remaining on footer buttons after pressing them
 	main_footer.set_focus(input_widget)
 	# - =
@@ -1035,6 +1064,52 @@ def get_resolution_ffprobe(file):
 			return str(i["width"]) + "x" + str(i["height"])
 	return None
 
+RenderClass = RenderClass_base()
+# - = - = -
+# YTCON VERSION CHECKER
+import importlib.util
+
+try:
+	# Trying to use relative paths to look at __version__
+	from .__version__ import __version__
+	RenderClass.version = __version__
+	RenderClass.install_source = "pip"
+except:
+	pass
+
+if RenderClass.version == "!!{PLACEHOLDER}!!" or RenderClass.version == "?.?.?":
+	try:
+		# Find the directory in which the ytcon startup file is located
+		ytcon_files_path = os.path.abspath(__file__).replace("yt.py", "")
+
+		# Try to load __version__.py from the directory where ytcon is located
+		spec = importlib.util.spec_from_file_location("version", ytcon_files_path + "__version__.py")
+		module = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(module)
+		RenderClass.version = module.__version__
+	except:
+		pass
+
+if RenderClass.version == "!!{PLACEHOLDER}!!" or RenderClass.version == "?.?.?":
+	try:
+		# Use GIT to check tags, makes sense if git clone was used to install
+		tag = subprocess.check_output(f'git -C "{ytcon_files_path}" describe --tags', shell=True, encoding="UTF-8")
+
+		# Formating it a little
+		# v0.0.11-3-g0ada3b4 -->> 0.0.11
+		tag = tag.replace("\n", "").replace("v", "")
+		if tag.find("-") > 1:
+			tag = tag[0:tag.find("-")]
+
+		RenderClass.version = tag
+		RenderClass.install_source = "git"
+	except:
+		pass
+
+#print(RenderClass.version) # TODO CLEAN TRASH
+#print(RenderClass.install_source)
+#print(RenderClass.pypi_version)
+#input(">> ")
 # - = - = -
 ControlClass = ControlClass_base()
 
@@ -1050,8 +1125,6 @@ ControlClass.ydl_opts = {
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
-
-RenderClass = RenderClass_base()
 
 top_pile = urwid.Pile([])
 
@@ -1123,11 +1196,14 @@ load_settings_button = urwid.Button("Load from config file", on_press=settings.l
 
 footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
+settings_version_text = urwid.Text("YTCON version: " + RenderClass.version)
+
 footer_widget = urwid.Pile([
 	error_widget,
 	urwid.Text("- - -"),
 	log_widget,
 	urwid.Text("- - -"),
+	settings_version_text,
 	footer_buttons
 ])
 
