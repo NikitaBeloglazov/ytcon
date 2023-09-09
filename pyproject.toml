@@ -1,11 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "ytcon"
-#version = "0.0.9"
-dynamic = ["version"]
+version = "0.0.9"
 authors = [
   {name="NikitaBeloglazov", email="nnikita.beloglazov@gmail.com"},
 ]
@@ -26,6 +25,3 @@ ytcon = "ytcon:yt"
 [project.urls]
 "Homepage" = "https://github.com/NikitaBeloglazov/ytcon"
 "Bug Tracker" = "https://github.com/NikitaBeloglazov/ytcon/issues"
-
-[tool.setuptools_scm] # GITHUB DYNAMIC VERSIONING
-write_to = "src/ytcon/_version.py"
