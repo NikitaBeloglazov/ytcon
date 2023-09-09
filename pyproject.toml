@@ -28,4 +28,4 @@ ytcon = "ytcon:yt"
 "Bug Tracker" = "https://github.com/NikitaBeloglazov/ytcon/issues"
 
 [tool.setuptools_scm] # GITHUB DYNAMIC VERSIONING
-write_to = "ytcon/_version.py"
+write_to = "src/ytcon/_version.py"
