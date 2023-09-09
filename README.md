@@ -18,21 +18,35 @@
 * Shows the resolution of downloading videos, even in generic extractor
 * Beautiful human interface with color support
 
-TODO:
+#### TODO:
 * Change clipboard module
 * Desktop notifications support
+* RPM packaging
+
 
 and more.. 
 
 # Install
+#### YTCON is avalible on PyPI 🎆 - https://pypi.org/project/ytcon/
+
+## Simple way
+Install it like a pip package
+```shell
+pipx install ytcon && pipx ensurepath
+```
+If pipx is not installed, install it with a system package manager - `python3-pipx`
+
+## Manual way
 Clone the repository to your local disk
 ```shell
 git clone https://github.com/NikitaBeloglazov/ytcon && cd ytcon
 ```
+
 Then install modules
 ```shell
-WORKING ON IT
+pip3 install -r requirements.txt
 ```
+
 And then run it
 ```shell
 python3 yt.py
@@ -42,17 +56,17 @@ python3 yt.py
 ```
 •‎ 🟩 Linux - FULL SUPPORT
 •‎ 🟨 Android - Pydroid 3 terminal doesn't work, Termux works fine
-  but with some directory path changes, and clipboard auto-paste doesn't work because pyperclip doesn't support Android
+  clipboard auto-paste doesn't work because pyperclip doesn't support Android
   ---
-•‎ ◻️ Windows - Unknown, everything should work with some directories path modifications
+•‎ ◻️ Windows - Unknown, everything should work
 •‎ ◻️ MacOS - Unknown, i don't have a Mac 🤷‍♂️
 ```
 
 # Screenshots
 ### Main screen
-![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/main_screenshot.jpg)
+![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/main/screenshots/main_screenshot.jpg)
 ### Settings screen
-![Settings screen image](https://github.com/NikitaBeloglazov/ytcon/raw/readme-update/screenshots/settings_screenshot.jpg)
+![Settings screen image](https://github.com/NikitaBeloglazov/ytcon/raw/main/screenshots/settings_screenshot.jpg)
 
 # Settings save file
 The save file is located at `~/.config/ytcon`
