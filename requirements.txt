@@ -1,0 +1,4 @@
+urwid>=2.1.2
+pyperclip
+ffmpeg-python>=0.2.0
+yt_dlp

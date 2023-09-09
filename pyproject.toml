@@ -4,20 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ytcon"
-version = "0.0.2"
+version = "0.0.7"
 authors = [
   {name="NikitaBeloglazov", email="nnikita.beloglazov@gmail.com"},
 ]
-description = "A small example package"
+description = "yt-dlp pseudo-graphical console GUI ✨"
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["urwid", "pyperclip", "ffmpeg-python", "yt_dlp"]
+dependencies = ["urwid>=2.1.2", "pyperclip", "ffmpeg-python>=0.2.0", "yt_dlp"]
 
 classifiers = [
     "Programming Language :: Python :: 3",
-    #"License :: MIT License",
+    #"License :: MPL-2.0 license",
     #"Operating System :: OS Independent",
 ]
+
+[project.scripts]
+ytcon = "ytcon:yt"
 
 [project.urls]
 "Homepage" = "https://github.com/NikitaBeloglazov/ytcon"
