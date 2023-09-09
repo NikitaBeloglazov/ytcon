@@ -3,7 +3,8 @@ import subprocess
 tag = subprocess.check_output("git describe --tags", shell=True, encoding="UTF-8")
 print("[TAG MARKER] git response: " + tag)
 tag = tag.replace("\n", "").replace("v", "")
-tag = tag[0:tag.find("-")]
+if tag.find("-") > 1:
+	tag = tag[0:tag.find("-")]
 print("[TAG MARKER] FOUND TAG: " + tag)
 
 print("[TAG MARKER] MARKING VERSION IN pyproject.toml")
