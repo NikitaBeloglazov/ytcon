@@ -1,8 +1,8 @@
 import subprocess
 import os
 
+os.system("ls -a")
 tag = subprocess.check_output("git describe --tags", shell=True, encoding="UTF-8")
-os.system("ls")
 
 print("[TAG MARKER] git response: " + tag)
 tag = tag.replace("\n", "").replace("v", "")
