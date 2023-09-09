@@ -4,19 +4,26 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ytcon"
-version = "0.0.9"
+version = "0.0.10"
 authors = [
   {name="NikitaBeloglazov", email="nnikita.beloglazov@gmail.com"},
 ]
-description = "yt-dlp pseudo-graphical console GUI ✨"
+description = "yt-dlp pseudo-graphical console interface (TUI) ✨"
 readme = "README.md"
+license = {file = "LICENSE"}
+license = {text = "MPL 2.0 License"}
+
 requires-python = ">=3.9"
 dependencies = ["urwid>=2.1.2", "pyperclip", "ffmpeg-python>=0.2.0", "yt_dlp"]
 
+keywords = ["ytcon", "yt-dlp", "yt_dlp", "ytdlp", "tui"]
+
 classifiers = [
     "Programming Language :: Python :: 3",
-    #"License :: MPL-2.0 license",
-    #"Operating System :: OS Independent",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Development Status :: 4 - Beta",
+    "Environment :: Console :: Curses",
+    "Topic :: Multimedia :: Video"
 ]
 
 [project.scripts]
