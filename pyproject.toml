@@ -13,7 +13,7 @@ readme = "README.md"
 license = {text = "MPL 2.0 License"}
 
 requires-python = ">=3.9"
-dependencies = ["urwid>=2.1.2", "pyperclip", "ffmpeg-python>=0.2.0", "yt_dlp"]
+dependencies = ["requests", "urwid>=2.1.2", "pyperclip", "ffmpeg-python>=0.2.0", "yt_dlp"]
 
 keywords = ["ytcon", "yt-dlp", "yt_dlp", "ytdlp", "tui"]
 

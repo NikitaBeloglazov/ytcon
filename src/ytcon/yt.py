@@ -9,8 +9,10 @@ import logging
 import threading
 import traceback
 import subprocess
+import importlib.util
 from pathlib import Path
 # - = - = - = - = - = - = -
+import requests # for updates check
 import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
@@ -268,6 +270,7 @@ class ControlClass_base:
 
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
 		self.exit = False
+		self.auto_update_safe_gui_stop = False
 		self.exception = ""
 		self.clipboard_checker_state_launched = False
 
@@ -310,11 +313,6 @@ class ControlClass_base:
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
 	def __init__(self):
-		self.version = "?.?.?"
-		self.install_source = "???"
-		self.pypi_version = "?.?.?"
-		self.tried_check_pypi_version = False
-
 		self.methods = self.MethodsClass()
 		self.settings_show = False
 
@@ -422,6 +420,141 @@ class RenderClass_base:
 			if error:
 				return f"| {'='*(white_space-2)} |"
 			return f"|{'█'*progress}{' '*white_space}|"
+
+class UpdateAndVersionsClass:
+	def __init__(self):
+		self.version = "?.?.?"
+		self.install_source = "???"
+		self.pypi_version = "?.?.?"
+		self.tried_check_pypi_version = False
+
+		self.auto_update_avalible = False
+
+		self.get_pypi_version_new_thread()
+		self.version, self.install_source = self.check_version()
+		#print(self.version)
+		#print(self.install_source)
+		#input(">> ")
+
+	def check_version(self):
+		version = "?.?.?"
+		install_source = "???"
+		try:
+			# Trying to use relative paths to look at __version__
+			from .__version__ import __version__
+			version = __version__
+
+			# Understand by which tool is it installed
+			if os.path.abspath(__file__).find("pipx") > 0:
+				install_source = "pipx"
+			else:
+				install_source = "pip"
+		except:
+			pass
+
+		if version == "!!{PLACEHOLDER}!!" or version == "?.?.?":
+			try:
+				# Find the directory in which the ytcon startup file is located
+				ytcon_files_path = os.path.abspath(__file__).replace("yt.py", "")
+
+				# Try to load __version__.py from the directory where ytcon is located
+				spec = importlib.util.spec_from_file_location("version", ytcon_files_path + "__version__.py")
+				module = importlib.util.module_from_spec(spec)
+				spec.loader.exec_module(module)
+				version = module.__version__
+			except:
+				pass
+
+		if version == "!!{PLACEHOLDER}!!" or version == "?.?.?":
+			try:
+				# Use GIT to check tags, makes sense if git clone was used to install
+				tag = subprocess.check_output(f'git -C "{ytcon_files_path}" describe --tags', shell=True, encoding="UTF-8")
+
+				# Formating it a little
+				# v0.0.11-3-g0ada3b4 -->> 0.0.11
+				tag = tag.replace("\n", "").replace("v", "")
+				if tag.find("-") > 1:
+					tag = tag[0:tag.find("-")]
+
+				version = tag
+				install_source = "git"
+			except:
+				pass
+
+		if version == "!!{PLACEHOLDER}!!":
+			version = "?.?.?"
+		return version, install_source
+
+	def get_pypi_version(self):
+		try:
+			self.pypi_version = requests.get("https://pypi.org/pypi/ytcon/json", timeout=20).json()["info"]["version"]
+			#self.pypi_version = "0.0.13"
+		except:
+			logger.debug(traceback.format_exc())
+
+	def get_pypi_version_new_thread(self):
+		threading.Thread(target=self.get_pypi_version, daemon=True).start()
+
+	def update_settings_version_text(self):
+		textt = f"Your YTCON version: {updates_class.version} (from {updates_class.install_source}) / Actual YTCON version: {updates_class.pypi_version}"
+
+		if self.version == "?.?.?" or self.pypi_version == "?.?.?":
+			settings_version_text.set_text((RenderClass.yellow, textt))
+		elif self.version == self.pypi_version:
+			settings_version_text.set_text((RenderClass.green, textt))
+		elif self.version != self.pypi_version:
+			if self.install_source == "pipx":
+				textt = textt + "\n\nUpdate using pipx:\n - pipx upgrade ytcon\n"
+				self.auto_update_avalible = True
+			if self.install_source == "pip":
+				textt = textt + "\n\nUpdate using pip:\n - pip3 install -U ytcon\n"
+			if self.install_source == "git":
+				textt = textt + "\n\nUpdate using git:\n - `git pull` in folder with ytcon\n"
+				self.auto_update_avalible = True
+
+			settings_version_text.set_text((RenderClass.red, textt))
+
+	def get_update_command(self):
+		if self.install_source == "pipx":
+			return "pipx upgrade ytcon"
+			self.auto_update_avalible = True
+		elif self.install_source == "git":
+			ytcon_files_path = os.path.abspath(__file__).replace("yt.py", "")
+			return f"git -C {ytcon_files_path} pull"
+		elif self.install_source == "pip":
+			journal.error("[YTCON] Auto update is not avalible for pip installation type")
+			return None
+		elif self.install_source == "???":
+			journal.error("[YTCON] Auto update is not avalible - Unable to determine your installation type")
+			return None
+		else:
+			journal.error("[YTCON] Auto update is not avalible - No update instructions found for your installation type")
+			return None
+
+	def update_run_and_restart(self):
+		update_command = self.get_update_command()
+		if update_command is None:
+			return None
+		ControlClass.auto_update_safe_gui_stop = True
+		time.sleep(1)
+		print("\n- = - =\nThe following command will run in 10 seconds:\n")
+		print(" - " + update_command)
+		print("\nCtrl+C to cancel update.")
+		time.sleep(10)
+		print("- = - =\n>> " + update_command + "\n")
+		status_code = os.system(update_command)
+		if status_code == 0:
+			print("\n- = - =\nUpdate was completed successfully! YTCON will restart itself..")
+			restart_command = sys.executable + " " + " ".join(sys.argv)
+			print(" - " + restart_command)
+			print("\nCtrl+C to cancel restart.")
+			time.sleep(5)
+			print("- = - =\n>> " + restart_command + "\n")
+			os.system(restart_command)
+		else:
+			print("\n- = - =\nIt looks like the update failed. See the output above for details.")
+
+updates_class = UpdateAndVersionsClass()
 
 def hook(d):
 	""" A hook that is called every time by yt-dlp when the state of the task changes (example percent changed),
@@ -812,6 +945,14 @@ class InputHandlerClass:
 				settings.load()
 				journal.info(settings.settings)
 
+			elif text == "ref":
+				updates_class.get_pypi_version_new_thread()
+
+			elif text == "update":
+				#updates_class.update_run_and_restart()
+				updates_class.update_thread = threading.Thread(target=updates_class.update_run_and_restart, daemon=True)
+				updates_class.update_thread.start()
+
 			else:
 				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
 
@@ -954,6 +1095,14 @@ def tick_handler(loop, _):
 		time.sleep(0.5)
 		print(ControlClass.exception)
 		sys.exit(1)
+
+	if ControlClass.auto_update_safe_gui_stop is True:
+		try:
+			loop.stop()
+		except:
+			journal.debug(traceback.format_exc())
+		updates_class.update_thread.join()
+		exit()
 	# - = - = - = - = - = - = - = - = -
 
 	# - = - = - = - = - = - = - = - = -
@@ -973,27 +1122,12 @@ def tick_handler(loop, _):
 
 	# - = - = - = - = - = - = - = - = -
 	# GET LATEST VERSION NUMBER FROM PYPI
-	if RenderClass.tried_check_pypi_version is False:
-		#print("Check updates.. :)")
-		try:
-			import requests
-			RenderClass.pypi_version = requests.get("https://pypi.org/pypi/ytcon/json", timeout=20).json()["info"]["version"]
-		except:
-			pass
+	# TODO OPIMIZE
+	if updates_class.tried_check_pypi_version is False:
+		updates_class.update_settings_version_text()
 
-		textt = f"Your YTCON version: {RenderClass.version} (from {RenderClass.install_source}) / Actual YTCON version: {RenderClass.pypi_version}"
-
-		if RenderClass.version == "?.?.?" or RenderClass.pypi_version == "?.?.?":
-			settings_version_text.set_text((RenderClass.yellow, textt))
-		elif RenderClass.version == RenderClass.pypi_version:
-			settings_version_text.set_text((RenderClass.green, textt))
-		elif RenderClass.version != RenderClass.pypi_version:
-			if RenderClass.install_source == "pip":
-				textt = textt + "\n\nUpdate using pipx or pip:\n - pipx upgrade ytcon\n OR\n - pip3 install -U ytcon\n"
-			if RenderClass.install_source == "git":
-				textt = textt + "\n\nUpdate using git:\n - git clone https://github.com/NikitaBeloglazov/ytcon\n"
-
-			settings_version_text.set_text((RenderClass.red, textt))
+	if updates_class.auto_update_avalible is True:
+		auto_update_avalible_text_indicator.set_text((RenderClass.cyan, f"- - -\nAuto update {updates_class.version} -> {updates_class.pypi_version} is avalible! Write \"update\" for details!"))
 	# - = - = - = - = - = - = - = - = -
 
 	# Prevent focus from remaining on footer buttons after pressing them
@@ -1064,53 +1198,8 @@ def get_resolution_ffprobe(file):
 			return str(i["width"]) + "x" + str(i["height"])
 	return None
 
+# - = - = -
 RenderClass = RenderClass_base()
-# - = - = -
-# YTCON VERSION CHECKER
-import importlib.util
-
-try:
-	# Trying to use relative paths to look at __version__
-	from .__version__ import __version__
-	RenderClass.version = __version__
-	RenderClass.install_source = "pip"
-except:
-	pass
-
-if RenderClass.version == "!!{PLACEHOLDER}!!" or RenderClass.version == "?.?.?":
-	try:
-		# Find the directory in which the ytcon startup file is located
-		ytcon_files_path = os.path.abspath(__file__).replace("yt.py", "")
-
-		# Try to load __version__.py from the directory where ytcon is located
-		spec = importlib.util.spec_from_file_location("version", ytcon_files_path + "__version__.py")
-		module = importlib.util.module_from_spec(spec)
-		spec.loader.exec_module(module)
-		RenderClass.version = module.__version__
-	except:
-		pass
-
-if RenderClass.version == "!!{PLACEHOLDER}!!" or RenderClass.version == "?.?.?":
-	try:
-		# Use GIT to check tags, makes sense if git clone was used to install
-		tag = subprocess.check_output(f'git -C "{ytcon_files_path}" describe --tags', shell=True, encoding="UTF-8")
-
-		# Formating it a little
-		# v0.0.11-3-g0ada3b4 -->> 0.0.11
-		tag = tag.replace("\n", "").replace("v", "")
-		if tag.find("-") > 1:
-			tag = tag[0:tag.find("-")]
-
-		RenderClass.version = tag
-		RenderClass.install_source = "git"
-	except:
-		pass
-
-#print(RenderClass.version) # TODO CLEAN TRASH
-#print(RenderClass.install_source)
-#print(RenderClass.pypi_version)
-#input(">> ")
-# - = - = -
 ControlClass = ControlClass_base()
 
 ControlClass.ydl_opts = {
@@ -1143,6 +1232,8 @@ main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, m
 logger.debug(main_footer_buttons.contents)
 main_footer_buttons_with_attrmap = urwid.AttrMap(main_footer_buttons, "buttons_footer")
 
+auto_update_avalible_text_indicator = urwid.Text("- - -")
+
 main_footer = urwid.Pile(
 		[
 		error_widget,
@@ -1151,7 +1242,7 @@ main_footer = urwid.Pile(
 		urwid.Text("- - -"),
 		input_widget,
 		urwid.Divider(),
-		urwid.Text("- - -"),
+		auto_update_avalible_text_indicator,
 		main_footer_buttons_with_attrmap,
 		])
 main_widget = urwid.Frame(
@@ -1196,7 +1287,7 @@ load_settings_button = urwid.Button("Load from config file", on_press=settings.l
 
 footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
-settings_version_text = urwid.Text("YTCON version: " + RenderClass.version)
+settings_version_text = urwid.Text((RenderClass.yellow, f"Your YTCON version: {updates_class.version} / Actual YTCON version: *Working..*"))
 
 footer_widget = urwid.Pile([
 	error_widget,
