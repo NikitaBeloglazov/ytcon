@@ -568,7 +568,7 @@ class UpdateAndVersionsClass:
 			print("- = - =\n>> " + restart_command + "\n")
 			os.system(restart_command)
 		else:
-			print("\n- = - =\nIt looks like the update failed. See the output above for details.")
+			print("\n- = - =\nIt looks like the update failed. See the output above for details.\nYTCON has not been updated.")
 		return None
 
 updates_class = UpdateAndVersionsClass()
