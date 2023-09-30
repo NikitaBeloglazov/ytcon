@@ -9,8 +9,9 @@
 #### TUI for the yt-dlp utility, with support for many settings, some fixes, and multithreading
 #### 🚧 Currently in the ALPHA stage of development
 
-# Features:
+# 📘 Features:
 * All yt-dlp features
+* Auto-updates feature
 * Multiple downloads at the same time
 * Settings menu
 * Clipboard auto-paste
@@ -19,70 +20,54 @@
 * Beautiful human interface with color support
 
 #### TODO:
-* Change clipboard module
+* Change clipboard module [Almost done 👽]
 * Desktop notifications support
-* Auto-updates feature
 * RPM packaging
 
 and more.. 
 
-# Install
-#### YTCON is avalible on PyPI 🎆 - https://pypi.org/project/ytcon/
+# 🚀 Install
+### YTCON is avalible on PyPI 🎆 - https://pypi.org/project/ytcon/
 
-## Simple way
-Install it like a pip package
-```shell
-pipx install ytcon && pipx ensurepath
-```
+## ▶️ Install it like a pip package in pipx (Recommended)
+* `pipx install ytcon`
+* `pipx ensurepath`
+
 If pipx is not installed, install it with a system package manager - `python3-pipx`
 
-## Manual way
-Clone the repository to your local disk
-```shell
-git clone https://github.com/NikitaBeloglazov/ytcon && cd ytcon
-```
+### Manual install
+* `git clone https://github.com/NikitaBeloglazov/ytcon && cd ytcon`
+* `pip3 install -r requirements.txt`
+* `cd src/ytcon && python3 yt.py`
 
-Then install modules
-```shell
-pip3 install -r requirements.txt
-```
+# 💿 Support
 
-And then run it
-```shell
-cd src/ytcon && python3 yt.py
-```
+__•‎ 🟩 Linux - FULL SUPPORT__
 
-# Support
-```
-•‎ 🟩 Linux - FULL SUPPORT
-•‎ 🟨 Android - Pydroid 3 terminal doesn't work, Termux works fine
-  clipboard auto-paste doesn't work because pyperclip doesn't support Android
-  ---
-•‎ ◻️ Windows - Unknown, everything should work
-•‎ ◻️ MacOS - Unknown, i don't have a Mac 🤷‍♂️
-```
+__•‎ 🟩 Android - FULL SUPPORT with some tweaks__
 
-# Screenshots
+__•‎ ◻️ Windows - Unknown, everything should work, i will test it soon__
+
+__•‎ 🟥 MacOS - Unknown, i don't have a Mac 🤷‍♂️. If have it, and you want to help, [write an issue](https://github.com/NikitaBeloglazov/ytcon/issues/new)__
+
+# 🖼️ Screenshots
 ### Main screen
 ![Main screen image](https://github.com/NikitaBeloglazov/ytcon/raw/main/screenshots/main_screenshot.jpg)
 ### Settings screen
 ![Settings screen image](https://github.com/NikitaBeloglazov/ytcon/raw/main/screenshots/settings_screenshot.jpg)
 
-# Settings save file
+# ⚙️ Settings save file
 The save file is located at `~/.config/ytcon`
 
-# Testing / Debug / Troubleshooting
+# 💬 Testing / Debug / Troubleshooting
 * See `/tmp/debug.log` and `/tmp/info.log`. They are cleared every new launch of the utility.
 * Try this same link with regular yt-dlp (`yt-dlp [link]`)
   
 # Contribution / Issues
-* Pull requests are welcome!
-* Feel free to write Issues! The developer can answer you in the following languages: Ukrainian, English, Russian.
-* If you encounter a problem, please see "Troubleshooting" section. Don't forget to attach logs :)
-* To speed up the process write to [maintainer](https://github.com/NikitaBeloglazov)
-
-# License
-This code is under [Mozilla Public License Version 2.0](/../../blob/main/LICENSE).
+* 🥼 __Pull requests are welcome!__
+* 🌈 Feel free to write Issues! The developer can answer you in the following languages: Ukrainian, English, Russian.
+* Don't forget to attach version (`pip3 show ytcon`) and error text :)
+* ⏩ To speed up the process write to [maintainer](https://github.com/NikitaBeloglazov)
 
 <!-- # Changelog          -->
 <!-- * 0.0.0 ALPHA:       -->
