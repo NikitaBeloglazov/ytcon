@@ -44,11 +44,14 @@ If pipx is not installed, install it with a system package manager - `python3-pi
 
 __•‎ 🟩 Linux - FULL SUPPORT__
 
-__•‎ 🟩 Android - FULL SUPPORT with some tweaks__
+__•‎ 🟩 Android - FULL SUPPORT in Termux with some tweaks__
 
-__•‎ ◻️ Windows - Unknown, everything should work, i will test it soon__
+__•‎ 🟩 MacOS - Works__ on macOS HighSierra 10.13
 
-__•‎ 🟥 MacOS - Unknown, i don't have a Mac 🤷‍♂️. If have it, and you want to help, [write an issue](https://github.com/NikitaBeloglazov/ytcon/issues/new)__
+__•‎ 🟩 BSD Systems - Works__ on __FreeBSD / GhostBSD__ and OpenBSD / FuguIta
+
+__•‎ 🟥 Windows - Don't works, because Urwid don't support it.__
+Related Issues: [-1-](https://github.com/urwid/urwid/issues/240) and [-2-](https://github.com/NikitaBeloglazov/ytcon/issues/new). Maybe it will be fixed soon. Use WSL or Cygwin unstead.
 
 # 🖼️ Screenshots
 ### Main screen
