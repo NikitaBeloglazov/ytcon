@@ -17,23 +17,24 @@ import urwid
 import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 
-# - = - Check ffmpeg installed in system - = -
+import yt_dlp
+#import notify2
+
+debug_that_will_be_saved_later = []
+logs_that_will_be_printed_later = []
+
+# - = - Check ffmpeg installed in system - = - = - = -
 try:
 	# Try to launch it
 	subprocess.run("ffmpeg -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	subprocess.run("ffprobe -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
 	# If there was a command execution error, ffmpeg is not installed
-	print("\n[!!] FFMPEG and FFPROBE is not installed in your system. Install it with system package manager:\n  sudo apt install ffmpeg\n  sudo dnf install ffmpeg\n  sudo zypper install ffmpeg\n  sudo pacman -S ffmpeg.\n\nProgram execution cannot be continued. YTCON will be exit now.\n")
+	print("\n[!!] FFMPEG and FFPROBE is not installed in your system. Install it using system package manager:\n - sudo apt install ffmpeg\n - sudo dnf install ffmpeg\n - sudo zypper install ffmpeg\n - sudo pacman -S ffmpeg.\n\nProgram execution cannot be continued. YTCON will be exit now.\n")
 	sys.exit(1)
-# - = - = - = - = - = - = - = - = - = - = - = -
+# - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
-import yt_dlp
-#import notify2
-
-# - = CHECK SYSTEM PATHS PART 1 - = - = - = - = - = - = - = - =
-logs_that_will_be_printed_later = []
-# - - - - - - - - - - - - -
+# - = CHECK SYSTEM PATHS - = - = - = - = - = - = - = - =
 # Check if it is android termux emulator and change dir to user-reachable internal storage
 this_is_android_device = False
 if os.getcwd().find("com.termux") != -1:
@@ -62,7 +63,6 @@ try:
 	os.remove("/tmp/write_test")
 	log_folder = "/tmp/"
 except:
-	print("[YTCON] /tmp folder is unavalible (windows, android?). setting current dir for logs..")
 	logs_that_will_be_printed_later.append("[YTCON] /tmp folder is unavalible (windows, android?). setting current dir for logs..")
 	log_folder = ""
 # - - - - - - - - - - - - -
@@ -762,10 +762,10 @@ def downloadd(url):
 		return None
 	except:
 		exit_with_exception(traceback.format_exc())
+		return None
 
 	# - = - = - = [Post-processing] = - = - = - #
 	try:
-		del ydl
 		if ControlClass.queue_list[temp1_index]["status"] == "exists":
 			return None # skip post-process if file already exists
 		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
@@ -1301,7 +1301,7 @@ def get_resolution_ffprobe(file):
 	""" Uses ffprobe to get video (even not fully downloaded) resolution """
 	try:
 		probe = ffmpeg.probe(file)
-	except ffmpeg._run.Error as e:
+	except ffmpeg.Error as e:
 		logger.debug("ffprobe error:")
 		logger.debug(e.stderr)
 		return None
@@ -1437,6 +1437,8 @@ logger.debug("config path: %s", configpath)
 # Output collected to-later-print logs
 for i in logs_that_will_be_printed_later:
 	journal.info(i)
+for i in debug_that_will_be_saved_later:
+	logger.debug(i)
 # - = - = - = - = - = - = -
 
 settings.load()
