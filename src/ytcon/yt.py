@@ -14,8 +14,9 @@ from pathlib import Path
 # - = - = - = - = - = - = -
 import requests # for updates check
 import urwid
-import pyperclip
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
+
+import clipman
 
 import yt_dlp
 #import notify2
@@ -450,7 +451,7 @@ class UpdateAndVersionsClass:
 		install_source = "???"
 		try:
 			# Trying to use relative paths to look at __version__
-			from .__version__ import __version__
+			from .__version__ import __version__ # pylint: disable=import-outside-toplevel
 			version = __version__
 
 			# Understand by which tool is it installed
@@ -657,8 +658,8 @@ def hook(d):
 	except:
 		exit_with_exception(traceback.format_exc())
 
-def downloadd(url):
-	""" 
+def downloadd(url): # pylint: disable=too-many-return-statements
+	"""
 	The main component of ytcon, this class sets the basic parameters for the video,
 	composes the title and starts downloading.
 
@@ -1177,7 +1178,7 @@ def tick_handler(loop, _):
 	# - = - = - = - = - = - = - = - = -
 
 	# - = Clipboard thread activator = -
-	if settings.get_setting("clipboard_autopaste") and ControlClass.clipboard_checker_state_launched is not True:
+	if settings.get_setting("clipboard_autopaste") and ControlClass.clipboard_checker_state_launched is False:
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
 
@@ -1252,17 +1253,31 @@ url_regex = r"^(https?:\/\/)?([\w-]{1,32}\.[\w-]{1,32})[^\s@]*$"
 def clipboard_checker():
 	"""
 	Checks the clipboard for new entries against old ones.
-	If it sees new material on the clipboard, it will check whether this is a site, if it detects site, download starts
-	""" # TODO: move to tick_handler?
+	If it sees new content on the clipboard, it will check whether this is a site, if it detects site, download starts
+	"""
+
+	# Set the button yellow and DO NOT start daemon
+	ControlClass.clipboard_checker_state_launched = "Do not start"
+
+	if clipman.dataclass.init_called is False:
+		try:
+			clipman.init()
+		except:
+			logger.info(traceback.format_exc())
+			journal.error("[YTCON] An error occurred while initializing the clipboard. You can see the error in info.log. Or save the Auto-paste option enabled in the config file, restart ytcon, and after that you will see an error with detailed instructions.")
+
+			# Keep setting ON for "save to config file" ability
+			time.sleep(60)
+			settings.write_setting("clipboard_autopaste", False)
+			update_checkboxes()
+			ControlClass.clipboard_checker_state_launched = False
+			return None
+
 	try:
 		ControlClass.clipboard_checker_state_launched = True
 		journal.info("[YTCON] Clipboard auto-paste is ON.")
 
-		new_clip = pyperclip.paste()
-		if re.fullmatch(url_regex, new_clip):
-			journal.info("[CLIP] URL detected: " + new_clip)
-			threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
-		old_clip = new_clip
+		old_clip = ""
 
 		while True:
 			if settings.get_setting("clipboard_autopaste") is False:
@@ -1270,23 +1285,16 @@ def clipboard_checker():
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
 
-			new_clip = pyperclip.paste() # TODO change paste method
+			new_clip = clipman.paste()
 			if new_clip != old_clip:
 				if re.fullmatch(url_regex, new_clip):
 					journal.info("[CLIP] New URL detected: " + new_clip)
 					threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
 				else:
-					logger.debug(new_clip)
-					journal.info("[CLIP] New content detected. But this is not URL. Ignoring..")
+					logger.debug("clipboard content: %s", new_clip)
+					journal.info("[CLIP] New clipboard content detected. But this is not URL. Ignoring..")
 			old_clip = new_clip
 			time.sleep(1)
-	except pyperclip.PyperclipException:
-		logger.debug(traceback.format_exc())
-		journal.error("[YTCON] pyperclip module says your platform is unsupported (android?). Turning off Clipboard auto-paste..")
-		settings.write_setting("clipboard_autopaste", False)
-		update_checkboxes()
-		ControlClass.clipboard_checker_state_launched = False
-		return None
 	except:
 		exit_with_exception(str(traceback.format_exc()))
 		return None
@@ -1441,7 +1449,37 @@ for i in debug_that_will_be_saved_later:
 	logger.debug(i)
 # - = - = - = - = - = - = -
 
+# - = - = - = - Late initialize - = - = - = - =
 settings.load()
+
+if settings.get_setting("clipboard_autopaste") is True:
+	try:
+		clipman.init()
+	except Exception as e: # pylint: disable=broad-except
+		logger.info(traceback.format_exc())
+		print("[!!] An Clipboard error occurred!\n")
+		print(f"- {type(e).__name__}: {e}")
+		print("\nYou can follow instructions in this error message, or ignore it")
+		print("BUT, if you ignore it, clipboard auto-paste will be unavalible.\n")
+		print("Also, if this error message doesn't contain instructions,")
+		print("and does not contain any understandable text for your human language, please make an issue")
+		print("https://github.com/NikitaBeloglazov/clipman/issues/new")
+		print("Full traceback can be found in info.log\n")
+
+		try:
+			user_answer = input("Ignore it? [yes/NO] > ")
+		except KeyboardInterrupt:
+			print("Exiting..")
+			sys.exit(1)
+
+		if user_answer.lower() in ("yes", "y"):
+			journal.error("[YTCON] If you don't want answer \"yes\" every time, solve the problem, or disable auto-paste in settings and PRESS \"Save to config file\"")
+			settings.write_setting("clipboard_autopaste", False)
+			update_checkboxes()
+		else:
+			print("Exiting..")
+			sys.exit(1)
+# - = - = - = - = - = - = - = - = - = - = - = -
 
 loop.set_alarm_in(0, render_tasks)
 loop.set_alarm_in(0, logprinter)
