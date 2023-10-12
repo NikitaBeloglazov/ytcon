@@ -1,5 +1,6 @@
 urwid>=2.1.2
 requests
-pyperclip
+tqdm
+clipman
 ffmpeg-python>=0.2.0
 yt_dlp

@@ -12,6 +12,7 @@ import subprocess
 import importlib.util
 from pathlib import Path
 # - = - = - = - = - = - = -
+from tqdm import tqdm # for statusbar
 import requests # for updates check
 import urwid
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
@@ -427,8 +428,10 @@ class RenderClass_base:
 			progress = round(percent / 4)
 			white_space = 25 - progress
 			if error:
-				return f"| {'='*(white_space-2)} |"
-			return f"|{'█'*progress}{' '*white_space}|"
+				return f"| {'#'*(white_space-2)} |"
+			# return f"|{'█'*progress}{' '*white_space}|"
+
+			return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
 
 class UpdateAndVersionsClass:
 	""" The class stores everything related to determining the version number and auto-updates """
