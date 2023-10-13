@@ -238,7 +238,6 @@ class SettingsClass:
 			self.write_setting("special_mode", True)
 			journal.info("[YTCON] special_mode: False -> True")
 			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
-		update_checkboxes()
 
 	def clipboard_autopaste_switch(self, _=None, _1=None):
 		""" Clipboard autopaste switch function for urwid.Button's """
@@ -250,7 +249,6 @@ class SettingsClass:
 			self.write_setting("clipboard_autopaste", True)
 			journal.info("[YTCON] clipboard_autopaste: False -> True")
 		journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
-		update_checkboxes()
 
 settings = SettingsClass()
 
@@ -320,6 +318,7 @@ class RenderClass_base:
 	def __init__(self):
 		self.methods = self.MethodsClass()
 		self.settings_show = False
+		self.settings_showed = False
 
 		self.errorprinter_animation = 3
 
@@ -433,6 +432,8 @@ class RenderClass_base:
 
 			return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
 
+RenderClass = RenderClass_base()
+
 class UpdateAndVersionsClass:
 	""" The class stores everything related to determining the version number and auto-updates """
 	def __init__(self):
@@ -444,6 +445,9 @@ class UpdateAndVersionsClass:
 
 		self.get_pypi_version_new_thread()
 		self.version, self.install_source = self.check_version()
+
+		# Widget from settings that shows versions
+		self.settings_version_text = urwid.Text((RenderClass.yellow, f"Your YTCON version: {self.version} / Newest YTCON version: *Working..*"))
 
 		# Variables that cannot have initial values but need to be declared
 		self.update_thread = None
@@ -518,9 +522,9 @@ class UpdateAndVersionsClass:
 		textt = f"Your YTCON version: {updates_class.version} (from {updates_class.install_source}) / Actual YTCON version: {updates_class.pypi_version}"
 
 		if self.version == "?.?.?" or self.pypi_version == "?.?.?":
-			settings_version_text.set_text((RenderClass.yellow, textt))
+			self.settings_version_text.set_text((RenderClass.yellow, textt))
 		elif self.version == self.pypi_version:
-			settings_version_text.set_text((RenderClass.green, textt))
+			self.settings_version_text.set_text((RenderClass.green, textt))
 		elif self.version != self.pypi_version:
 			if self.install_source == "pipx":
 				#textt = textt + "\n\nUpdate using pipx:\n - pipx upgrade ytcon\n"
@@ -533,7 +537,7 @@ class UpdateAndVersionsClass:
 
 			if self.auto_update_avalible is True:
 				textt = textt + "\n[!!] Auto update is avalible! Write \"update\" in input field to easy update right now!\n"
-			settings_version_text.set_text((RenderClass.light_red, textt))
+			self.settings_version_text.set_text((RenderClass.light_red, textt))
 
 	def get_update_command(self):
 		""" A function that stores commands for updating """
@@ -1216,21 +1220,6 @@ def tick_handler(loop, _):
 		sys.exit()
 	# - = - = - = - = - = - = - = - = -
 
-	# - = - = - = - = - = - = - = - = -
-	# Settings page show handler
-	if RenderClass.settings_show is True and loop.widget is not settings_widget:
-		try:
-			update_checkboxes()
-			loop.widget = settings_widget
-		except:
-			exit_with_exception(traceback.format_exc())
-	if RenderClass.settings_show is False and loop.widget is not main_widget:
-		try:
-			loop.widget = main_widget
-		except:
-			exit_with_exception(traceback.format_exc())
-	# - = - = - = - = - = - = - = - = -
-
 	# Prevent focus from remaining on footer buttons after pressing them
 	main_footer.set_focus(input_widget)
 
@@ -1324,7 +1313,6 @@ def get_resolution_ffprobe(file):
 	return None
 
 # - = - = -
-RenderClass = RenderClass_base()
 ControlClass = ControlClass_base()
 
 ControlClass.ydl_opts = {
@@ -1376,8 +1364,9 @@ main_widget = urwid.Frame(
 	focus_part='footer')
 
 # - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+"""
 def update_checkboxes():
-	""" Update the state of the checkboxes to setting state, for prevention telling wrong info """
+	""\" Update the state of the checkboxes to setting state, for prevention telling wrong info "\""
 	settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
 	settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
 	settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
@@ -1386,44 +1375,8 @@ settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_ch
 settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
 settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
 update_checkboxes()
+"""
 
-settings_pile = urwid.Pile([
-	urwid.Divider(),
-	settings_checkbox_clipboard,
-	urwid.Divider(),
-	settings_checkbox_sp,
-	urwid.Divider(),
-	settings_checkbox_delete_af,
-	urwid.Divider(),
-])
-
-# Filler container to center Pile vertically
-settings_filler = urwid.Filler(settings_pile, valign='top')
-
-# Wrap content in urwid.Padding with 4 character padding on each side
-settings_padding = urwid.Padding(settings_filler, left=4, right=4, align='center')
-
-header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
-
-exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=settings.show_settings_call), "reversed")
-
-save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
-load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
-
-footer_buttons = urwid.GridFlow([exit_settings_button, save_settings_button, load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
-
-settings_version_text = urwid.Text((RenderClass.yellow, f"Your YTCON version: {updates_class.version} / Actual YTCON version: *Working..*"))
-
-footer_widget = urwid.Pile([
-	error_widget,
-	urwid.Text("- - -"),
-	log_widget,
-	urwid.Text("- - -"),
-	settings_version_text,
-	footer_buttons
-])
-
-settings_widget = urwid.Frame(settings_padding, header=header_widget, footer=footer_widget)
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 custom_palette = [
@@ -1452,6 +1405,132 @@ for i in debug_that_will_be_saved_later:
 	logger.debug(i)
 # - = - = - = - = - = - = -
 
+def update_checkboxes():
+	if RenderClass.settings_show is True:
+		sett.update()
+
+class SettingsRenderClass:
+	def __init__(self):
+		self.header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
+
+		self.exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=settings.show_settings_call), "reversed")
+		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
+		self.load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
+		self.footer_buttons = urwid.GridFlow([self.exit_settings_button, self.save_settings_button, self.load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
+
+		self.footer_widget = urwid.Pile([
+			error_widget,
+			urwid.Text("- - -"),
+			log_widget,
+			urwid.Text("- - -"),
+			updates_class.settings_version_text,
+			self.footer_buttons
+		])
+
+		# - = - Section buttons mapping - = - = - = - = - = - = -
+		self.section_button_global = urwid.Button("Processing", on_press=self.set_right_section, user_data=self.Global_SECTION)
+		self.section_button_2      = urwid.Button("2"         , on_press=self.set_right_section, user_data=self.Two_SECTION)
+		self.section_button_3      = urwid.Button("3"         , on_press=self.set_right_section, user_data=self.Three_SECTION)
+
+		self.connected_sections = [
+			self.Global_SECTION,
+			self.Two_SECTION,
+			self.Three_SECTION
+			]
+
+		# - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+
+		#self.sflw = ([self.section_button_global, self.section_button_2, self.section_button_3])
+
+		self.left_widget_sflw = urwid.SimpleFocusListWalker(
+			[
+			urwid.AttrMap(self.section_button_global, "", "reversed"),
+			urwid.AttrMap(self.section_button_2     , "", "reversed"),
+			urwid.AttrMap(self.section_button_3     , "", "reversed")
+			])
+
+		self.left_widget_listbox = urwid.ListBox(self.left_widget_sflw)
+		self.left_widget = urwid.BoxAdapter(self.left_widget_listbox, 100)
+
+		# # Wrap content in urwid.Padding with 4 character padding on each side
+		self.center_widget = urwid.Text(" " * 100)
+		self.set_right_section(None, self.Global_SECTION, update=False)
+
+	def set_right_section(self, _, section, update=True):
+		self.current_section = section
+		if update:
+			self.update()
+
+	def update(self):
+		self.right_widget = urwid.Padding(self.current_section.get(), left=3, right=3, align='center')
+		# Создайте Columns, чтобы разделить экран на две части
+		self.columns = urwid.Columns(
+			[
+			#("fixed", 1, self.center_widget),
+			("fixed", 20, self.left_widget),
+			("fixed", 1, urwid.AttrMap(self.center_widget, "reversed")),
+			self.right_widget
+			])
+		self.columns_filler = urwid.Filler(self.columns)
+		self.settings_widget = urwid.Frame(self.columns_filler, header=self.header_widget, footer=self.footer_widget)
+		#return self.settings_widgetif update:
+		loop.widget = self.settings_widget
+
+	def tick_handler_settings(self, _, _1):
+
+		if RenderClass.settings_show is True:
+			lol = sett.left_widget_listbox.focus_position
+			if self.current_section != self.connected_sections[lol]:
+				journal.info(lol)
+				self.set_right_section(None, self.connected_sections[lol])
+		# - = - = - = - = - = - = - = - = -
+		# Settings page show handler
+		if RenderClass.settings_show is True and RenderClass.settings_showed is False:
+			try:
+				self.update()
+				RenderClass.settings_showed = True
+			except:
+				exit_with_exception(traceback.format_exc())
+		if RenderClass.settings_show is False and RenderClass.settings_showed is True:
+			try:
+				loop.widget = main_widget
+				RenderClass.settings_showed = False
+			except:
+				exit_with_exception(traceback.format_exc())
+		# - = - = - = - = - = - = - = - = -
+		loop.set_alarm_in(0.2, self.tick_handler_settings)
+
+	class Two_SECTION:
+		def get():
+			return urwid.Text('helo2')
+
+	class Three_SECTION:
+		def get():
+			return urwid.Text('helo3')
+
+	class Global_SECTION:
+		def get():
+			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
+			settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
+			settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
+
+			# UPDATE CHECKBOXES
+			settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
+
+			settings_pile = urwid.Pile([
+				urwid.Divider(),
+				settings_checkbox_clipboard,
+				urwid.Divider(),
+				settings_checkbox_sp,
+				urwid.Divider(),
+				settings_checkbox_delete_af,
+				urwid.Divider(),
+				])
+			return settings_pile
+
+sett = SettingsRenderClass()
 # - = - = - = - Late initialize - = - = - = - =
 settings.load()
 
@@ -1478,7 +1557,6 @@ if settings.get_setting("clipboard_autopaste") is True:
 		if user_answer.lower() in ("yes", "y"):
 			journal.error("[YTCON] If you don't want answer \"yes\" every time, solve the problem, or disable auto-paste in settings and PRESS \"Save to config file\"")
 			settings.write_setting("clipboard_autopaste", False)
-			update_checkboxes()
 		else:
 			print("Exiting..")
 			sys.exit(1)
@@ -1489,6 +1567,7 @@ loop.set_alarm_in(0, logprinter)
 loop.set_alarm_in(0, errorprinter)
 loop.set_alarm_in(0, tick_handler)
 loop.set_alarm_in(1, tick_handler_big_delay)
+loop.set_alarm_in(1, sett.tick_handler_settings)
 
 # for testing purposes?
 # threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
