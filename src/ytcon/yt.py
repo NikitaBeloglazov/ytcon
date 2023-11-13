@@ -1415,54 +1415,38 @@ for i in debug_that_will_be_saved_later:
 # - = - = - = - = - = - = -
 
 def update_checkboxes():
+	"""
+	!LEGACY!: update the checkboxes so that their status is not a lie 
+	"""
 	if RenderClass.settings_show is True:
 		sett.update()
 
-class BoxPudding(urwid.Widget, urwid.WidgetContainerMixin):
-	_sizing = frozenset(['box'])
-	def __init__(self, header, content, footer):
-		#self.__super.__init__()
-
-		self.header = header
-		self.content = content
-		self.footer = footer
-
-	def render(self, size, focus=False):
-		(maxcol, maxrow) = size
-		a = urwid.ListBox([
-			(1, self.header),
-			(1, self.content),
-			(1, self.footer)
-			])
-		a = urwid.Text("nah")
-		#journal.error(a)
-		#journal.error(a._sizing)
-		#journal.error(a.render((maxcol,)))
-		#journal.error("uhhhh???")
-		return a#.render((maxcol,))
-		#num_pudding = int(maxcol / len(self.header))
-		#return urwid.TextCanvas([self.header.encode("utf-8") * num_pudding] * maxrow,
-		#						maxcol=maxcol)
-
 def gen_SimpleFocusListWalker_with_footer(contents, footer, width=20):
+	"""
+	Some analogue of urwid.Frame, it contains a body (contents) and footer,
+	but at the same time we CAN switch the focus between them
+	"""
+	# Count body (contents) rows 
 	contents_rows = 0
 	for i in contents:
 		contents_rows = contents_rows + i.rows((width,))
+
+	# Count footer rows 
 	footer_rows = 0
 	for i in footer:
 		footer_rows = footer_rows + i.rows((width,))
+
 	filler_height = RenderClass.height - contents_rows - footer_rows
 	filler_list = []
+
+	# Filling the empty space between widgets using a urwid.Divider
 	for i in range(0, filler_height):
 		filler_list.append(urwid.Divider())
 	return urwid.Pile(contents + filler_list + footer)
 
 class SettingsRenderClass:
+	""" The class that is responsible for rendering the settings menu """
 	def __init__(self):
-		#loop.widget = BoxPudding(urwid.Text("header"), urwid.Text("content"), urwid.Text("footer"))
-		#return None
-		self.header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
-
 		self.exit_settings_button = urwid.Button("Exit from settings", on_press=settings.show_settings_call)
 		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save  )
 		self.load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
@@ -1472,7 +1456,6 @@ class SettingsRenderClass:
 			error_widget,
 			urwid.Text("- - -"),
 			log_widget,
-			#self.footer_buttons
 		])
 
 		# - = - Section buttons mapping - = - = - = - = - = - = -
@@ -1507,9 +1490,7 @@ class SettingsRenderClass:
 
 		self.left_widget = urwid.Filler(self.left_widget_sflw, valign="top")
 
-		# # Wrap content in urwid.Padding with 4 character padding on each side
-		self.vertical_divider = urwid.Filler(urwid.Text("│" * 100))
-		self.empty_vertical_divider = urwid.Filler(urwid.Text(" " * 100))
+		self.vertical_divider = urwid.Filler(urwid.Text(" " * 100))
 		self.set_right_section(None, self.Global_SECTION, update=False)
 
 	def set_right_section(self, _, section, update=True):
@@ -1518,7 +1499,6 @@ class SettingsRenderClass:
 			self.update()
 
 	def update(self):
-		#self.right_widget = urwid.Filler(urwid.Padding(self.current_section.get(), left=3, right=3, align='center'), valign='top')
 		self.right_widget = urwid.Frame(
 			urwid.Padding(urwid.Filler(self.current_section.get(), valign='top'), left=2, right=2, align='center'),
 
@@ -1538,24 +1518,23 @@ class SettingsRenderClass:
 			[
 			# ALL INCOMING WIDGETS MUST BE BOX
 			("fixed", 20, self.left_widget),
-			("fixed", 1, self.empty_vertical_divider),
-			#("fixed", 1, urwid.AttrMap(self.empty_vertical_divider, "reversed")),
+			("fixed", 1, self.vertical_divider),
+			#("fixed", 1, urwid.AttrMap(self.vertical_divider, "reversed")),
 			self.right_widget
 			])
-		#self.columns = self.right_widget
-		#self.settings_widget = urwid.Frame(self.columns_filler, header=self.header_widget, footer=self.footer_widget)
-		#return self.settings_widgetif update:
+
 		loop.widget = self.columns
 
 	def tick_handler_settings(self, _, _1):
 
 		"""
 		if RenderClass.settings_show is True:
-			lol = sett.left_widget_sflw.focus_position
+			lol = sett.left_widget_sflw.focus_position - 1 # -1 because header is widget too
 			if self.current_section != self.connected_sections[lol]:
 				journal.info(lol)
 				self.set_right_section(None, self.connected_sections[lol])
 		"""
+
 		# - = - = - = - = - = - = - = - = -
 		# Settings page show handler
 		if RenderClass.settings_show is True and RenderClass.settings_showed is False:
