@@ -1325,7 +1325,8 @@ ControlClass.ydl_opts = {
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
-	'ignoreerrors': True # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
+	'ignoreerrors': True, # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
+	#'nocheckcertificate': True # TODO
 	}
 
 top_pile = urwid.Pile([])
@@ -1385,6 +1386,14 @@ custom_palette = [
 	('buttons_footer', 'light green', ''),
 	('light_red', 'light red', ''),
 	('yellow', 'yellow', ''),
+	('light_green', 'light green', ''),
+	('green', 'dark green', ''),
+	('cyan', 'dark cyan', ''),
+	('light_cyan', 'light cyan', ''),
+	('bold_default', 'white', ''),
+
+	('green_background', 'black', 'dark green'),
+	('cyan_background',  'black', 'dark cyan'),
 ]
 
 loop = urwid.MainLoop(main_widget, palette=custom_palette)
@@ -1409,51 +1418,98 @@ def update_checkboxes():
 	if RenderClass.settings_show is True:
 		sett.update()
 
+class BoxPudding(urwid.Widget, urwid.WidgetContainerMixin):
+	_sizing = frozenset(['box'])
+	def __init__(self, header, content, footer):
+		#self.__super.__init__()
+
+		self.header = header
+		self.content = content
+		self.footer = footer
+
+	def render(self, size, focus=False):
+		(maxcol, maxrow) = size
+		a = urwid.ListBox([
+			(1, self.header),
+			(1, self.content),
+			(1, self.footer)
+			])
+		a = urwid.Text("nah")
+		#journal.error(a)
+		#journal.error(a._sizing)
+		#journal.error(a.render((maxcol,)))
+		#journal.error("uhhhh???")
+		return a#.render((maxcol,))
+		#num_pudding = int(maxcol / len(self.header))
+		#return urwid.TextCanvas([self.header.encode("utf-8") * num_pudding] * maxrow,
+		#						maxcol=maxcol)
+
+def gen_SimpleFocusListWalker_with_footer(contents, footer, width=20):
+	contents_rows = 0
+	for i in contents:
+		contents_rows = contents_rows + i.rows((width,))
+	footer_rows = 0
+	for i in footer:
+		footer_rows = footer_rows + i.rows((width,))
+	filler_height = RenderClass.height - contents_rows - footer_rows
+	filler_list = []
+	for i in range(0, filler_height):
+		filler_list.append(urwid.Divider())
+	return urwid.Pile(contents + filler_list + footer)
+
 class SettingsRenderClass:
 	def __init__(self):
+		#loop.widget = BoxPudding(urwid.Text("header"), urwid.Text("content"), urwid.Text("footer"))
+		#return None
 		self.header_widget = urwid.AttrMap(urwid.Padding(urwid.Text(" - = Settings = - "), align='center'), 'reversed')
 
-		self.exit_settings_button = urwid.AttrMap(urwid.Button("Exit from settings", on_press=settings.show_settings_call), "reversed")
-		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
+		self.exit_settings_button = urwid.Button("Exit from settings", on_press=settings.show_settings_call)
+		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save  )
 		self.load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
-		self.footer_buttons = urwid.GridFlow([self.exit_settings_button, self.save_settings_button, self.load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
+		self.footer_buttons = urwid.GridFlow([self.exit_settings_button, urwid.Divider(), self.save_settings_button, self.load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
 		self.footer_widget = urwid.Pile([
 			error_widget,
 			urwid.Text("- - -"),
 			log_widget,
-			urwid.Text("- - -"),
-			updates_class.settings_version_text,
-			self.footer_buttons
+			#self.footer_buttons
 		])
 
 		# - = - Section buttons mapping - = - = - = - = - = - = -
-		self.section_button_global = urwid.Button("Processing", on_press=self.set_right_section, user_data=self.Global_SECTION)
-		self.section_button_2      = urwid.Button("2"         , on_press=self.set_right_section, user_data=self.Two_SECTION)
-		self.section_button_3      = urwid.Button("3"         , on_press=self.set_right_section, user_data=self.Three_SECTION)
-
 		self.connected_sections = [
 			self.Global_SECTION,
 			self.Two_SECTION,
 			self.Three_SECTION
 			]
 
+		self.section_buttons = [
+				urwid.AttrMap(urwid.Text(" - = Categories = -"), "green_background", ""),
+				]
+
+		for i in self.connected_sections:
+			self.section_buttons.append(
+				urwid.AttrMap(
+					urwid.Button(i.name, on_press=self.set_right_section, user_data=i),
+					"", "reversed"
+				)
+			)
 		# - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
-		#self.sflw = ([self.section_button_global, self.section_button_2, self.section_button_3])
-
-		self.left_widget_sflw = urwid.SimpleFocusListWalker(
+		self.left_widget_sflw = gen_SimpleFocusListWalker_with_footer(
+			self.section_buttons,
 			[
-			urwid.AttrMap(self.section_button_global, "", "reversed"),
-			urwid.AttrMap(self.section_button_2     , "", "reversed"),
-			urwid.AttrMap(self.section_button_3     , "", "reversed")
-			])
+				urwid.AttrMap(self.load_settings_button, "cyan", "reversed"),
+				urwid.AttrMap(self.save_settings_button, "cyan", "reversed"),
+				urwid.Divider(),
+				urwid.AttrMap(self.exit_settings_button, "light_cyan", "cyan_background"),
+			]
+			)
 
-		self.left_widget_listbox = urwid.ListBox(self.left_widget_sflw)
-		self.left_widget = urwid.BoxAdapter(self.left_widget_listbox, 100)
+		self.left_widget = urwid.Filler(self.left_widget_sflw, valign="top")
 
 		# # Wrap content in urwid.Padding with 4 character padding on each side
-		self.center_widget = urwid.Text(" " * 100)
+		self.vertical_divider = urwid.Filler(urwid.Text("│" * 100))
+		self.empty_vertical_divider = urwid.Filler(urwid.Text(" " * 100))
 		self.set_right_section(None, self.Global_SECTION, update=False)
 
 	def set_right_section(self, _, section, update=True):
@@ -1462,27 +1518,44 @@ class SettingsRenderClass:
 			self.update()
 
 	def update(self):
-		self.right_widget = urwid.Padding(self.current_section.get(), left=3, right=3, align='center')
-		# Создайте Columns, чтобы разделить экран на две части
+		#self.right_widget = urwid.Filler(urwid.Padding(self.current_section.get(), left=3, right=3, align='center'), valign='top')
+		self.right_widget = urwid.Frame(
+			urwid.Padding(urwid.Filler(self.current_section.get(), valign='top'), left=2, right=2, align='center'),
+
+			footer = urwid.Pile([
+				updates_class.settings_version_text,
+				urwid.LineBox(
+					self.footer_widget,
+					tlcorner='╭', trcorner='╮', # Rounding corners
+					blcorner='', bline='', brcorner='' # Remove bottom line
+					),
+				]),
+
+			header = urwid.AttrMap(urwid.Text(" - = " + self.current_section.name), "reversed", "") )
+
+		# Create Columns for split screen
 		self.columns = urwid.Columns(
 			[
-			#("fixed", 1, self.center_widget),
+			# ALL INCOMING WIDGETS MUST BE BOX
 			("fixed", 20, self.left_widget),
-			("fixed", 1, urwid.AttrMap(self.center_widget, "reversed")),
+			("fixed", 1, self.empty_vertical_divider),
+			#("fixed", 1, urwid.AttrMap(self.empty_vertical_divider, "reversed")),
 			self.right_widget
 			])
-		self.columns_filler = urwid.Filler(self.columns)
-		self.settings_widget = urwid.Frame(self.columns_filler, header=self.header_widget, footer=self.footer_widget)
+		#self.columns = self.right_widget
+		#self.settings_widget = urwid.Frame(self.columns_filler, header=self.header_widget, footer=self.footer_widget)
 		#return self.settings_widgetif update:
-		loop.widget = self.settings_widget
+		loop.widget = self.columns
 
 	def tick_handler_settings(self, _, _1):
 
+		"""
 		if RenderClass.settings_show is True:
-			lol = sett.left_widget_listbox.focus_position
+			lol = sett.left_widget_sflw.focus_position
 			if self.current_section != self.connected_sections[lol]:
 				journal.info(lol)
 				self.set_right_section(None, self.connected_sections[lol])
+		"""
 		# - = - = - = - = - = - = - = - = -
 		# Settings page show handler
 		if RenderClass.settings_show is True and RenderClass.settings_showed is False:
@@ -1501,14 +1574,19 @@ class SettingsRenderClass:
 		loop.set_alarm_in(0.2, self.tick_handler_settings)
 
 	class Two_SECTION:
+		name = "2"
+
 		def get():
 			return urwid.Text('helo2')
 
 	class Three_SECTION:
+		name = "3"
 		def get():
 			return urwid.Text('helo3')
 
 	class Global_SECTION:
+		name = "Global"
+
 		def get():
 			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
 			settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
