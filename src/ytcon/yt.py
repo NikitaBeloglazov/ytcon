@@ -1414,6 +1414,65 @@ for i in debug_that_will_be_saved_later:
 	logger.debug(i)
 # - = - = - = - = - = - = -
 
+class SettingsSections:
+	"""
+	The class in which the settings category classes are placed.
+
+	They will be automatically found and placed in a special dynamic list (self.settings_sections)
+	that will be shown to the user
+	"""
+	def __init__(self):
+		# Get all class attributes
+		class_attributes = vars(SettingsSections)
+
+		# Filter only classes
+		self.settings_sections = [cls for cls in class_attributes.values() if isinstance(cls, type)]
+
+		print(self.settings_sections)
+		#sys.exit(1)
+
+	class General_SECTION:
+		""" General section """
+		name = "General"
+
+		def get(self):
+			""" Get content of section """
+			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
+			settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
+			settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
+
+			# UPDATE CHECKBOXES
+			settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
+
+			settings_pile = urwid.Pile([
+				urwid.Divider(),
+				settings_checkbox_clipboard,
+				urwid.Divider(),
+				settings_checkbox_sp,
+				urwid.Divider(),
+				settings_checkbox_delete_af,
+				urwid.Divider(),
+				])
+			return settings_pile
+
+	class Two_SECTION:
+		""" Test section """
+		name = "2"
+		def get(self):
+			""" Get content of section """
+			return urwid.Text('helo2')
+
+	class Three_SECTION:
+		""" Test section """
+		name = "3"
+		def get(self):
+			""" Get content of section """
+			return urwid.Text('helo3')
+
+settings_sections = SettingsSections()
+
 def update_checkboxes():
 	"""
 	!LEGACY!: update the checkboxes so that their status is not a lie 
@@ -1426,12 +1485,12 @@ def gen_SimpleFocusListWalker_with_footer(contents, footer, width=20):
 	Some analogue of urwid.Frame, it contains a body (contents) and footer,
 	but at the same time we CAN switch the focus between them
 	"""
-	# Count body (contents) rows 
+	# Count body (contents) rows
 	contents_rows = 0
 	for i in contents:
 		contents_rows = contents_rows + i.rows((width,))
 
-	# Count footer rows 
+	# Count footer rows
 	footer_rows = 0
 	for i in footer:
 		footer_rows = footer_rows + i.rows((width,))
@@ -1448,9 +1507,8 @@ class SettingsRenderClass:
 	""" The class that is responsible for rendering the settings menu """
 	def __init__(self):
 		self.exit_settings_button = urwid.Button("Exit from settings", on_press=settings.show_settings_call)
-		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save  )
+		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
 		self.load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
-		self.footer_buttons = urwid.GridFlow([self.exit_settings_button, urwid.Divider(), self.save_settings_button, self.load_settings_button], cell_width=25, h_sep=2, v_sep=1, align="left")
 
 		self.footer_widget = urwid.Pile([
 			error_widget,
@@ -1459,11 +1517,7 @@ class SettingsRenderClass:
 		])
 
 		# - = - Section buttons mapping - = - = - = - = - = - = -
-		self.connected_sections = [
-			self.Global_SECTION,
-			self.Two_SECTION,
-			self.Three_SECTION
-			]
+		self.connected_sections = settings_sections.settings_sections
 
 		self.section_buttons = [
 				urwid.AttrMap(urwid.Text(" - = Categories = -"), "green_background", ""),
@@ -1491,7 +1545,7 @@ class SettingsRenderClass:
 		self.left_widget = urwid.Filler(self.left_widget_sflw, valign="top")
 
 		self.vertical_divider = urwid.Filler(urwid.Text(" " * 100))
-		self.set_right_section(None, self.Global_SECTION, update=False)
+		self.set_right_section(None, self.connected_sections[0], update=False)
 
 	def set_right_section(self, _, section, update=True):
 		self.current_section = section
@@ -1500,7 +1554,7 @@ class SettingsRenderClass:
 
 	def update(self):
 		self.right_widget = urwid.Frame(
-			urwid.Padding(urwid.Filler(self.current_section.get(), valign='top'), left=2, right=2, align='center'),
+			urwid.Padding(urwid.Filler(self.current_section.get(None), valign='top'), left=2, right=2, align='center'),
 
 			footer = urwid.Pile([
 				updates_class.settings_version_text,
@@ -1551,41 +1605,6 @@ class SettingsRenderClass:
 				exit_with_exception(traceback.format_exc())
 		# - = - = - = - = - = - = - = - = -
 		loop.set_alarm_in(0.2, self.tick_handler_settings)
-
-	class Two_SECTION:
-		name = "2"
-
-		def get():
-			return urwid.Text('helo2')
-
-	class Three_SECTION:
-		name = "3"
-		def get():
-			return urwid.Text('helo3')
-
-	class Global_SECTION:
-		name = "Global"
-
-		def get():
-			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
-			settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
-			settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
-
-			# UPDATE CHECKBOXES
-			settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
-			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
-			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
-
-			settings_pile = urwid.Pile([
-				urwid.Divider(),
-				settings_checkbox_clipboard,
-				urwid.Divider(),
-				settings_checkbox_sp,
-				urwid.Divider(),
-				settings_checkbox_delete_af,
-				urwid.Divider(),
-				])
-			return settings_pile
 
 sett = SettingsRenderClass()
 # - = - = - = - Late initialize - = - = - = - =
