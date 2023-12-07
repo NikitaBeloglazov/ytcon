@@ -1422,14 +1422,13 @@ class SettingsSections:
 	that will be shown to the user
 	"""
 	def __init__(self):
-		# Get all class attributes
+		# Get all class attributes (sections)
 		class_attributes = vars(SettingsSections)
 
 		# Filter only classes
 		self.settings_sections = [cls for cls in class_attributes.values() if isinstance(cls, type)]
 
-		print(self.settings_sections)
-		#sys.exit(1)
+		#print(self.settings_sections)
 
 	class General_SECTION:
 		""" General section """
@@ -1580,14 +1579,12 @@ class SettingsRenderClass:
 		loop.widget = self.columns
 
 	def tick_handler_settings(self, _, _1):
-
-		"""
+		""" Same as tick_handler, but responsible only for settings menu """
 		if RenderClass.settings_show is True:
 			lol = sett.left_widget_sflw.focus_position - 1 # -1 because header is widget too
-			if self.current_section != self.connected_sections[lol]:
-				journal.info(lol)
-				self.set_right_section(None, self.connected_sections[lol])
-		"""
+			if not (lol > len(self.connected_sections)-1): # prevent crash on bottom buttons selection, -1 because len makes +1
+				if self.current_section != self.connected_sections[lol]:
+					self.set_right_section(None, self.connected_sections[lol])
 
 		# - = - = - = - = - = - = - = - = -
 		# Settings page show handler
