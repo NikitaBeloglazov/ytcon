@@ -1515,6 +1515,12 @@ class SettingsRenderClass:
 			log_widget,
 		])
 
+		# - =
+		# just placeholders. nevermind
+		self.columns = None
+		self.right_widget = None
+		# - =
+
 		# - = - Section buttons mapping - = - = - = - = - = - = -
 		self.connected_sections = settings_sections.settings_sections
 
@@ -1547,11 +1553,13 @@ class SettingsRenderClass:
 		self.set_right_section(None, self.connected_sections[0], update=False)
 
 	def set_right_section(self, _, section, update=True):
+		""" A function that puts the specified section class on the right visible part of the interface """
 		self.current_section = section
 		if update:
 			self.update()
 
 	def update(self):
+		""" re-generate + re-render right visible part of the interface """
 		self.right_widget = urwid.Frame(
 			urwid.Padding(urwid.Filler(self.current_section.get(None), valign='top'), left=2, right=2, align='center'),
 
@@ -1582,7 +1590,7 @@ class SettingsRenderClass:
 		""" Same as tick_handler, but responsible only for settings menu """
 		if RenderClass.settings_show is True:
 			lol = sett.left_widget_sflw.focus_position - 1 # -1 because header is widget too
-			if not (lol > len(self.connected_sections)-1): # prevent crash on bottom buttons selection, -1 because len makes +1
+			if not lol > len(self.connected_sections)-1: # prevent crash on bottom buttons selection, -1 because len makes +1
 				if self.current_section != self.connected_sections[lol]:
 					self.set_right_section(None, self.connected_sections[lol])
 
