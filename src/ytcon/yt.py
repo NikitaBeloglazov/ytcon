@@ -310,8 +310,6 @@ class ControlClass_base:
 		elif not self.delete_after_download: # false
 			self.delete_after_download = True
 			journal.error("[YTCON] Delete after download ENABLED! This means that the downloaded files WILL NOT BE SAVED!")
-			journal.warning("[YTCON] Anyway this setting state will NOT be saved in the settings save file.")
-			journal.warning("[YTCON] It resets every time when the utility is restarted. Made for test purposes.")
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -1431,44 +1429,74 @@ class SettingsSections:
 		#print(self.settings_sections)
 
 	class General_SECTION:
-		""" General section """
+		""" General settings section """
 		name = "General"
 
 		def get(self):
 			""" Get content of section """
 			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
-			settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
-			settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
 
 			# UPDATE CHECKBOXES
 			settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
-			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
-			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
 				settings_checkbox_clipboard,
 				urwid.Divider(),
+				])
+			return settings_pile
+
+	class Fetching_SECTION:
+		""" Fetching settings section - related to yt-dlp downloding """
+		name = "Fetching"
+		def get(self):
+			""" Get content of section """
+			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), " - Use different user-agent and extract cookies from chromium"], on_state_change=settings.special_mode_switch)
+			
+			# UPDATE CHECKBOXES
+			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+
+			settings_pile = urwid.Pile([
+				urwid.Divider(),
 				settings_checkbox_sp,
+				urwid.Divider(),
+				])
+
+			return settings_pile
+
+	class Debug_SECTION:
+		""" DEBUG settings section """
+		name = "Debug"
+		def get(self):
+			""" Get content of section """
+			settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
+			
+			# UPDATE CHECKBOXES
+			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
+
+			settings_pile = urwid.Pile([
+				urwid.Divider(),
+				urwid.Text((RenderClass.light_red, "The settings found here are made for testing purposes!")),
+				urwid.Text((RenderClass.light_red, "Changing these settings is not recommended.")),
+				urwid.Divider(),
+				urwid.Text((RenderClass.light_red, "Also, Debug settings WILL NOT be saved when you click on the \"Save to config file\" button")),
+				urwid.Divider(),
+				urwid.Text("- = -"),
 				urwid.Divider(),
 				settings_checkbox_delete_af,
 				urwid.Divider(),
 				])
+
 			return settings_pile
 
-	class Two_SECTION:
-		""" Test section """
-		name = "2"
-		def get(self):
-			""" Get content of section """
-			return urwid.Text('helo2')
-
+	""" = - E X A M P L E - =
 	class Three_SECTION:
-		""" Test section """
+		# Test section
 		name = "3"
 		def get(self):
-			""" Get content of section """
+			# Get content of section
 			return urwid.Text('helo3')
+	"""
 
 settings_sections = SettingsSections()
 
@@ -1609,7 +1637,7 @@ class SettingsRenderClass:
 			except:
 				exit_with_exception(traceback.format_exc())
 		# - = - = - = - = - = - = - = - = -
-		loop.set_alarm_in(0.2, self.tick_handler_settings)
+		loop.set_alarm_in(0.1, self.tick_handler_settings)
 
 sett = SettingsRenderClass()
 # - = - = - = - Late initialize - = - = - = - =
