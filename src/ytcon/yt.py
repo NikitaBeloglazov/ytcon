@@ -1626,6 +1626,11 @@ class SettingsRenderClass:
 		# Settings page show handler
 		if RenderClass.settings_show is True and RenderClass.settings_showed is False:
 			try:
+				# - = - = -
+				# Return to default position
+				self.left_widget_sflw.set_focus(1)
+				self.set_right_section(None, self.connected_sections[0], update=False)
+				# - = - = -
 				self.update()
 				RenderClass.settings_showed = True
 			except:
