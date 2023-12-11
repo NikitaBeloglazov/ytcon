@@ -1452,7 +1452,7 @@ class SettingsSections:
 		def get(self):
 			""" Get content of section """
 			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), " - Use different user-agent and extract cookies from chromium"], on_state_change=settings.special_mode_switch)
-			
+
 			# UPDATE CHECKBOXES
 			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
 
@@ -1470,7 +1470,7 @@ class SettingsSections:
 		def get(self):
 			""" Get content of section """
 			settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
-			
+
 			# UPDATE CHECKBOXES
 			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
 
@@ -1489,14 +1489,13 @@ class SettingsSections:
 
 			return settings_pile
 
-	""" = - E X A M P L E - =
-	class Three_SECTION:
-		# Test section
-		name = "3"
-		def get(self):
-			# Get content of section
-			return urwid.Text('helo3')
-	"""
+	# = - E X A M P L E - =
+	#class Three_SECTION:
+	#	# Test section
+	#	name = "3"
+	#	def get(self):
+	#		# Get content of section
+	#		return urwid.Text('helo3')
 
 settings_sections = SettingsSections()
 
