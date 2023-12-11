@@ -7,20 +7,18 @@
 [![based on yt-dlp](https://img.shields.io/badge/Based_on:_yt--dlp-ff0000?logoColor=white&style=for-the-badge&logo=youtube)](https://github.com/yt-dlp/yt-dlp)
 [![maintainer: NikitaBeloglazov](https://img.shields.io/badge/Maintainer:_.%E2%80%A2%C2%B0%E2%97%8F%E2%9D%A4%EF%B8%8F%20NikitaBeloglazov%20Software%20Foundation%20%E2%9D%A4%EF%B8%8F%E2%97%8F%C2%B0%E2%80%A2.-informational?logoColor=white&style=for-the-badge&logo=github)](https://github.com/NikitaBeloglazov)
 #### TUI for the yt-dlp utility, with support for many settings, some fixes, and multithreading
-#### 🚧 Currently in the ALPHA stage of development
+#### 🚧 Currently in the BETA stage of development
 
 # 📘 Features:
-* All yt-dlp features
+* yt-dlp features
 * Auto-updates feature
 * Multiple downloads at the same time
-* Settings menu
 * Clipboard auto-paste
 * "Special mode"
 * Shows the resolution of downloading videos, even in generic extractor
-* Beautiful human interface with color support
+* Beautiful, colorful and comfortable human UI
 
 #### TODO:
-* Change clipboard module [Almost done 👽]
 * Desktop notifications support
 * RPM packaging
 
