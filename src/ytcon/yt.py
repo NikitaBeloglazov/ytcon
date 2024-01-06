@@ -177,7 +177,10 @@ class SettingsClass:
 	def __init__(self):
 
 		# Default settings
-		self.settings = {"special_mode": False, "clipboard_autopaste": True}
+		self.settings = {
+			"special_mode": False,
+			"clipboard_autopaste": True,
+			}
 
 	class SettingNotFoundError(Exception):
 		""" Called if the specified setting is not found (see def get_setting) """
@@ -209,7 +212,7 @@ class SettingsClass:
 		""" Uses pickle for loading settings from ~/.config/settings.db to memory """
 		try:
 			with open(configpath + "settings.db", "rb") as filee:
-				self.settings = pickle.load(filee)
+				self.settings.update(pickle.load(filee))
 			journal.info(f"[YTCON] {configpath}settings.db loaded")
 			update_checkboxes()
 			RenderClass.flash_button_text(button, RenderClass.green)
@@ -227,28 +230,20 @@ class SettingsClass:
 			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
 			logger.debug(os.remove(f"{configpath}settings.db"))
 
-	def special_mode_switch(self, _=None, _1=None):
-		""" Special mode switch function for urwid.Button's """
+	def setting_switch(self, _=None, state=None, name=None):
+		if name is None:
+			raise TypeError
+
+		if state is None:
+			state = not self.get_setting(name)
+
 		journal.info("")
-		if self.get_setting("special_mode"): # true
-			self.write_setting("special_mode", False)
-			journal.info("[YTCON] special_mode: True -> False")
-			journal.info("[YTCON] SP deactivated! now a default yt-dlp extractor settings will be used.")
-		elif not self.get_setting("special_mode"): # false
-			self.write_setting("special_mode", True)
-			journal.info("[YTCON] special_mode: False -> True")
-			journal.info("[YTCON] SP activated! now a different user agent will be used, and cookies will be retrieved from chromium")
+		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
+		self.write_setting(name, state)
 
 	def clipboard_autopaste_switch(self, _=None, _1=None):
-		""" Clipboard autopaste switch function for urwid.Button's """
-		journal.info("")
-		if self.get_setting("clipboard_autopaste"): # true
-			self.write_setting("clipboard_autopaste", False)
-			journal.info("[YTCON] clipboard_autopaste: True -> False")
-		elif not self.get_setting("clipboard_autopaste"): # false
-			self.write_setting("clipboard_autopaste", True)
-			journal.info("[YTCON] clipboard_autopaste: False -> True")
-		journal.info("[YTCON] A signal to the clipboard processing thread has been sent.")
+		""" Clipboard autopaste switch function for urwid.Button's. FOR BACK COMPABILITY """
+		self.setting_switch(None, None, name="clipboard_autopaste")
 
 settings = SettingsClass()
 
@@ -1010,12 +1005,6 @@ class InputHandlerClass:
 			journal.info("")
 			journal.info("[YTCON] [INPUT] " + original_text)
 
-			# - = Special mode handler = -
-			if text in ("sp", "specialmode"):
-				settings.special_mode_switch()
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - =
-
 			# - = Clipboard auto-paste = -
 			if text in ("cb", "clipboard", "clip"):
 				settings.clipboard_autopaste_switch()
@@ -1045,12 +1034,13 @@ class InputHandlerClass:
 				except:
 					exit_with_exception(traceback.format_exc())
 
-			elif text == "set 0":
-				RenderClass.settings_show = False
-			elif text == "set 1":
+			elif text == "s":
 				RenderClass.settings_show = True
 
-			elif text == "set ls":
+			elif text == "flags":
+				journal.info(pprint.pformat(ControlClass.ydl_opts))
+
+			elif text == "s ls":
 				journal.info(settings.settings)
 
 			elif text == "save":
@@ -1323,7 +1313,7 @@ ControlClass.ydl_opts = {
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
-	'ignoreerrors': True, # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
+	#'ignoreerrors': True, # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	#'nocheckcertificate': True # TODO
 	}
 
@@ -1362,22 +1352,6 @@ main_widget = urwid.Frame(
 	footer=main_footer,
 	focus_part='footer')
 
-# - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-"""
-def update_checkboxes():
-	""\" Update the state of the checkboxes to setting state, for prevention telling wrong info "\""
-	settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
-	settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
-	settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
-
-settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
-settings_checkbox_sp = urwid.CheckBox("Special mode", on_state_change=settings.special_mode_switch)
-settings_checkbox_delete_af = urwid.CheckBox((RenderClass.red, "Delete after download"), on_state_change=ControlClass.delete_after_download_switch)
-update_checkboxes()
-"""
-
-# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-
 custom_palette = [
 	# ('name_of_style', 'color_text', 'color_background')
 	('reversed', 'standout', ''),
@@ -1412,6 +1386,7 @@ for i in debug_that_will_be_saved_later:
 	logger.debug(i)
 # - = - = - = - = - = - = -
 
+# - = SETTINGS - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 class SettingsSections:
 	"""
 	The class in which the settings category classes are placed.
@@ -1434,7 +1409,7 @@ class SettingsSections:
 
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.clipboard_autopaste_switch)
+			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.setting_switch, user_data="clipboard_autopaste")
 
 			# UPDATE CHECKBOXES
 			settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
@@ -1442,7 +1417,7 @@ class SettingsSections:
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
 				settings_checkbox_clipboard,
-				urwid.Divider(),
+				urwid.Divider()
 				])
 			return settings_pile
 
@@ -1451,7 +1426,7 @@ class SettingsSections:
 		name = "Fetching"
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), " - Use different user-agent and extract cookies from chromium"], on_state_change=settings.special_mode_switch)
+			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), " - Use different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
 
 			# UPDATE CHECKBOXES
 			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
