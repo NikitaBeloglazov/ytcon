@@ -302,7 +302,7 @@ class ControlClass_base:
 			temp1 = 0
 			temp2_new = self.queue_list.copy()
 			for item, item_content in self.queue_list.copy().items():
-				if item_content["status"] == "exists" or item_content["status"] == "finished":
+				if item_content["status"] == "exists" or item_content["status"] == "finished" or item_content["status"] == "error":
 					del temp2_new[item]
 					if "meta_index" not in item_content:
 						temp1 = temp1 + 1
@@ -794,6 +794,15 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 	try:
 		if ControlClass.queue_list[temp1_index]["status"] == "exists":
 			return None # skip post-process if file already exists
+
+		# = - = -
+		if ControlClass.queue_list[temp1_index]["status"] != "finished":
+			# IF DOWNLOAD THREAD EXITS WITHOUT ERROR (this usually occurs due to the "ignoreerrors" flag)
+			journal.debug("DOWNLOAD THREAD EXITED WITHOUT ERROR")
+			map_variables.mark_as_error(url)
+			return None
+		# = - = -
+
 		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
 		os.utime(ControlClass.queue_list[temp1_index]["file"])
 
