@@ -180,6 +180,7 @@ class SettingsClass:
 		self.settings = {
 			"special_mode": False,
 			"clipboard_autopaste": True,
+			"no_check_certificate": False
 			}
 
 	class SettingNotFoundError(Exception):
@@ -215,6 +216,7 @@ class SettingsClass:
 				self.settings.update(pickle.load(filee))
 			journal.info(f"[YTCON] {configpath}settings.db loaded")
 			update_checkboxes()
+			self.update_ydl_opts()
 			RenderClass.flash_button_text(button, RenderClass.green)
 		except FileNotFoundError:
 			# If file not found
@@ -230,6 +232,10 @@ class SettingsClass:
 			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
 			logger.debug(os.remove(f"{configpath}settings.db"))
 
+	def clipboard_autopaste_switch(self, _=None, _1=None):
+		""" Clipboard autopaste switch function for urwid.Button's. FOR BACK COMPABILITY """
+		self.setting_switch(None, None, name="clipboard_autopaste")
+
 	def setting_switch(self, _=None, state=None, name=None):
 		if name is None:
 			raise TypeError
@@ -240,10 +246,28 @@ class SettingsClass:
 		journal.info("")
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
 		self.write_setting(name, state)
+		self.update_ydl_opts()
 
-	def clipboard_autopaste_switch(self, _=None, _1=None):
-		""" Clipboard autopaste switch function for urwid.Button's. FOR BACK COMPABILITY """
-		self.setting_switch(None, None, name="clipboard_autopaste")
+	def update_ydl_opts(self):
+		#journal.info(pprint.pformat(ControlClass.ydl_opts))
+		#journal.info("updated ydl_opts")
+
+		# - = Special mode cookie extractor activator = -
+		if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in ControlClass.ydl_opts:
+			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+		elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in ControlClass.ydl_opts:
+			del ControlClass.ydl_opts["cookiesfrombrowser"]
+		# - = - = - = - = - = - = - = - = - = - = - = - =
+
+		# - = Certificates ignore activator = -
+		if settings.get_setting("no_check_certificate") is True and "nocheckcertificate" not in ControlClass.ydl_opts:
+			ControlClass.ydl_opts["nocheckcertificate"] = True
+		elif settings.get_setting("no_check_certificate") is False and "nocheckcertificate" in ControlClass.ydl_opts:
+			del ControlClass.ydl_opts["nocheckcertificate"]
+		# - = - = - = - = - = - = - = - = - = - = - = - =
+
+		#journal.info(pprint.pformat(ControlClass.ydl_opts))
+
 
 settings = SettingsClass()
 
@@ -322,6 +346,7 @@ class RenderClass_base:
 		self.light_yellow = urwid.AttrSpec('yellow', 'default')
 		self.green = urwid.AttrSpec('dark green', 'default')
 		self.cyan = urwid.AttrSpec('dark cyan', 'default')
+		self.light_white = urwid.AttrSpec('bold', 'default')
 
 		# Variables that cannot have initial values but need to be declared
 		self.width = None
@@ -1177,13 +1202,6 @@ def tick_handler(loop, _):
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
 
-	# - = Special mode cookie extractor activator = -
-	if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in ControlClass.ydl_opts:
-		ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-	elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in ControlClass.ydl_opts:
-		del ControlClass.ydl_opts["cookiesfrombrowser"]
-	# - = - = - = - = - = - = - = - = - = - = - = - =
-
 	# - = - = - = - = - = - = - = - = -
 	# The error handler, if it sees ControlClass.exit = True,
 	# then exits the program commenting this with the text from ControlClass.exception.
@@ -1314,7 +1332,6 @@ ControlClass.ydl_opts = {
 	'retry_sleep': 'http,fragment:exp',
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 	#'ignoreerrors': True, # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
-	#'nocheckcertificate': True # TODO
 	}
 
 top_pile = urwid.Pile([])
@@ -1417,7 +1434,7 @@ class SettingsSections:
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
 				settings_checkbox_clipboard,
-				urwid.Divider()
+				urwid.Divider(),
 				])
 			return settings_pile
 
@@ -1426,14 +1443,18 @@ class SettingsSections:
 		name = "Fetching"
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), " - Use different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
+			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
+			settings_checkbox_nocert = urwid.CheckBox([(RenderClass.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
 
 			# UPDATE CHECKBOXES
 			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+			settings_checkbox_nocert.set_state(settings.get_setting("no_check_certificate"), do_callback=False)
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
 				settings_checkbox_sp,
+				urwid.Divider(),
+				settings_checkbox_nocert,
 				urwid.Divider(),
 				])
 
