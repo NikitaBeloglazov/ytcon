@@ -180,7 +180,8 @@ class SettingsClass:
 		self.settings = {
 			"special_mode": False,
 			"clipboard_autopaste": True,
-			"no_check_certificate": False
+			"no_check_certificate": False,
+			"ignoreerrors": False,
 			}
 
 	class SettingNotFoundError(Exception):
@@ -264,6 +265,13 @@ class SettingsClass:
 			ControlClass.ydl_opts["nocheckcertificate"] = True
 		elif settings.get_setting("no_check_certificate") is False and "nocheckcertificate" in ControlClass.ydl_opts:
 			del ControlClass.ydl_opts["nocheckcertificate"]
+		# - = - = - = - = - = - = - = - = - = - = - = - =
+
+		# - = Certificates ignore activator = -
+		if settings.get_setting("ignoreerrors") is True and "ignoreerrors" not in ControlClass.ydl_opts:
+			ControlClass.ydl_opts["ignoreerrors"] = True
+		elif settings.get_setting("ignoreerrors") is False and "ignoreerrors" in ControlClass.ydl_opts:
+			del ControlClass.ydl_opts["ignoreerrors"]
 		# - = - = - = - = - = - = - = - = - = - = - = - =
 
 		#journal.info(pprint.pformat(ControlClass.ydl_opts))
@@ -1340,7 +1348,6 @@ ControlClass.ydl_opts = {
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
-	#'ignoreerrors': True, # !!! DANGEROUS OPTION !!! # Don't exit if there is private video in playlist
 	}
 
 top_pile = urwid.Pile([])
@@ -1464,6 +1471,28 @@ class SettingsSections:
 				settings_checkbox_sp,
 				urwid.Divider(),
 				settings_checkbox_nocert,
+				urwid.Divider(),
+				])
+
+			return settings_pile
+
+	class Playlists_SECTION:
+		""" Playlist settings section """
+		name = "Playlists"
+		def get(self):
+			""" Get content of section """
+			settings_checkbox_ignerr = urwid.CheckBox([
+				(RenderClass.light_yellow, "Ignore downloading errors"),
+				(RenderClass.light_red, "\n<!!> Dangerous option - makes ytcon a little unstable\nPlease use only if necessary <!!>"),
+				"\nUse this so as not to interrupt the download if\none of the video in the playlist is not available"
+				], on_state_change=settings.setting_switch, user_data="ignoreerrors")
+
+			# UPDATE CHECKBOXES
+			settings_checkbox_ignerr.set_state(settings.get_setting("ignoreerrors"), do_callback=False)
+
+			settings_pile = urwid.Pile([
+				urwid.Divider(),
+				settings_checkbox_ignerr,
 				urwid.Divider(),
 				])
 
