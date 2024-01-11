@@ -182,6 +182,7 @@ class SettingsClass:
 			"clipboard_autopaste": True,
 			"no_check_certificate": False,
 			"ignoreerrors": False,
+			"progressbar_appearance": "detailed",
 			}
 
 	class SettingNotFoundError(Exception):
@@ -248,6 +249,20 @@ class SettingsClass:
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
 		self.write_setting(name, state)
 		self.update_ydl_opts()
+		sett.settings_soft_update_scheduled = True
+
+	def setting_change_content(self, _=None, _1=None, data=None):
+		if data is None:
+			raise TypeError
+
+		name = data[0]
+		set_data = data[1]
+
+		journal.info("")
+		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {set_data}")
+		self.write_setting(name, set_data)
+		self.update_ydl_opts()
+		sett.settings_soft_update_scheduled = True
 
 	def update_ydl_opts(self):
 		#journal.info(pprint.pformat(ControlClass.ydl_opts))
@@ -454,9 +469,17 @@ class RenderClass_base:
 			white_space = 25 - progress
 			if error:
 				return f"| {'#'*(white_space-2)} |"
-			# return f"|{'█'*progress}{' '*white_space}|"
 
-			return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
+			style = settings.get_setting("progressbar_appearance")
+			if style == "detailed":
+				return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
+			elif style == "simple":
+				return f"|{'█'*progress}{' '*white_space}|"
+			elif style == "arrow":
+				temp1 = '='*progress
+				if temp1 != "":
+					temp1 = temp1[:-1] + ">" # replace last symbol to >
+				return f"|{temp1}{' '*white_space}|"
 
 RenderClass = RenderClass_base()
 
@@ -705,7 +728,6 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 				return None
 
 		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
-			logger.debug(str(ydl.params))
 			# needed for some sites. you may need to replace it with the correct one
 			if settings.get_setting("special_mode") is True:
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
@@ -1070,7 +1092,7 @@ class InputHandlerClass:
 				journal.error("[TEST] 5", show=False)
 				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
 
-			elif text == "makecrash":
+			elif text == "crash":
 				try:
 					0/0
 				except:
@@ -1442,71 +1464,119 @@ class SettingsSections:
 
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.setting_switch, user_data="clipboard_autopaste")
+			self.settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.setting_switch, user_data="clipboard_autopaste")
 
 			# UPDATE CHECKBOXES
-			settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+			self.update()
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
-				settings_checkbox_clipboard,
+				self.settings_checkbox_clipboard,
 				urwid.Divider(),
 				])
 			return settings_pile
+
+		def update(self):
+			self.settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
+
+	class Appearance_SECTION:
+		""" settings section related to appearance """
+		name = "Appearance"
+		def get(self):
+			""" Get content of section """
+			self.settings_checkbox_progresstype_detailed = urwid.CheckBox([
+				(RenderClass.cyan, "46% |███▍   | - Detailed"),
+				"\nUse some unicode characters (▏;▍;▋;▉;█)\nto display the percentage more accurately.\nDoesn't fully work in tty",
+				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "detailed"))
+			self.settings_checkbox_progresstype_simple = urwid.CheckBox([
+				(RenderClass.cyan, "46% |████   | - Simple"),
+				"\nUse only ACSII squares (█) to show percentage"
+				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "simple"))
+			self.settings_checkbox_progresstype_arrow = urwid.CheckBox([
+				(RenderClass.cyan, "46% |===>   | - Arrow"),
+				"\nLet's just add some oldfag style 😎"
+				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "arrow"))
+
+			# UPDATE CHECKBOXES
+			self.update()
+
+			settings_pile = urwid.Pile([
+				urwid.Divider(),
+				urwid.Text((RenderClass.light_yellow, "Progress bar type")),
+				self.settings_checkbox_progresstype_detailed,
+				urwid.Divider(),
+				self.settings_checkbox_progresstype_simple,
+				urwid.Divider(),
+				self.settings_checkbox_progresstype_arrow,
+				urwid.Divider(),
+				])
+
+			return settings_pile
+
+		def update(self):
+			self.settings_checkbox_progresstype_detailed.set_state(settings.get_setting("progressbar_appearance") == "detailed", do_callback=False)
+			self.settings_checkbox_progresstype_simple.set_state(settings.get_setting("progressbar_appearance") == "simple", do_callback=False)
+			self.settings_checkbox_progresstype_arrow.set_state(settings.get_setting("progressbar_appearance") == "arrow", do_callback=False)
 
 	class Fetching_SECTION:
 		""" Fetching settings section - related to yt-dlp downloding """
 		name = "Fetching"
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
-			settings_checkbox_nocert = urwid.CheckBox([(RenderClass.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
+			self.settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
+			self.settings_checkbox_nocert = urwid.CheckBox([(RenderClass.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
 
 			# UPDATE CHECKBOXES
-			settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
-			settings_checkbox_nocert.set_state(settings.get_setting("no_check_certificate"), do_callback=False)
+			self.update()
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
-				settings_checkbox_sp,
+				self.settings_checkbox_sp,
 				urwid.Divider(),
-				settings_checkbox_nocert,
+				self.settings_checkbox_nocert,
 				urwid.Divider(),
 				])
 
 			return settings_pile
+
+		def update(self):
+			self.settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
+			self.settings_checkbox_nocert.set_state(settings.get_setting("no_check_certificate"), do_callback=False)
 
 	class Playlists_SECTION:
 		""" Playlist settings section """
 		name = "Playlists"
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_ignerr = urwid.CheckBox([
+			self.settings_checkbox_ignerr = urwid.CheckBox([
 				(RenderClass.light_yellow, "Ignore downloading errors"),
 				(RenderClass.light_red, "\n<!!> Dangerous option - makes ytcon a little unstable\nPlease use only if necessary <!!>"),
 				"\nUse this so as not to interrupt the download if\none of the video in the playlist is not available"
 				], on_state_change=settings.setting_switch, user_data="ignoreerrors")
 
 			# UPDATE CHECKBOXES
-			settings_checkbox_ignerr.set_state(settings.get_setting("ignoreerrors"), do_callback=False)
+			self.update()
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
-				settings_checkbox_ignerr,
+				self.settings_checkbox_ignerr,
 				urwid.Divider(),
 				])
 
 			return settings_pile
+
+		def update(self):
+			self.settings_checkbox_ignerr.set_state(settings.get_setting("ignoreerrors"), do_callback=False)
 
 	class Debug_SECTION:
 		""" DEBUG settings section """
 		name = "Debug"
 		def get(self):
 			""" Get content of section """
-			settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
+			self.settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
 
 			# UPDATE CHECKBOXES
-			settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
+			self.update()
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
@@ -1517,11 +1587,14 @@ class SettingsSections:
 				urwid.Divider(),
 				urwid.Text("- = -"),
 				urwid.Divider(),
-				settings_checkbox_delete_af,
+				self.settings_checkbox_delete_af,
 				urwid.Divider(),
 				])
 
 			return settings_pile
+
+		def update(self):
+			self.settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
 
 	# = - E X A M P L E - =
 	#class Three_SECTION:
@@ -1566,6 +1639,8 @@ def gen_SimpleFocusListWalker_with_footer(contents, footer, width=20):
 class SettingsRenderClass:
 	""" The class that is responsible for rendering the settings menu """
 	def __init__(self):
+		self.settings_soft_update_scheduled = False
+
 		self.exit_settings_button = urwid.Button("Exit from settings", on_press=settings.show_settings_call)
 		self.save_settings_button = urwid.Button("Save to config file", on_press=settings.save)
 		self.load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
@@ -1619,10 +1694,14 @@ class SettingsRenderClass:
 		if update:
 			self.update()
 
+	def soft_update(self):
+		self.current_section_initialized.update()
+
 	def update(self):
 		""" re-generate + re-render right visible part of the interface """
+		self.current_section_initialized = self.current_section()
 		self.right_widget = urwid.Frame(
-			urwid.Padding(urwid.Filler(self.current_section.get(None), valign='top'), left=2, right=2, align='center'),
+			urwid.Padding(urwid.Filler(self.current_section_initialized.get(), valign='top'), left=2, right=2, align='center'),
 
 			footer = urwid.Pile([
 				updates_class.settings_version_text,
@@ -1675,6 +1754,14 @@ class SettingsRenderClass:
 			except:
 				exit_with_exception(traceback.format_exc())
 		# - = - = - = - = - = - = - = - = -
+
+		# - = - = - = - = - = - = - = - = -
+		# Soft checkbox updater
+		if self.settings_soft_update_scheduled is True:
+			self.soft_update()
+			self.settings_soft_update_scheduled = False
+		# - = - = - = - = - = - = - = - = -
+
 		loop.set_alarm_in(0.1, self.tick_handler_settings)
 
 sett = SettingsRenderClass()
