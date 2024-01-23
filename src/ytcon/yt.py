@@ -468,18 +468,50 @@ class RenderClass_base:
 			progress = round(percent / 4)
 			white_space = 25 - progress
 			if error:
-				return f"| {'#'*(white_space-2)} |"
+				return f"|{'#'*progress}{' '*white_space}|"
 
 			style = settings.get_setting("progressbar_appearance")
+
 			if style == "detailed":
 				return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
+
 			elif style == "simple":
 				return f"|{'█'*progress}{' '*white_space}|"
+
 			elif style == "arrow":
 				temp1 = '='*progress
 				if temp1 != "":
 					temp1 = temp1[:-1] + ">" # replace last symbol to >
 				return f"|{temp1}{' '*white_space}|"
+
+			elif style == "pacman":
+				# [---------Co o o o o o o o]
+				#            ^^ background ^^
+
+				progressline = '-'*progress
+				if progressline != "" and progress != 25:
+					if progress % 2 == 0:
+						progressline = progressline[:-1] + "C" # replace last symbol to c
+					else:
+						progressline = progressline[:-1] + "c" # replace last symbol to C
+
+				# Skip background generation if this not needed
+				if progress == 25:
+					return f"[{progressline}]"
+
+				# - = Background generation = -
+				if progress % 2:
+					background = " "
+				else:
+					background = "o"
+
+				while len(background) != white_space:
+					if background[-1] == " ":
+						background = background + "o"
+					else:
+						background = background + " "
+				# - = - = - = - = - = - = - = -
+				return f"[{progressline}{background[:white_space]}]"
 
 RenderClass = RenderClass_base()
 
@@ -1496,6 +1528,10 @@ class SettingsSections:
 				(RenderClass.cyan, "46% |===>   | - Arrow"),
 				"\nLet's just add some oldfag style 😎"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "arrow"))
+			self.settings_checkbox_progresstype_pacman = urwid.CheckBox([
+				(RenderClass.cyan, "46% |--C o | - Pacman"),
+				"\nPacman game"
+				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "pacman"))
 
 			# UPDATE CHECKBOXES
 			self.update()
@@ -1509,6 +1545,8 @@ class SettingsSections:
 				urwid.Divider(),
 				self.settings_checkbox_progresstype_arrow,
 				urwid.Divider(),
+				self.settings_checkbox_progresstype_pacman,
+				urwid.Divider(),
 				])
 
 			return settings_pile
@@ -1517,6 +1555,8 @@ class SettingsSections:
 			self.settings_checkbox_progresstype_detailed.set_state(settings.get_setting("progressbar_appearance") == "detailed", do_callback=False)
 			self.settings_checkbox_progresstype_simple.set_state(settings.get_setting("progressbar_appearance") == "simple", do_callback=False)
 			self.settings_checkbox_progresstype_arrow.set_state(settings.get_setting("progressbar_appearance") == "arrow", do_callback=False)
+			self.settings_checkbox_progresstype_pacman.set_state(settings.get_setting("progressbar_appearance") == "pacman", do_callback=False)
+
 
 	class Fetching_SECTION:
 		""" Fetching settings section - related to yt-dlp downloding """
