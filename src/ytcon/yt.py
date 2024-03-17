@@ -475,22 +475,29 @@ class RenderClass_base:
 			if style == "detailed":
 				return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
 
-			elif style == "simple":
+			if style == "simple":
 				return f"|{'█'*progress}{' '*white_space}|"
 
-			elif style == "arrow":
+			if style == "arrow":
 				temp1 = '='*progress
 				if temp1 != "":
 					temp1 = temp1[:-1] + ">" # replace last symbol to >
 				return f"|{temp1}{' '*white_space}|"
 
-			elif style == "pacman":
+			if style == "pacman":
 				# [---------Co o o o o o o o]
 				#            ^^ background ^^
 
+				mseconds = time.time() - round(time.time())
+				#print(mseconds)
+				if mseconds > 0:
+					mystery_bool = True
+				else:
+					mystery_bool = False
+
 				progressline = '-'*progress
 				if progressline != "" and progress != 25:
-					if progress % 2 == 0:
+					if mystery_bool:
 						progressline = progressline[:-1] + "C" # replace last symbol to c
 					else:
 						progressline = progressline[:-1] + "c" # replace last symbol to C
@@ -501,9 +508,9 @@ class RenderClass_base:
 
 				# - = Background generation = -
 				if progress % 2:
-					background = " "
-				else:
 					background = "o"
+				else:
+					background = " "
 
 				while len(background) != white_space:
 					if background[-1] == " ":
