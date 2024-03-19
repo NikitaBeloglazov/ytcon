@@ -1742,7 +1742,10 @@ class SettingsRenderClass:
 			self.update()
 
 	def soft_update(self):
-		self.current_section_initialized.update()
+		try:
+			self.current_section_initialized.update()
+		except AttributeError:
+			logger.debug("soft_update unsucceful because SettingsRenderClass doesn't have initialized settings section")
 
 	def update(self):
 		""" re-generate + re-render right visible part of the interface """
