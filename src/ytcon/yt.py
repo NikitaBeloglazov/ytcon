@@ -485,8 +485,8 @@ class RenderClass_base:
 				return f"|{temp1}{' '*white_space}|"
 
 			if style == "pacman":
-				# [---------Co o o o o o o o]
-				#            ^^ background ^^
+				# [---------Co o o o o o o ]
+				#           ^^ background ^^
 
 				mseconds = time.time() - round(time.time())
 				#print(mseconds)
@@ -496,7 +496,7 @@ class RenderClass_base:
 					mystery_bool = False
 
 				progressline = '-'*progress
-				if progressline != "" and progress != 25:
+				if progress not in (0, 25):
 					if mystery_bool:
 						progressline = progressline[:-1] + "C" # replace last symbol to c
 					else:
@@ -775,7 +775,7 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 			infolist = ydl.extract_info(url, download=False)
 
 			# - = - = - log spam filter - = - = - = - =
-			if infolist is None: # yt-dlp returns videos with errors as None :||
+			if infolist is None: # yt-dlp returns videos with errors as None :|| # TODO?
 				journal.warning("ydl.extract_info RETURNED NONE", show=False)
 				return None
 			if "automatic_captions" in infolist:
