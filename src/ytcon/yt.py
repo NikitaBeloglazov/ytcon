@@ -805,10 +805,10 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 			filename = f'{temp1} [{id_in_filename}].{infolist["ext"]}'
 
 			# Name too long handler (https://github.com/ytdl-org/youtube-dl/issues/29912 and more more more issues)
-			if len(filename.encode('utf-8')) > 254:
+			if len(filename.encode('utf-8')) > 190:
 				# ^^^^^^^^^^^^^^^^^^^^^^^ counting bytes in filename
-				logger.debug("ERROR: FILENAME MORE THAN 255 BYTES. SHORTING...")
-				while len(filename.encode('utf-8')) > 254:
+				logger.debug("ERROR: FILENAME MORE THAN 190 BYTES. SHORTING...")
+				while len(filename.encode('utf-8')) > 190:
 					temp1 = " ".join(temp1.split()[:-1]) # remove 1 last word
 					filename = f'{temp1} [{id_in_filename}].{infolist["ext"]}'
 					logger.debug(filename)
