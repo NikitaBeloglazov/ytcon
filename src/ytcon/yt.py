@@ -239,6 +239,7 @@ class SettingsClass:
 		self.setting_switch(None, None, name="clipboard_autopaste")
 
 	def setting_switch(self, _=None, state=None, name=None):
+		""" Switches state to negative current state or to state set by state argument. Made for for urwid.Button's """
 		if name is None:
 			raise TypeError
 
@@ -252,6 +253,10 @@ class SettingsClass:
 		sett.settings_soft_update_scheduled = True
 
 	def setting_change_content(self, _=None, _1=None, data=None):
+		"""
+		Change content in setting where negative state cannot be determined.
+		Made for for urwid.Button's with pre-writed arguments
+		"""
 		if data is None:
 			raise TypeError
 
@@ -265,6 +270,7 @@ class SettingsClass:
 		sett.settings_soft_update_scheduled = True
 
 	def update_ydl_opts(self):
+		""" Updates some setting-related ydl_opts. Maybe something like post-change scripts? """
 		#journal.info(pprint.pformat(ControlClass.ydl_opts))
 		#journal.info("updated ydl_opts")
 
@@ -489,8 +495,7 @@ class RenderClass_base:
 				#           ^^ background ^^
 
 				mseconds = time.time() - round(time.time())
-				#print(mseconds)
-				if mseconds > 0:
+				if mseconds > 0: # pylint: disable=simplifiable-if-statement # no, because bool(-1) is True
 					mystery_bool = True
 				else:
 					mystery_bool = False
@@ -519,6 +524,7 @@ class RenderClass_base:
 						background = background + " "
 				# - = - = - = - = - = - = - = -
 				return f"[{progressline}{background[:white_space]}]"
+			return None
 
 RenderClass = RenderClass_base()
 
@@ -1148,10 +1154,10 @@ class InputHandlerClass:
 
 			elif text == "save":
 				settings.save()
-				journal.info(settings.settings)
+				#journal.info(settings.settings)
 			elif text == "load":
 				settings.load()
-				journal.info(settings.settings)
+				#journal.info(settings.settings)
 
 			elif text == "update":
 				#updates_class.update_run_and_restart()
@@ -1497,7 +1503,7 @@ class SettingsSections:
 
 		#print(self.settings_sections)
 
-	class General_SECTION:
+	class General_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" General settings section """
 		name = "General"
 
@@ -1516,9 +1522,10 @@ class SettingsSections:
 			return settings_pile
 
 		def update(self):
+			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
 
-	class Appearance_SECTION:
+	class Appearance_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" settings section related to appearance """
 		name = "Appearance"
 		def get(self):
@@ -1559,13 +1566,14 @@ class SettingsSections:
 			return settings_pile
 
 		def update(self):
+			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_progresstype_detailed.set_state(settings.get_setting("progressbar_appearance") == "detailed", do_callback=False)
 			self.settings_checkbox_progresstype_simple.set_state(settings.get_setting("progressbar_appearance") == "simple", do_callback=False)
 			self.settings_checkbox_progresstype_arrow.set_state(settings.get_setting("progressbar_appearance") == "arrow", do_callback=False)
 			self.settings_checkbox_progresstype_pacman.set_state(settings.get_setting("progressbar_appearance") == "pacman", do_callback=False)
 
 
-	class Fetching_SECTION:
+	class Fetching_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" Fetching settings section - related to yt-dlp downloding """
 		name = "Fetching"
 		def get(self):
@@ -1587,10 +1595,11 @@ class SettingsSections:
 			return settings_pile
 
 		def update(self):
+			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_sp.set_state(settings.get_setting("special_mode"), do_callback=False)
 			self.settings_checkbox_nocert.set_state(settings.get_setting("no_check_certificate"), do_callback=False)
 
-	class Playlists_SECTION:
+	class Playlists_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" Playlist settings section """
 		name = "Playlists"
 		def get(self):
@@ -1613,9 +1622,10 @@ class SettingsSections:
 			return settings_pile
 
 		def update(self):
+			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_ignerr.set_state(settings.get_setting("ignoreerrors"), do_callback=False)
 
-	class Debug_SECTION:
+	class Debug_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" DEBUG settings section """
 		name = "Debug"
 		def get(self):
@@ -1641,6 +1651,7 @@ class SettingsSections:
 			return settings_pile
 
 		def update(self):
+			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
 
 	# = - E X A M P L E - =
@@ -1742,6 +1753,7 @@ class SettingsRenderClass:
 			self.update()
 
 	def soft_update(self):
+		""" Update current section flags states without re-rendering it """
 		try:
 			self.current_section_initialized.update()
 		except AttributeError:
