@@ -5,7 +5,6 @@ import sys
 import time
 import pickle
 import pprint
-import logging
 import threading
 import traceback
 import subprocess
@@ -86,91 +85,6 @@ except:
 	print("The following path has problems: " + configpath)
 	sys.exit(1)
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-
-# - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
-logger = logging.getLogger('main_logger')
-logger.setLevel(logging.DEBUG)
-
-# Create handler for the INFO level
-info_file_handler = logging.FileHandler(log_folder+'info.log', mode='w')
-info_file_handler.setLevel(logging.INFO)
-
-# Create handler for the DEBUG level
-debug_file_handler = logging.FileHandler(log_folder+'debug.log', mode='w')
-debug_file_handler.setLevel(logging.DEBUG)
-
-# Add formatter
-formatter = logging.Formatter('%(levelname)s: %(message)s')
-info_file_handler.setFormatter(formatter)
-debug_file_handler.setFormatter(formatter)
-
-# Add handlers to the logger
-logger.addHandler(info_file_handler)
-logger.addHandler(debug_file_handler)
-
-# Write test logs
-logger.debug('== DEBUG LOG FILE ==')
-logger.info('== INFO LOG FILE ==')
-# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-
-class JournalClass:
-	"""
-	A log wrapper for yt-dlp and a logging class for the whole application.
-	info, warning and error will be added to the logs field. (logprinter())
-	For debug messages it is highly recommended to use logger.debug instead of journal
-	"""
-	def debug(self, msg):
-		""" !!! For yt-dlp """
-		if msg.startswith('[debug] '):
-			logger.debug(msg)
-		else:
-			self.info(msg)
-
-	# show: show in logs field
-	def info(self, msg, show=True):
-		""" info log level """
-		logger.info(msg)
-		if show:
-			self.add_to_logs_field(msg)
-	def warning(self, msg, show=True):
-		""" warning log level """
-		logger.warning(msg)
-		if show:
-			self.add_to_logs_field(msg)
-	def error(self, msg, show=True):
-		""" error log level. The error message will also be added to the errorprinter() """
-		if msg == "ERROR: kwallet-query failed with return code 1. Please consult the kwallet-query man page for details":
-			return None # Outdated: does not appear in yt-dlp on python3.11
-
-		logger.error(msg)
-		ControlClass.last_error = msg
-		ControlClass.error_countdown = 99
-		if show:
-			self.add_to_logs_field(msg)
-		return None
-
-	def clear_errors(self, _=None):
-		""" Clear the errorprinter() field """
-		ControlClass.last_error = ""
-		ControlClass.error_countdown = 0
-
-	def add_to_logs_field(self, msg):
-		""" there logs will be added to the logprinter() field. """
-		msg = str(msg).replace("\n", "")
-		if "[download]" in msg and "%" in msg and "at" in msg:
-			# awoid logging such as "[download] 100.0% of   52.05MiB at    3.07MiB/s ETA 00:00"
-			return None
-
-		del ControlClass.log[0]
-		if len(msg) > RenderClass.width:
-			temp1 = RenderClass.width - 3
-			ControlClass.log.append(msg[0:temp1]+"...")
-		else:
-			ControlClass.log.append(msg)
-		# logger.debug(ControlClass.log)
-		return None
-
-journal = JournalClass()
 
 class SettingsClass:
 	""" Сontains settings data and methods for them """
@@ -271,93 +185,37 @@ class SettingsClass:
 
 	def update_ydl_opts(self):
 		""" Updates some setting-related ydl_opts. Maybe something like post-change scripts? """
-		#journal.info(pprint.pformat(ControlClass.ydl_opts))
+		#journal.info(pprint.pformat(variables.ydl_opts))
 		#journal.info("updated ydl_opts")
 
 		# - = Special mode cookie extractor activator = -
-		if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in ControlClass.ydl_opts:
-			ControlClass.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-		elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in ControlClass.ydl_opts:
-			del ControlClass.ydl_opts["cookiesfrombrowser"]
+		if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in variables.ydl_opts:
+			variables.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
+		elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in variables.ydl_opts:
+			del variables.ydl_opts["cookiesfrombrowser"]
 		# - = - = - = - = - = - = - = - = - = - = - = - =
 
 		# - = Certificates ignore activator = -
-		if settings.get_setting("no_check_certificate") is True and "nocheckcertificate" not in ControlClass.ydl_opts:
-			ControlClass.ydl_opts["nocheckcertificate"] = True
-		elif settings.get_setting("no_check_certificate") is False and "nocheckcertificate" in ControlClass.ydl_opts:
-			del ControlClass.ydl_opts["nocheckcertificate"]
+		if settings.get_setting("no_check_certificate") is True and "nocheckcertificate" not in variables.ydl_opts:
+			variables.ydl_opts["nocheckcertificate"] = True
+		elif settings.get_setting("no_check_certificate") is False and "nocheckcertificate" in variables.ydl_opts:
+			del variables.ydl_opts["nocheckcertificate"]
 		# - = - = - = - = - = - = - = - = - = - = - = - =
 
 		# - = Certificates ignore activator = -
-		if settings.get_setting("ignoreerrors") is True and "ignoreerrors" not in ControlClass.ydl_opts:
-			ControlClass.ydl_opts["ignoreerrors"] = True
-		elif settings.get_setting("ignoreerrors") is False and "ignoreerrors" in ControlClass.ydl_opts:
-			del ControlClass.ydl_opts["ignoreerrors"]
+		if settings.get_setting("ignoreerrors") is True and "ignoreerrors" not in variables.ydl_opts:
+			variables.ydl_opts["ignoreerrors"] = True
+		elif settings.get_setting("ignoreerrors") is False and "ignoreerrors" in variables.ydl_opts:
+			del variables.ydl_opts["ignoreerrors"]
 		# - = - = - = - = - = - = - = - = - = - = - = - =
 
-		#journal.info(pprint.pformat(ControlClass.ydl_opts))
+		#journal.info(pprint.pformat(variables.ydl_opts))
 
+from log import journal, logger
+from control.variables import variables
+from control.exit import exit_with_exception, traceback
 
 settings = SettingsClass()
-
-class ControlClass_base:
-	""" It stores information about the download queue and some information that must be passed through several functions. """
-	def __init__(self):
-		self.queue_list = {}
-		self.ydl_opts = {}
-
-		self.temp = {}
-		self.temp["autopaste_button_color"] = "" # some kind of cache, see tick_handler
-
-		self.last_error = ""
-		self.error_countdown = 0
-		self.prev_last_error = ""
-		self.prev_error_countdown = 0
-
-		self.delete_after_download = False
-
-		self.log = ["", "", "", "", "", "Logs will appear there.."]
-		self.exit = False
-		self.auto_update_safe_gui_stop = False
-		self.exception = ""
-		self.clipboard_checker_state_launched = False
-
-		# See InputHandlerClass.InputBox
-		self.alt_plus_arrow_multiline_message_sended = False
-
-	def delete_finished(self):
-		""" Removes all completed operations from ControlClass.queue_list with a loop """
-		try:
-			temp1 = 0
-			temp2_new = self.queue_list.copy()
-			for item, item_content in self.queue_list.copy().items():
-				if item_content["status"] == "exists" or item_content["status"] == "finished" or item_content["status"] == "error":
-					del temp2_new[item]
-					if "meta_index" not in item_content:
-						temp1 = temp1 + 1
-			self.queue_list = temp2_new
-			logger.debug(self.queue_list)
-			RenderClass.remove_all_widgets()
-			return str(temp1)
-		except:
-			exit_with_exception(traceback.format_exc())
-		return None
-
-	def clear(self, _=None):
-		""" Clears errors and finished downloads from memory """
-		journal.clear_errors()
-		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
-		RenderClass.flash_button_text(main_clear_button, RenderClass.light_yellow, 2)
-
-	def delete_after_download_switch(self, _=None, _1=None):
-		""" Special mode switch function for urwid.Button's """
-		journal.info("")
-		if self.delete_after_download: # true
-			self.delete_after_download = False
-			journal.info("[YTCON] Delete after download disabled!")
-		elif not self.delete_after_download: # false
-			self.delete_after_download = True
-			journal.error("[YTCON] Delete after download ENABLED! This means that the downloaded files WILL NOT BE SAVED!")
 
 class RenderClass_base:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -655,7 +513,7 @@ class UpdateAndVersionsClass:
 		update_command = self.get_update_command()
 		if update_command is None:
 			return None
-		ControlClass.auto_update_safe_gui_stop = True
+		variables.auto_update_safe_gui_stop = True
 		time.sleep(1)
 		print("\n- = - =\nThe following command will run in 10 seconds:")
 		print(" - " + update_command)
@@ -693,58 +551,58 @@ def hook(d):
 		# - = - = - = - = - = - = - = - = - = - = -
 
 		logger.debug(pprint.pformat(d))
-		if "multiple_formats" in ControlClass.queue_list[d["info_dict"]["original_url"]]:
+		if "multiple_formats" in variables.queue_list[d["info_dict"]["original_url"]]:
 			indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
 		else:
 			indexx = d["info_dict"]["original_url"]
 
 		# - = - resolution detector - = - = - = - = - = - = - = - = - = -
-		if ControlClass.queue_list[indexx]["resolution"].find("???") > -1 and (ControlClass.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and ControlClass.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
+		if variables.queue_list[indexx]["resolution"].find("???") > -1 and (variables.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and variables.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
 			# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
 			logger.debug("DOWNBYTES: %s", str(d["downloaded_bytes"]))
 			temp1 = get_resolution_ffprobe(d["tmpfilename"])
-			temp2 = str(ControlClass.queue_list[indexx].get("resolution_detection_tries", 0)+1)
+			temp2 = str(variables.queue_list[indexx].get("resolution_detection_tries", 0)+1)
 
 			if temp1 is not None:
-				ControlClass.queue_list[indexx]["resolution"] = temp1
+				variables.queue_list[indexx]["resolution"] = temp1
 				journal.info(f"[YTCON] Detected resolution: {temp1} (on try {temp2})" )
 			else:
 				journal.warning(f'[YTCON] Resolution detection failed: ffprobe gave an error (try {temp2})')
-			ControlClass.queue_list[indexx]["resolution_detection_tried_on_byte"] = int(d["downloaded_bytes"])
-			ControlClass.queue_list[indexx]["resolution_detection_tries"] = ControlClass.queue_list[indexx].get("resolution_detection_tries", 0) + 1
+			variables.queue_list[indexx]["resolution_detection_tried_on_byte"] = int(d["downloaded_bytes"])
+			variables.queue_list[indexx]["resolution_detection_tries"] = variables.queue_list[indexx].get("resolution_detection_tries", 0) + 1
 		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
-		ControlClass.queue_list[indexx]["file"] = d["info_dict"]['_filename']
-		if ControlClass.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
+		variables.queue_list[indexx]["file"] = d["info_dict"]['_filename']
+		if variables.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
 			raise InputHandler.InputProcessed
-		ControlClass.queue_list[indexx]["status"] = d["status"]
+		variables.queue_list[indexx]["status"] = d["status"]
 
 		if int(d["_percent_str"].strip().split(".")[0]) > 100:
 			journal.warning("[YTCON] yt-dlp returned percent more than 100%: \"" + d["_percent_str"].strip() + "\". Values remain unchanged...")
 		else:
-			ControlClass.queue_list[indexx]["status_short_display"] = d["_percent_str"].strip()
-			ControlClass.queue_list[indexx]["percent"] = d["_percent_str"].strip()
-		ControlClass.queue_list[indexx]["speed"] = d["_speed_str"].strip()
+			variables.queue_list[indexx]["status_short_display"] = d["_percent_str"].strip()
+			variables.queue_list[indexx]["percent"] = d["_percent_str"].strip()
+		variables.queue_list[indexx]["speed"] = d["_speed_str"].strip()
 
 		try:
-			if ControlClass.queue_list[indexx]["eta"].count(":") > 1:
-				ControlClass.queue_list[indexx]["eta"] = d["_eta_str"].strip()
+			if variables.queue_list[indexx]["eta"].count(":") > 1:
+				variables.queue_list[indexx]["eta"] = d["_eta_str"].strip()
 			else:
-				ControlClass.queue_list[indexx]["eta"] = "ETA " + d["_eta_str"].strip()
+				variables.queue_list[indexx]["eta"] = "ETA " + d["_eta_str"].strip()
 		except KeyError:
 			if d["status"] == "finished":
-				ControlClass.queue_list[indexx]["eta"] = "ETA 00:00"
+				variables.queue_list[indexx]["eta"] = "ETA 00:00"
 
 		try:
 			if d["_total_bytes_estimate_str"].strip() == "N/A":
-				ControlClass.queue_list[indexx]["size"] = d["_total_bytes_str"].strip()
+				variables.queue_list[indexx]["size"] = d["_total_bytes_str"].strip()
 			else:
-				ControlClass.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
+				variables.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
 		except KeyError:
 			pass
 
 		try:
-			ControlClass.queue_list[indexx]["downloaded"] = d["_downloaded_bytes_str"].strip()
+			variables.queue_list[indexx]["downloaded"] = d["_downloaded_bytes_str"].strip()
 		except:
 			pass
 
@@ -753,7 +611,7 @@ def hook(d):
 		d["info_dict"]["subtitles"] = []
 		d["info_dict"]["fragments"] = []
 
-		logger.debug(pprint.pformat(ControlClass.queue_list))
+		logger.debug(pprint.pformat(variables.queue_list))
 	except InputHandler.InputProcessed:
 		pass
 	except:
@@ -767,12 +625,12 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 	For each link one thread (exception: playlists)
 	"""
 	try:
-		if url in ControlClass.queue_list:
-			if ControlClass.queue_list[url]["status"] not in ("exists", "finished"):
+		if url in variables.queue_list:
+			if variables.queue_list[url]["status"] not in ("exists", "finished"):
 				journal.error(f"[YTCON] Video link \"{RenderClass.methods.name_shortener(url, 40)}\" is already downloading!")
 				return None
 
-		with yt_dlp.YoutubeDL(ControlClass.ydl_opts) as ydl:
+		with yt_dlp.YoutubeDL(variables.ydl_opts) as ydl:
 			# needed for some sites. you may need to replace it with the correct one
 			if settings.get_setting("special_mode") is True:
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
@@ -834,28 +692,28 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 			temp1_index = map_variables.main(multiple_formats, infolist, filename)
 
 			if exists:
-				ControlClass.queue_list[infolist["original_url"]]["status"] = "exists"
+				variables.queue_list[infolist["original_url"]]["status"] = "exists"
 				if multiple_formats:
 					for i in infolist["requested_formats"]:
 						temp1_index = infolist["original_url"] + ":" + i["format_id"]
-						ControlClass.queue_list[temp1_index]["status"] = "exists"
-						ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
-						ControlClass.queue_list[temp1_index]["status_short_display"] = "Exist"
-						ControlClass.queue_list[temp1_index]["percent"] = "100.0%"
+						variables.queue_list[temp1_index]["status"] = "exists"
+						variables.queue_list[temp1_index]["downloaded"] = variables.queue_list[temp1_index]["size"]
+						variables.queue_list[temp1_index]["status_short_display"] = "Exist"
+						variables.queue_list[temp1_index]["percent"] = "100.0%"
 				else:
-					ControlClass.queue_list[temp1_index]["downloaded"] = ControlClass.queue_list[temp1_index]["size"]
-					ControlClass.queue_list[temp1_index]["status_short_display"] = "Exist"
-					ControlClass.queue_list[temp1_index]["percent"] = "100.0%"
+					variables.queue_list[temp1_index]["downloaded"] = variables.queue_list[temp1_index]["size"]
+					variables.queue_list[temp1_index]["status_short_display"] = "Exist"
+					variables.queue_list[temp1_index]["percent"] = "100.0%"
 			# - = - = - = - = - = - = - = - = - = - = - = - =
-			logger.debug(pprint.pformat(ControlClass.queue_list))
+			logger.debug(pprint.pformat(variables.queue_list))
 
-			with yt_dlp.YoutubeDL(ControlClass.ydl_opts | {"outtmpl": filename}) as ydl2:
+			with yt_dlp.YoutubeDL(variables.ydl_opts | {"outtmpl": filename}) as ydl2:
 				logger.debug(ydl2.download(url))
-				if ControlClass.last_error.find("[Errno 36] File name too long") > -1:
-					raise yt_dlp.utils.DownloadError(ControlClass.last_error)
+				if variables.last_error.find("[Errno 36] File name too long") > -1:
+					raise yt_dlp.utils.DownloadError(variables.last_error)
 			# - = Mark meta as finished = -
-			if "meta_index" in ControlClass.queue_list[infolist["original_url"]]:
-				ControlClass.queue_list[infolist["original_url"]]["status"] = "finished"
+			if "meta_index" in variables.queue_list[infolist["original_url"]]:
+				variables.queue_list[infolist["original_url"]]["status"] = "finished"
 
 	except yt_dlp.utils.DownloadError as e:
 		journal.error(str(e), show=False)
@@ -867,11 +725,11 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 
 	# - = - = - = [Post-processing] = - = - = - #
 	try:
-		if ControlClass.queue_list[temp1_index]["status"] == "exists":
+		if variables.queue_list[temp1_index]["status"] == "exists":
 			return None # skip post-process if file already exists
 
 		# = - = -
-		if ControlClass.queue_list[temp1_index]["status"] != "finished":
+		if variables.queue_list[temp1_index]["status"] != "finished":
 			# IF DOWNLOAD THREAD EXITS WITHOUT ERROR (this usually occurs due to the "ignoreerrors" flag)
 			journal.debug("DOWNLOAD THREAD EXITED WITHOUT ERROR")
 			map_variables.mark_as_error(url)
@@ -879,12 +737,12 @@ def downloadd(url): # pylint: disable=too-many-return-statements
 		# = - = -
 
 		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
-		os.utime(ControlClass.queue_list[temp1_index]["file"])
+		os.utime(variables.queue_list[temp1_index]["file"])
 
 		# Remove file after downloading
-		if ControlClass.delete_after_download is True:
-			journal.warning(f"[YTCON] REMOVING {ControlClass.queue_list[temp1_index]['file']}...")
-			os.remove(ControlClass.queue_list[temp1_index]["file"])
+		if variables.delete_after_download is True:
+			journal.warning(f"[YTCON] REMOVING {variables.queue_list[temp1_index]['file']}...")
+			os.remove(variables.queue_list[temp1_index]["file"])
 	except:
 		exit_with_exception(traceback.format_exc())
 
@@ -896,14 +754,14 @@ class MapVariablesClass:
 	def main(self, multiple_formats, infolist, filename):
 		""" Finding some specific parameters and using a loop assign if there are several files """
 		if multiple_formats:
-			ControlClass.queue_list[infolist["original_url"]] = {}
-			ControlClass.queue_list[infolist["original_url"]]["meta_index"] = True
-			ControlClass.queue_list[infolist["original_url"]]["multiple_formats"] = True
-			ControlClass.queue_list[infolist["original_url"]]["formats"] = []
-			ControlClass.queue_list[infolist["original_url"]]["status"] = "waiting"
+			variables.queue_list[infolist["original_url"]] = {}
+			variables.queue_list[infolist["original_url"]]["meta_index"] = True
+			variables.queue_list[infolist["original_url"]]["multiple_formats"] = True
+			variables.queue_list[infolist["original_url"]]["formats"] = []
+			variables.queue_list[infolist["original_url"]]["status"] = "waiting"
 			for i in infolist["requested_formats"]:
 				temp1_index = infolist["original_url"] + ":" + i["format_id"]
-				ControlClass.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
+				variables.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
 				self.map_variables(temp1_index, infolist, i, filename)
 			return temp1_index
 		# else:
@@ -913,53 +771,53 @@ class MapVariablesClass:
 
 	def map_variables(self, temp1_index, infolist, i, filename):
 		""" Main parameter assigner. In some cases, it can be used in a loop """
-		ControlClass.queue_list[temp1_index] = {}
-		ControlClass.queue_list[temp1_index]["status"] = "waiting"
-		ControlClass.queue_list[temp1_index]["status_short_display"] = "Wait"
-		ControlClass.queue_list[temp1_index]["percent"] = "0.0%"
-		ControlClass.queue_list[temp1_index]["speed"] = "0KiB/s"
+		variables.queue_list[temp1_index] = {}
+		variables.queue_list[temp1_index]["status"] = "waiting"
+		variables.queue_list[temp1_index]["status_short_display"] = "Wait"
+		variables.queue_list[temp1_index]["percent"] = "0.0%"
+		variables.queue_list[temp1_index]["speed"] = "0KiB/s"
 		try:
-			ControlClass.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
+			variables.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
 		except KeyError:
-			ControlClass.queue_list[temp1_index]["size"] = "???MiB"
-		ControlClass.queue_list[temp1_index]["downloaded"] = "0MiB"
-		ControlClass.queue_list[temp1_index]["eta"] = "ETA ??:??"
-		ControlClass.queue_list[temp1_index]["name"] = infolist["fulltitle"]
+			variables.queue_list[temp1_index]["size"] = "???MiB"
+		variables.queue_list[temp1_index]["downloaded"] = "0MiB"
+		variables.queue_list[temp1_index]["eta"] = "ETA ??:??"
+		variables.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 		if i["resolution"] == "audio only":
-			ControlClass.queue_list[temp1_index]["resolution"] = "audio"
+			variables.queue_list[temp1_index]["resolution"] = "audio"
 		else:
 			if i.get("width", None) is None and i.get("height", None) is None:
-				ControlClass.queue_list[temp1_index]["resolution"] = "???х???"
+				variables.queue_list[temp1_index]["resolution"] = "???х???"
 			else:
-				ControlClass.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
-		ControlClass.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
-		ControlClass.queue_list[temp1_index]["file"] = filename
+				variables.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
+		variables.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
+		variables.queue_list[temp1_index]["file"] = filename
 
 	def mark_as_error(self, url):
 		""" Change the status of the downloaded link to Error if such link exists """
-		if url in ControlClass.queue_list:
-			ControlClass.queue_list[url]["status"] = "error"
-			if "multiple_formats" in ControlClass.queue_list[url]:
+		if url in variables.queue_list:
+			variables.queue_list[url]["status"] = "error"
+			if "multiple_formats" in variables.queue_list[url]:
 				for i in url["formats"]:
 					temp1_index = url + ":" + i
-					ControlClass.queue_list[temp1_index]["status"] = "error"
-					ControlClass.queue_list[temp1_index]["status_short_display"] = "Error"
+					variables.queue_list[temp1_index]["status"] = "error"
+					variables.queue_list[temp1_index]["status_short_display"] = "Error"
 			else:
-				ControlClass.queue_list[url]["status_short_display"] = "Error"
+				variables.queue_list[url]["status_short_display"] = "Error"
 
 map_variables = MapVariablesClass()
 
 def render_tasks(loop, _):
 	"""
-	Graphic part of ytcon - draws a colored video queue from ControlClass.queue_list
+	Graphic part of ytcon - draws a colored video queue from variables.queue_list
 	Shows names, extractors, ETAs, generates progress bars, etc.
 	"""
 	try:
-		if not ControlClass.queue_list: # if ControlClass.queue_list == {}
+		if not variables.queue_list: # if variables.queue_list == {}
 			RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
 		else:
 			r = 0
-			for _, i in ControlClass.queue_list.items():
+			for _, i in variables.queue_list.items():
 				if "meta_index" in i:
 					continue # just ignore meta-downloads
 
@@ -1016,9 +874,9 @@ class InputHandlerClass:
 			"""
 			tmp1 = self.get_cursor_coords(size)[0]
 			if len(self.get_cursor_coords(size)) > 1 and self.get_cursor_coords(size)[1] > 0:
-				if ControlClass.alt_plus_arrow_multiline_message_sended is False:
+				if variables.alt_plus_arrow_multiline_message_sended is False:
 					journal.error("[YTCON] Navigation using Alt+Arrow in a multi-line input field does not work as expected, this is a known problem, and we cannot solve it due to the peculiarities of the engine.\n\nNavigation will be inaccurate and skip some characters for no reason.\nWe apologize for the inconvenience caused.")
-					ControlClass.alt_plus_arrow_multiline_message_sended = True
+					variables.alt_plus_arrow_multiline_message_sended = True
 				tmp1 = tmp1 * self.get_cursor_coords(size)[1]
 				return tmp1
 			return tmp1 - 12
@@ -1147,7 +1005,7 @@ class InputHandlerClass:
 				RenderClass.settings_show = True
 
 			elif text == "flags":
-				journal.info(pprint.pformat(ControlClass.ydl_opts))
+				journal.info(pprint.pformat(variables.ydl_opts))
 
 			elif text == "s ls":
 				journal.info(settings.settings)
@@ -1181,21 +1039,21 @@ def errorprinter(loop, _):
 	""" Draws errors in error_widget in red, after some time (specified in the timer) removes error messages """
 	try:
 		# - = skip, do not re-render if there is no errors - = - = - = - = -
-		# if ControlClass.prev_last_error == ControlClass.last_error and ControlClass.prev_error_countdown == ControlClass.error_countdown:
+		# if variables.prev_last_error == variables.last_error and variables.prev_error_countdown == variables.error_countdown:
 		#	time.sleep(0.6)
 		#	continue
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = -
 		to_render = []
 		to_render.append("- - -\n")
 
-		if ControlClass.error_countdown != 0:
-			error_text_generator = "[" + RenderClass.methods.whitespace_stabilization(str(ControlClass.error_countdown), 2) + "] " + str(ControlClass.last_error)
+		if variables.error_countdown != 0:
+			error_text_generator = "[" + RenderClass.methods.whitespace_stabilization(str(variables.error_countdown), 2) + "] " + str(variables.last_error)
 		else:
-			error_text_generator = str(ControlClass.last_error)
+			error_text_generator = str(variables.last_error)
 
 		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
 
-		if ControlClass.last_error == "":
+		if variables.last_error == "":
 			to_render.append((RenderClass.cyan, error_text_generator))
 		else:
 			to_render.append((RenderClass.red, error_text_generator))
@@ -1218,7 +1076,7 @@ def errorprinter(loop, _):
 			else:
 				error_widget.set_text(to_render[:-3])
 
-		if ControlClass.last_error == "":
+		if variables.last_error == "":
 			if RenderClass.errorprinter_animation < 3 and RenderClass.errorprinter_animation >= 0:
 				RenderClass.errorprinter_animation += 1
 		else:
@@ -1226,12 +1084,12 @@ def errorprinter(loop, _):
 				RenderClass.errorprinter_animation = RenderClass.errorprinter_animation - 1
 		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
-		ControlClass.prev_last_error = ControlClass.last_error
-		ControlClass.prev_error_countdown = ControlClass.error_countdown
+		variables.prev_last_error = variables.last_error
+		variables.prev_error_countdown = variables.error_countdown
 
-		if ControlClass.error_countdown != 0:
-			ControlClass.error_countdown = ControlClass.error_countdown - 1
-			if ControlClass.error_countdown == 0:
+		if variables.error_countdown != 0:
+			variables.error_countdown = variables.error_countdown - 1
+			if variables.error_countdown == 0:
 				journal.clear_errors()
 
 		#error_widget.set_text(to_render)
@@ -1243,22 +1101,22 @@ def logprinter(loop, _):
 	""" Prints the last 6 lines of logs in log_widget """
 	try:
 		# - = skip, do not re-render if it doesn't change - = - = - =
-		# if ControlClass.oldlog == ControlClass.log:
+		# if ControlClass.oldlog == variables.log:
 		#	time.sleep(0.5)
 		#	continue
 		# else:
-		#	ControlClass.oldlog = ControlClass.log.copy()
+		#	ControlClass.oldlog = variables.log.copy()
 		#
 		# controlclass snippet:
 		# self.oldlog = ["", "", "", "", "", ""]
 		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
 
-		to_render = ControlClass.log[0] + "\n"
-		to_render += ControlClass.log[1] + "\n"
-		to_render += ControlClass.log[2] + "\n"
-		to_render += ControlClass.log[3] + "\n"
-		to_render += ControlClass.log[4] + "\n"
-		to_render += ControlClass.log[5]
+		to_render = variables.log[0] + "\n"
+		to_render += variables.log[1] + "\n"
+		to_render += variables.log[2] + "\n"
+		to_render += variables.log[3] + "\n"
+		to_render += variables.log[4] + "\n"
+		to_render += variables.log[5]
 		log_widget.set_text(to_render)
 
 		loop.set_alarm_in(0.3, logprinter)
@@ -1270,34 +1128,34 @@ def tick_handler(loop, _):
 
 	# - = - = - = - = - = - = - = - = -
 	# Autopaste button color changer
-	if (settings.get_setting("clipboard_autopaste") is True and ControlClass.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and ControlClass.clipboard_checker_state_launched is not False):
+	if (settings.get_setting("clipboard_autopaste") is True and variables.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and variables.clipboard_checker_state_launched is not False):
 		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "yellow"), main_footer_buttons.contents[2][1])
-		ControlClass.temp["autopaste_button_color"] = "yellow" # some kind of cache
-	elif ControlClass.clipboard_checker_state_launched is not True and ControlClass.temp["autopaste_button_color"] != "light_red":
+		variables.temp["autopaste_button_color"] = "yellow" # some kind of cache
+	elif variables.clipboard_checker_state_launched is not True and variables.temp["autopaste_button_color"] != "light_red":
 		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "light_red"), main_footer_buttons.contents[2][1])
-		ControlClass.temp["autopaste_button_color"] = "light_red" # some kind of cache
-	elif ControlClass.clipboard_checker_state_launched is True and ControlClass.temp["autopaste_button_color"] != "buttons_footer":
+		variables.temp["autopaste_button_color"] = "light_red" # some kind of cache
+	elif variables.clipboard_checker_state_launched is True and variables.temp["autopaste_button_color"] != "buttons_footer":
 		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "buttons_footer"), main_footer_buttons.contents[2][1])
-		ControlClass.temp["autopaste_button_color"] = "buttons_footer" # some kind of cache
+		variables.temp["autopaste_button_color"] = "buttons_footer" # some kind of cache
 	# - = - = - = - = - = - = - = - = -
 
 	# - = Clipboard thread activator = -
-	if settings.get_setting("clipboard_autopaste") and ControlClass.clipboard_checker_state_launched is False:
+	if settings.get_setting("clipboard_autopaste") and variables.clipboard_checker_state_launched is False:
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
 
 	# - = - = - = - = - = - = - = - = -
-	# The error handler, if it sees ControlClass.exit = True,
-	# then exits the program commenting this with the text from ControlClass.exception.
+	# The error handler, if it sees variables.exit = True,
+	# then exits the program commenting this with the text from variables.exception.
 	# The parent function of such actions: exit_with_exception()
-	if ControlClass.exit is True:
+	if variables.exit is True:
 		loop.stop()
 		print("An unknown error has occurred!\n")
 		time.sleep(0.5)
-		print(ControlClass.exception)
+		print(variables.exception)
 		sys.exit(1)
 
-	if ControlClass.auto_update_safe_gui_stop is True:
+	if variables.auto_update_safe_gui_stop is True:
 		try:
 			loop.stop()
 		except:
@@ -1339,7 +1197,7 @@ def clipboard_checker():
 	"""
 
 	# Set the button yellow and DO NOT start daemon
-	ControlClass.clipboard_checker_state_launched = "Do not start"
+	variables.clipboard_checker_state_launched = "Do not start"
 
 	if clipman.dataclass.init_called is False:
 		try:
@@ -1352,18 +1210,18 @@ def clipboard_checker():
 			time.sleep(60)
 			settings.write_setting("clipboard_autopaste", False)
 			update_checkboxes()
-			ControlClass.clipboard_checker_state_launched = False
+			variables.clipboard_checker_state_launched = False
 			return None
 
 	try:
-		ControlClass.clipboard_checker_state_launched = True
+		variables.clipboard_checker_state_launched = True
 		journal.info("[YTCON] Clipboard auto-paste is ON.")
 
 		old_clip = ""
 
 		while True:
 			if settings.get_setting("clipboard_autopaste") is False:
-				ControlClass.clipboard_checker_state_launched = False
+				variables.clipboard_checker_state_launched = False
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None
 
@@ -1381,12 +1239,6 @@ def clipboard_checker():
 		exit_with_exception(str(traceback.format_exc()))
 		return None
 
-def exit_with_exception(text):
-	""" Terminates the pseudo-graphics API and prints an error message, then exits the program """
-	journal.error(text)
-	ControlClass.exit = True
-	ControlClass.exception = text
-
 def get_resolution_ffprobe(file):
 	""" Uses ffprobe to get video (even not fully downloaded) resolution """
 	try:
@@ -1403,9 +1255,9 @@ def get_resolution_ffprobe(file):
 	return None
 
 # - = - = -
-ControlClass = ControlClass_base()
+from control.control import *
 
-ControlClass.ydl_opts = {
+variables.ydl_opts = {
 	'logger': journal,
 	'progress_hooks': [hook],
 	'color': 'no_color',
@@ -1652,7 +1504,7 @@ class SettingsSections:
 
 		def update(self):
 			""" Update checkbox states for they don't lie """
-			self.settings_checkbox_delete_af.set_state(ControlClass.delete_after_download, do_callback=False)
+			self.settings_checkbox_delete_af.set_state(variables.delete_after_download, do_callback=False)
 
 	# = - E X A M P L E - =
 	#class Three_SECTION:
