@@ -123,7 +123,7 @@ class SettingsClass:
 		with open(configpath + "settings.db", "wb") as filee:
 			pickle.dump(self.settings, filee)
 		journal.info(f"[YTCON] {configpath}settings.db saved")
-		RenderClass.flash_button_text(button, RenderClass.green)
+		RenderClass.flash_button_text(button, colors.green)
 
 	def load(self, button=None): # in the second argument urwid puts the button of which the function was called
 		""" Uses pickle for loading settings from ~/.config/settings.db to memory """
@@ -133,11 +133,11 @@ class SettingsClass:
 			journal.info(f"[YTCON] {configpath}settings.db loaded")
 			update_checkboxes()
 			self.update_ydl_opts()
-			RenderClass.flash_button_text(button, RenderClass.green)
+			RenderClass.flash_button_text(button, colors.green)
 		except FileNotFoundError:
 			# If file not found
 			journal.warning(f"[YTCON] Saved settings load failed: FileNotFoundError: {configpath}settings.db")
-			RenderClass.flash_button_text(button, RenderClass.red)
+			RenderClass.flash_button_text(button, colors.red)
 		except EOFError as exc:
 			# If save file is corrupted
 			logger.debug(traceback.format_exc())
@@ -214,6 +214,7 @@ class SettingsClass:
 from log import journal, logger
 from control.variables import variables
 from control.exit import exit_with_exception, traceback
+from render.colors import colors
 
 settings = SettingsClass()
 
@@ -225,15 +226,6 @@ class RenderClass_base:
 		self.settings_showed = False
 
 		self.errorprinter_animation = 3
-
-		# Init colors
-		self.red = urwid.AttrSpec('dark red', 'default')
-		self.light_red = urwid.AttrSpec('light red', 'default')
-		self.yellow = urwid.AttrSpec('brown', 'default')
-		self.light_yellow = urwid.AttrSpec('yellow', 'default')
-		self.green = urwid.AttrSpec('dark green', 'default')
-		self.cyan = urwid.AttrSpec('dark cyan', 'default')
-		self.light_white = urwid.AttrSpec('bold', 'default')
 
 		# Variables that cannot have initial values but need to be declared
 		self.width = None
@@ -399,7 +391,7 @@ class UpdateAndVersionsClass:
 		self.version, self.install_source = self.check_version()
 
 		# Widget from settings that shows versions
-		self.settings_version_text = urwid.Text((RenderClass.yellow, f"Your YTCON version: {self.version} / Newest YTCON version: *Working..*"))
+		self.settings_version_text = urwid.Text((colors.yellow, f"Your YTCON version: {self.version} / Newest YTCON version: *Working..*"))
 
 		# Variables that cannot have initial values but need to be declared
 		self.update_thread = None
@@ -474,9 +466,9 @@ class UpdateAndVersionsClass:
 		textt = f"Your YTCON version: {updates_class.version} (from {updates_class.install_source}) / Actual YTCON version: {updates_class.pypi_version}"
 
 		if self.version == "?.?.?" or self.pypi_version == "?.?.?":
-			self.settings_version_text.set_text((RenderClass.yellow, textt))
+			self.settings_version_text.set_text((colors.yellow, textt))
 		elif self.version == self.pypi_version:
-			self.settings_version_text.set_text((RenderClass.green, textt))
+			self.settings_version_text.set_text((colors.green, textt))
 		elif self.version != self.pypi_version:
 			if self.install_source == "pipx":
 				#textt = textt + "\n\nUpdate using pipx:\n - pipx upgrade ytcon\n"
@@ -489,7 +481,7 @@ class UpdateAndVersionsClass:
 
 			if self.auto_update_avalible is True:
 				textt = textt + "\n[!!] Auto update is avalible! Write \"update\" in input field to easy update right now!\n"
-			self.settings_version_text.set_text((RenderClass.light_red, textt))
+			self.settings_version_text.set_text((colors.light_red, textt))
 
 	def get_update_command(self):
 		""" A function that stores commands for updating """
@@ -814,7 +806,7 @@ def render_tasks(loop, _):
 	"""
 	try:
 		if not variables.queue_list: # if variables.queue_list == {}
-			RenderClass.edit_or_add_row((RenderClass.cyan, "No tasks"), 0)
+			RenderClass.edit_or_add_row((colors.cyan, "No tasks"), 0)
 		else:
 			r = 0
 			for _, i in variables.queue_list.items():
@@ -831,13 +823,13 @@ def render_tasks(loop, _):
 				temp1 = temp1 + fileshortname
 
 				if i["status"] == "waiting":
-					RenderClass.edit_or_add_row((RenderClass.cyan, temp1), r)
+					RenderClass.edit_or_add_row((colors.cyan, temp1), r)
 				elif i["status"] == "error":
-					RenderClass.edit_or_add_row((RenderClass.red, temp1), r)
+					RenderClass.edit_or_add_row((colors.red, temp1), r)
 				elif i["status"] == "exists":
-					RenderClass.edit_or_add_row((RenderClass.yellow, temp1), r)
+					RenderClass.edit_or_add_row((colors.yellow, temp1), r)
 				elif i["status"] == "finished":
-					RenderClass.edit_or_add_row((RenderClass.green, temp1), r)
+					RenderClass.edit_or_add_row((colors.green, temp1), r)
 				else:
 					RenderClass.edit_or_add_row(temp1, r)
 
@@ -1054,9 +1046,9 @@ def errorprinter(loop, _):
 		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
 
 		if variables.last_error == "":
-			to_render.append((RenderClass.cyan, error_text_generator))
+			to_render.append((colors.cyan, error_text_generator))
 		else:
-			to_render.append((RenderClass.red, error_text_generator))
+			to_render.append((colors.red, error_text_generator))
 
 		to_render.append("\n")
 
@@ -1183,7 +1175,7 @@ def tick_handler_big_delay(loop, _):
 
 	# New-update-avalible notificator
 	if updates_class.auto_update_avalible is True:
-		auto_update_avalible_text_indicator.set_text((RenderClass.cyan, f"- - -\nAuto update {updates_class.version} -> {updates_class.pypi_version} is avalible! Write \"update\" to easy update right now!"))
+		auto_update_avalible_text_indicator.set_text((colors.cyan, f"- - -\nAuto update {updates_class.version} -> {updates_class.pypi_version} is avalible! Write \"update\" to easy update right now!"))
 	# - = - = - = - = - = - = - = - = -
 
 	# - =
@@ -1304,23 +1296,7 @@ main_widget = urwid.Frame(
 	footer=main_footer,
 	focus_part='footer')
 
-custom_palette = [
-	# ('name_of_style', 'color_text', 'color_background')
-	('reversed', 'standout', ''),
-	('buttons_footer', 'light green', ''),
-	('light_red', 'light red', ''),
-	('yellow', 'yellow', ''),
-	('light_green', 'light green', ''),
-	('green', 'dark green', ''),
-	('cyan', 'dark cyan', ''),
-	('light_cyan', 'light cyan', ''),
-	('bold_default', 'white', ''),
-
-	('green_background', 'black', 'dark green'),
-	('cyan_background',  'black', 'dark cyan'),
-]
-
-loop = urwid.MainLoop(main_widget, palette=custom_palette)
+loop = urwid.MainLoop(main_widget, palette=colors.custom_palette)
 
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
 RenderClass.loop = loop
@@ -1383,19 +1359,19 @@ class SettingsSections:
 		def get(self):
 			""" Get content of section """
 			self.settings_checkbox_progresstype_detailed = urwid.CheckBox([
-				(RenderClass.cyan, "46% |███▍   | - Detailed"),
+				(colors.cyan, "46% |███▍   | - Detailed"),
 				"\nUse some unicode characters (▏;▍;▋;▉;█)\nto display the percentage more accurately.\nDoesn't fully work in tty",
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "detailed"))
 			self.settings_checkbox_progresstype_simple = urwid.CheckBox([
-				(RenderClass.cyan, "46% |████   | - Simple"),
+				(colors.cyan, "46% |████   | - Simple"),
 				"\nUse only ACSII squares (█) to show percentage"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "simple"))
 			self.settings_checkbox_progresstype_arrow = urwid.CheckBox([
-				(RenderClass.cyan, "46% |===>   | - Arrow"),
+				(colors.cyan, "46% |===>   | - Arrow"),
 				"\nLet's just add some oldfag style 😎"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "arrow"))
 			self.settings_checkbox_progresstype_pacman = urwid.CheckBox([
-				(RenderClass.cyan, "46% |--C o | - Pacman"),
+				(colors.cyan, "46% |--C o | - Pacman"),
 				"\nPacman game"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "pacman"))
 
@@ -1404,7 +1380,7 @@ class SettingsSections:
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
-				urwid.Text((RenderClass.light_yellow, "Progress bar type")),
+				urwid.Text((colors.light_yellow, "Progress bar type")),
 				self.settings_checkbox_progresstype_detailed,
 				urwid.Divider(),
 				self.settings_checkbox_progresstype_simple,
@@ -1430,8 +1406,8 @@ class SettingsSections:
 		name = "Fetching"
 		def get(self):
 			""" Get content of section """
-			self.settings_checkbox_sp = urwid.CheckBox([(RenderClass.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
-			self.settings_checkbox_nocert = urwid.CheckBox([(RenderClass.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
+			self.settings_checkbox_sp = urwid.CheckBox([(colors.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
+			self.settings_checkbox_nocert = urwid.CheckBox([(colors.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
 
 			# UPDATE CHECKBOXES
 			self.update()
@@ -1457,8 +1433,8 @@ class SettingsSections:
 		def get(self):
 			""" Get content of section """
 			self.settings_checkbox_ignerr = urwid.CheckBox([
-				(RenderClass.light_yellow, "Ignore downloading errors"),
-				(RenderClass.light_red, "\n<!!> Dangerous option - makes ytcon a little unstable\nPlease use only if necessary <!!>"),
+				(colors.light_yellow, "Ignore downloading errors"),
+				(colors.light_red, "\n<!!> Dangerous option - makes ytcon a little unstable\nPlease use only if necessary <!!>"),
 				"\nUse this so as not to interrupt the download if\none of the video in the playlist is not available"
 				], on_state_change=settings.setting_switch, user_data="ignoreerrors")
 
@@ -1489,10 +1465,10 @@ class SettingsSections:
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
-				urwid.Text((RenderClass.light_red, "The settings found here are made for testing purposes!")),
-				urwid.Text((RenderClass.light_red, "Changing these settings is not recommended.")),
+				urwid.Text((colors.light_red, "The settings found here are made for testing purposes!")),
+				urwid.Text((colors.light_red, "Changing these settings is not recommended.")),
 				urwid.Divider(),
-				urwid.Text((RenderClass.light_red, "Also, Debug settings WILL NOT be saved when you click on the \"Save to config file\" button")),
+				urwid.Text((colors.light_red, "Also, Debug settings WILL NOT be saved when you click on the \"Save to config file\" button")),
 				urwid.Divider(),
 				urwid.Text("- = -"),
 				urwid.Divider(),
