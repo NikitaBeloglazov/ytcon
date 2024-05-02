@@ -7,7 +7,7 @@ import urwid
 from log import journal, logger
 #from render.render import render
 from settings_menu.variables import settings_menu_variables
-from render.loop import loop
+from render.loop import loop_container
 from control.variables import variables
 from control.control import ControlClass
 from control.exit import exit_with_exception, traceback
@@ -133,7 +133,7 @@ class InputHandlerClass:
 
 			if text == "":
 				# Force refreshing screen...
-				loop.draw_screen()
+				loop_container.loop.draw_screen()
 				raise self.InputProcessed
 
 			journal.info("")

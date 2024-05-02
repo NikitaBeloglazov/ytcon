@@ -78,7 +78,7 @@ from settings.settings_processor import settings
 
 from settings_menu.variables import settings_menu_variables
 
-from render.loop import loop
+from render.loop import loop_container
 
 RenderClass = render
 
@@ -629,10 +629,9 @@ variables.ydl_opts = {
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 	}
 
-loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
+loop_container.loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
 
-RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
-RenderClass.loop = loop
+RenderClass.width, RenderClass.height = loop_container.loop.screen.get_cols_rows()
 
 # - = - = - = - = - = - = -
 # Some debug info writer
@@ -946,7 +945,7 @@ class SettingsRenderClass:
 			self.right_widget
 			])
 
-		loop.widget = self.columns
+		loop_container.loop.widget = self.columns
 
 	def tick_handler_settings(self, _, _1):
 		""" Same as tick_handler, but responsible only for settings menu """
@@ -971,7 +970,7 @@ class SettingsRenderClass:
 				exit_with_exception(traceback.format_exc())
 		if settings_menu_variables.settings_show is False and settings_menu_variables.settings_showed is True:
 			try:
-				loop.widget = widgets.main_widget
+				loop_container.loop.widget = widgets.main_widget
 				settings_menu_variables.settings_showed = False
 			except:
 				exit_with_exception(traceback.format_exc())
@@ -984,7 +983,7 @@ class SettingsRenderClass:
 			self.settings_soft_update_scheduled = False
 		# - = - = - = - = - = - = - = - = -
 
-		loop.set_alarm_in(0.1, self.tick_handler_settings)
+		loop_container.loop.set_alarm_in(0.1, self.tick_handler_settings)
 
 sett = SettingsRenderClass()
 # - = - = - = - Late initialize - = - = - = - =
@@ -1018,14 +1017,14 @@ if settings.get_setting("clipboard_autopaste") is True:
 			sys.exit(1)
 # - = - = - = - = - = - = - = - = - = - = - = -
 
-loop.set_alarm_in(0, render_tasks)
-loop.set_alarm_in(0, logprinter)
-loop.set_alarm_in(0, errorprinter)
-loop.set_alarm_in(0, tick_handler)
-loop.set_alarm_in(1, tick_handler_big_delay)
-loop.set_alarm_in(1, sett.tick_handler_settings)
+loop_container.loop.set_alarm_in(0, render_tasks)
+loop_container.loop.set_alarm_in(0, logprinter)
+loop_container.loop.set_alarm_in(0, errorprinter)
+loop_container.loop.set_alarm_in(0, tick_handler)
+loop_container.loop.set_alarm_in(1, tick_handler_big_delay)
+loop_container.loop.set_alarm_in(1, sett.tick_handler_settings)
 
 # for testing purposes?
 # threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
-loop.run()
+loop_container.loop.run()
