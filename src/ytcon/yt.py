@@ -3,12 +3,10 @@ import os
 import re
 import sys
 import time
-import pickle
 import pprint
 import threading
 import traceback
 import subprocess
-from pathlib import Path
 # - = - = - = - = - = - = -
 import urwid
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
@@ -63,150 +61,7 @@ try:
 except:
 	logs_that_will_be_printed_later.append("[YTCON] /tmp folder is unavalible (windows, android?). setting current dir for logs..")
 	log_folder = ""
-# - - - - - - - - - - - - -
-# Save file folder check
-if "XDG_CONFIG_HOME" in os.environ:
-	configpath = os.path.expanduser(os.environ["XDG_CONFIG_HOME"] + "/ytcon/")
-else:
-	configpath = os.path.expanduser("~/.config/ytcon/")
-
-try:
-	Path(configpath).mkdir(parents=True, exist_ok=True)
-	with open(configpath + "write_test", "wb") as filee:
-		pass
-	os.remove(configpath + "write_test")
-except:
-	print(traceback.format_exc())
-	print("= = =\n[!!] An error was occurred!\n")
-	print("Save file folder check failed. Maybe XDG_CONFIG_HOME env or dir permissions broken?")
-	print("The following path has problems: " + configpath)
-	sys.exit(1)
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - =
-
-class SettingsClass:
-	""" Сontains settings data and methods for them """
-	def __init__(self):
-
-		# Default settings
-		self.settings = {
-			"special_mode": False,
-			"clipboard_autopaste": True,
-			"no_check_certificate": False,
-			"ignoreerrors": False,
-			"progressbar_appearance": "detailed",
-			}
-
-	class SettingNotFoundError(Exception):
-		""" Called if the specified setting is not found (see def get_setting) """
-
-	def show_settings_call(self, _=None):
-		""" Settings display state switch, made for urwid.Button(on_press=show_settings_call) """
-		RenderClass.settings_show = not RenderClass.settings_show
-
-	def get_setting(self, setting_name):
-		""" Get setting, if it not found, calls SettingNotFoundError """
-		try:
-			return self.settings[setting_name]
-		except KeyError as exc:
-			raise self.SettingNotFoundError from exc
-
-	def write_setting(self, setting_name, setting_content):
-		""" Writes the settings to the memory. Made for the possible use of some "hooks" in the future """
-		self.settings[setting_name] = setting_content
-
-	def save(self, button=None): # in the second argument urwid puts the button of which the function was called
-		""" Uses pickle for saving settings from memory to ~/.config/settings.db"""
-		logger.debug(Path(configpath).mkdir(parents=True, exist_ok=True)) # Create dirs if they don't already exist
-		with open(configpath + "settings.db", "wb") as filee:
-			pickle.dump(self.settings, filee)
-		journal.info(f"[YTCON] {configpath}settings.db saved")
-		RenderClass.flash_button_text(button, colors.green)
-
-	def load(self, button=None): # in the second argument urwid puts the button of which the function was called
-		""" Uses pickle for loading settings from ~/.config/settings.db to memory """
-		try:
-			with open(configpath + "settings.db", "rb") as filee:
-				self.settings.update(pickle.load(filee))
-			journal.info(f"[YTCON] {configpath}settings.db loaded")
-			update_checkboxes()
-			self.update_ydl_opts()
-			RenderClass.flash_button_text(button, colors.green)
-		except FileNotFoundError:
-			# If file not found
-			journal.warning(f"[YTCON] Saved settings load failed: FileNotFoundError: {configpath}settings.db")
-			RenderClass.flash_button_text(button, colors.red)
-		except EOFError as exc:
-			# If save file is corrupted
-			logger.debug(traceback.format_exc())
-			journal.warning(f"[YTCON] Saved settings load FAILED: EOFError: {exc}: {configpath}settings.db")
-			journal.error("[YTCON] YOUR SETTINGS FILE IS CORRUPTED. Default settings restored and corrupted save file removed.")
-			self.write_setting("clipboard_autopaste", False)
-			update_checkboxes()
-			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
-			logger.debug(os.remove(f"{configpath}settings.db"))
-
-	def clipboard_autopaste_switch(self, _=None, _1=None):
-		""" Clipboard autopaste switch function for urwid.Button's. FOR BACK COMPABILITY """
-		self.setting_switch(None, None, name="clipboard_autopaste")
-
-	def setting_switch(self, _=None, state=None, name=None):
-		""" Switches state to negative current state or to state set by state argument. Made for for urwid.Button's """
-		if name is None:
-			raise TypeError
-
-		if state is None:
-			state = not self.get_setting(name)
-
-		journal.info("")
-		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
-		self.write_setting(name, state)
-		self.update_ydl_opts()
-		sett.settings_soft_update_scheduled = True
-
-	def setting_change_content(self, _=None, _1=None, data=None):
-		"""
-		Change content in setting where negative state cannot be determined.
-		Made for for urwid.Button's with pre-writed arguments
-		"""
-		if data is None:
-			raise TypeError
-
-		name = data[0]
-		set_data = data[1]
-
-		journal.info("")
-		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {set_data}")
-		self.write_setting(name, set_data)
-		self.update_ydl_opts()
-		sett.settings_soft_update_scheduled = True
-
-	def update_ydl_opts(self):
-		""" Updates some setting-related ydl_opts. Maybe something like post-change scripts? """
-		#journal.info(pprint.pformat(variables.ydl_opts))
-		#journal.info("updated ydl_opts")
-
-		# - = Special mode cookie extractor activator = -
-		if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in variables.ydl_opts:
-			variables.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-		elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in variables.ydl_opts:
-			del variables.ydl_opts["cookiesfrombrowser"]
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		# - = Certificates ignore activator = -
-		if settings.get_setting("no_check_certificate") is True and "nocheckcertificate" not in variables.ydl_opts:
-			variables.ydl_opts["nocheckcertificate"] = True
-		elif settings.get_setting("no_check_certificate") is False and "nocheckcertificate" in variables.ydl_opts:
-			del variables.ydl_opts["nocheckcertificate"]
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		# - = Certificates ignore activator = -
-		if settings.get_setting("ignoreerrors") is True and "ignoreerrors" not in variables.ydl_opts:
-			variables.ydl_opts["ignoreerrors"] = True
-		elif settings.get_setting("ignoreerrors") is False and "ignoreerrors" in variables.ydl_opts:
-			del variables.ydl_opts["ignoreerrors"]
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		#journal.info(pprint.pformat(variables.ydl_opts))
 
 from log import journal, logger
 
@@ -215,68 +70,19 @@ from control.exit import exit_with_exception, traceback
 
 from render.colors import colors
 from render.progressbar_defs import progressbar_defs
+from render.render import render
+
+from widgets.main_widgets import widgets
+
+from settings.settings_processor import settings
+
+from settings_menu.variables import settings_menu_variables
+
+from render.loop import loop
+
+RenderClass = render
 
 from app_update import app_updates
-
-settings = SettingsClass()
-
-class RenderClass_base:
-	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
-	def __init__(self):
-		self.settings_show = False
-		self.settings_showed = False
-
-		self.errorprinter_animation = 3
-
-		# Variables that cannot have initial values but need to be declared
-		self.width = None
-		self.height = None
-		self.loop = None
-
-	def add_row(self, text):
-		""" Add an additional widget to top_pile for drawing a new task """
-		top_pile.contents = top_pile.contents + [[urwid.Text(text), top_pile.options()],]
-
-	def edit_or_add_row(self, text, pos):
-		""" Edit a widget with a specific serial number, and if there is none, then create a new one """
-		if pos > self.calculate_widget_height(top_pile) - 1:
-			self.add_row(text)
-		else:
-			top_pile.contents[pos][0].set_text(text)
-
-	def remove_all_widgets(self):
-		"""
-		If there are obsolete widgets in top_pile that will not be changed, they are considered garbage,
-		for this you need to call remove_all_widgets, all widgets, including unnecessary old ones, 
-		will be removed, but will be recreated if needed
-		"""
-		top_pile.contents = []
-
-	def calculate_widget_height(self, widget):
-		""" (recursively) Counts how many rows the widget occupies in height """
-		if isinstance(widget, urwid.Text):
-			# Returns the number of lines of text in the widget
-			return len(widget.text.split('\n'))
-		if isinstance(widget, urwid.Pile):
-			# Recursively sums the heights of widgets inside a urwid.Pile container
-			return sum(self.calculate_widget_height(item[0]) for item in widget.contents)
-		return 0 # Return 0 for unsupported widget types (?)
-
-	def flash_button_text(self, button, color, times=4):
-		""" Makes the button to blink in the specified color """
-		if button is None:
-			return None
-		temp1 = button.get_label()
-		for _ in range(1, times+1):
-			button.set_label((color, temp1))
-			RenderClass.loop.draw_screen()
-			time.sleep(0.1)
-			button.set_label(temp1)
-			RenderClass.loop.draw_screen()
-			time.sleep(0.1)
-		return None
-
-RenderClass = RenderClass_base()
 
 def hook(d):
 	""" A hook that is called every time by yt-dlp when the state of the task changes (example percent changed),
@@ -589,197 +395,8 @@ def render_tasks(loop, _):
 	except:
 		exit_with_exception(traceback.format_exc())
 
-
-class InputHandlerClass:
-	"""
-		Class for processing user input.
-		Contains a modified Urwid.edit widget and functions for processing commands and URLs
-	"""
-	class InputBox(urwid.Edit):
-		""" 
-			A modified urwid.Edit Widget.
-			If the user presses Enter, it collects text and sent text to input_handler,
-			and after that is it cleans the input field
-		"""
-		def is_skipable(self, inp):
-			"""
-				Determines whether this character can be skipped.
-				Used in ALT key handlers to determine whether a character is part of a word
-			"""
-			if inp.isalpha() or inp.isdigit():# or inp == "%":
-				return True
-			return False
-
-		def get_cords(self, size):
-			""" 
-				Takes the cursor coordinates from the InputBox to determine which character the cursor is currently on.
-				Doesn't work well if the text is muiti-line
-			"""
-			tmp1 = self.get_cursor_coords(size)[0]
-			if len(self.get_cursor_coords(size)) > 1 and self.get_cursor_coords(size)[1] > 0:
-				if variables.alt_plus_arrow_multiline_message_sended is False:
-					journal.error("[YTCON] Navigation using Alt+Arrow in a multi-line input field does not work as expected, this is a known problem, and we cannot solve it due to the peculiarities of the engine.\n\nNavigation will be inaccurate and skip some characters for no reason.\nWe apologize for the inconvenience caused.")
-					variables.alt_plus_arrow_multiline_message_sended = True
-				tmp1 = tmp1 * self.get_cursor_coords(size)[1]
-				return tmp1
-			return tmp1 - 12
-
-		def get_safe_text(self):
-			""" Limits the end of the text to avoid infinite recursion """
-			return self.get_edit_text() + "??"
-
-		def keypress(self, size, key):
-			""" Overrides a regular class. """
-			#journal.info(key)
-
-			if key in ('meta left', 'ctrl left'):
-				# Alt + Left and Ctrl + Left key handler. Moves left one word
-				super().keypress(size, "left")
-				temp1 = ""
-				# Moves one letter at a time until it finds a special symbol that cannot an part of word
-				while self.is_skipable(self.get_safe_text()[self.get_cords(size)-1]):# and self.get_cords(size) > 0:
-					endless_loop_detector_first = self.get_cords(size)
-					temp1 = temp1 + self.get_safe_text()[self.get_cords(size)-1]
-					super().keypress(size, "left")
-
-					# If the coordinates have not changed since the last cursor movement, then the border has been reached
-					endless_loop_detector_two = self.get_cords(size)
-					if endless_loop_detector_first == endless_loop_detector_two:
-						logger.debug("meta left: loop detected")
-						break
-				return None
-
-			if key in ('meta right', 'ctrl right'):
-				# Alt + Right and Ctrl + Right key handler. Moves right one word
-				super().keypress(size, "right")
-				temp1 = ""
-				# Moves one letter at a time until it finds a special symbol that cannot an part of word
-				while self.is_skipable(self.get_safe_text()[self.get_cords(size)]):# and self.get_cords(size) > 0:
-					endless_loop_detector_first = self.get_cords(size)
-					temp1 = temp1 + self.get_safe_text()[self.get_cords(size)]
-					super().keypress(size, "right")
-
-					# If the coordinates have not changed since the last cursor movement, then the border has been reached
-					endless_loop_detector_two = self.get_cords(size)
-					if endless_loop_detector_first == endless_loop_detector_two:
-						logger.debug("meta right: loop detected")
-						break
-				return None
-
-			if key == 'meta backspace':
-				# Alt + Backspace key handler. Removes last word in inputbox
-				if len(self.get_edit_text()) < 3:
-					super().keypress(size, "backspace")
-					return None
-
-				temp1 = list(self.get_edit_text())
-				temp2 = False
-				if self.is_skipable(temp1[-1]):
-					temp2 = True
-				else:
-					if self.is_skipable(temp1[-2]):
-						temp2 = True
-					del temp1[-1]
-
-				while self.is_skipable(temp1[-1]) and temp2 is True:
-					del temp1[-1]
-					if len(temp1) == 0:
-						break
-
-				self.set_edit_text("".join(temp1))
-				return None
-
-			if key == 'enter':
-				# If enter pressed, send URL to input_handler and clear inputbox
-				InputHandler.input_handler(self.get_edit_text())
-				self.set_edit_text("")
-				return None
-
-			# If the conditions do not work and the key is not assigned
-			return super().keypress(size, key)
-
-	class InputProcessed(Exception):
-		""" Dummy exception, when called means that the processing of this request is completed. """
-
-	def input_handler(self, text):
-		""" Main input handler logic """
-		try:
-			original_text = text
-			text = text.lower()
-
-			if text == "":
-				# Force refreshing screen...
-				loop.draw_screen()
-				raise self.InputProcessed
-
-			journal.info("")
-			journal.info("[YTCON] [INPUT] " + original_text)
-
-			# - = Clipboard auto-paste = -
-			if text in ("cb", "clipboard", "clip"):
-				settings.clipboard_autopaste_switch()
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - =
-
-			# - = Delete after download = -
-			if text in ("dad", "delete after download"):
-				ControlClass.delete_after_download_switch()
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - =
-
-			if text in ("clear", "cls"):
-				ControlClass.clear()
-
-			elif text == "logtest":
-				logger.debug("[TEST] 1")
-				journal.info("[TEST] 2")
-				journal.warning("[TEST] 3")
-				journal.error("[TEST] 4")
-				journal.error("[TEST] 5", show=False)
-				journal.info("😘😘😘😘 6") # can break something, emojis have problems calculating sizes
-
-			elif text == "crash":
-				try:
-					0/0
-				except:
-					exit_with_exception(traceback.format_exc())
-
-			elif text == "s":
-				RenderClass.settings_show = True
-
-			elif text == "flags":
-				journal.info(pprint.pformat(variables.ydl_opts))
-
-			elif text == "s ls":
-				journal.info(settings.settings)
-
-			elif text == "save":
-				settings.save()
-				#journal.info(settings.settings)
-			elif text == "load":
-				settings.load()
-				#journal.info(settings.settings)
-
-			elif text == "update":
-				#app_updates.update_run_and_restart()
-				app_updates.update_thread = threading.Thread(target=app_updates.update_run_and_restart, daemon=True)
-				app_updates.update_thread.start()
-
-			elif text == "fake update":
-				app_updates.pypi_version = "0.0.99"
-
-			else:
-				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start()
-
-		except self.InputProcessed:
-			pass
-		except:
-			exit_with_exception(traceback.format_exc())
-
-InputHandler = InputHandlerClass()
-
 def errorprinter(loop, _):
-	""" Draws errors in error_widget in red, after some time (specified in the timer) removes error messages """
+	""" Draws errors in widgets.error_widget in red, after some time (specified in the timer) removes error messages """
 	try:
 		# - = skip, do not re-render if there is no errors - = - = - = - = -
 		# if variables.prev_last_error == variables.last_error and variables.prev_error_countdown == variables.error_countdown:
@@ -805,19 +422,19 @@ def errorprinter(loop, _):
 
 		# - = - = - = - = - = - unfold animation - = - = - = - = - = -
 		if RenderClass.errorprinter_animation == 0:
-			error_widget.set_text(to_render)
+			widgets.error_widget.set_text(to_render)
 		elif RenderClass.errorprinter_animation == 1:
-			error_widget.set_text(to_render[:-1])
+			widgets.error_widget.set_text(to_render[:-1])
 		elif RenderClass.errorprinter_animation == 2:
 			if to_render[:-2] == ["- - -\n"]:
-				error_widget.set_text("- - -")
+				widgets.error_widget.set_text("- - -")
 			else:
-				error_widget.set_text(to_render[:-2])
+				widgets.error_widget.set_text(to_render[:-2])
 		elif RenderClass.errorprinter_animation == 3:
 			if not to_render[:-3]:
-				error_widget.set_text("")
+				widgets.error_widget.set_text("")
 			else:
-				error_widget.set_text(to_render[:-3])
+				widgets.error_widget.set_text(to_render[:-3])
 
 		if variables.last_error == "":
 			if RenderClass.errorprinter_animation < 3 and RenderClass.errorprinter_animation >= 0:
@@ -835,13 +452,13 @@ def errorprinter(loop, _):
 			if variables.error_countdown == 0:
 				journal.clear_errors()
 
-		#error_widget.set_text(to_render)
+		#widgets.error_widget.set_text(to_render)
 		loop.set_alarm_in(0.3, errorprinter)
 	except:
 		exit_with_exception(str(traceback.format_exc()))
 
 def logprinter(loop, _):
-	""" Prints the last 6 lines of logs in log_widget """
+	""" Prints the last 6 lines of logs in widgets.log_widget """
 	try:
 		# - = skip, do not re-render if it doesn't change - = - = - =
 		# if ControlClass.oldlog == variables.log:
@@ -860,7 +477,7 @@ def logprinter(loop, _):
 		to_render += variables.log[3] + "\n"
 		to_render += variables.log[4] + "\n"
 		to_render += variables.log[5]
-		log_widget.set_text(to_render)
+		widgets.log_widget.set_text(to_render)
 
 		loop.set_alarm_in(0.3, logprinter)
 	except:
@@ -872,13 +489,13 @@ def tick_handler(loop, _):
 	# - = - = - = - = - = - = - = - = -
 	# Autopaste button color changer
 	if (settings.get_setting("clipboard_autopaste") is True and variables.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and variables.clipboard_checker_state_launched is not False):
-		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "yellow"), main_footer_buttons.contents[2][1])
+		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "yellow"), widgets.main_footer_buttons.contents[2][1])
 		variables.temp["autopaste_button_color"] = "yellow" # some kind of cache
 	elif variables.clipboard_checker_state_launched is not True and variables.temp["autopaste_button_color"] != "light_red":
-		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "light_red"), main_footer_buttons.contents[2][1])
+		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "light_red"), widgets.main_footer_buttons.contents[2][1])
 		variables.temp["autopaste_button_color"] = "light_red" # some kind of cache
 	elif variables.clipboard_checker_state_launched is True and variables.temp["autopaste_button_color"] != "buttons_footer":
-		main_footer_buttons.contents[2] = (urwid.AttrMap(main_footer_clipboard_autopaste_button, "buttons_footer"), main_footer_buttons.contents[2][1])
+		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "buttons_footer"), widgets.main_footer_buttons.contents[2][1])
 		variables.temp["autopaste_button_color"] = "buttons_footer" # some kind of cache
 	# - = - = - = - = - = - = - = - = -
 
@@ -912,7 +529,7 @@ def tick_handler(loop, _):
 	# - = - = - = - = - = - = - = - = -
 
 	# Prevent focus from remaining on footer buttons after pressing them
-	main_footer.set_focus(input_widget)
+	widgets.main_footer.set_focus(widgets.input_widget)
 
 	# - =
 	loop.set_alarm_in(0.3, tick_handler)
@@ -926,7 +543,7 @@ def tick_handler_big_delay(loop, _):
 
 	# New-update-avalible notificator
 	if app_updates.auto_update_avalible is True:
-		auto_update_avalible_text_indicator.set_text((colors.cyan, f"- - -\nAuto update {app_updates.version} -> {app_updates.pypi_version} is avalible! Write \"update\" to easy update right now!"))
+		widgets.auto_update_avalible_text_indicator.set_text((colors.cyan, f"- - -\nAuto update {app_updates.version} -> {app_updates.pypi_version} is avalible! Write \"update\" to easy update right now!"))
 	# - = - = - = - = - = - = - = - = -
 
 	# - =
@@ -1012,42 +629,7 @@ variables.ydl_opts = {
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 	}
 
-top_pile = urwid.Pile([])
-
-#logger.debug(pprint.pformat(top_pile.contents))
-#logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
-
-log_widget = urwid.Text("Initializing, please wait")
-error_widget = urwid.Text("Initializing, please wait")
-input_widget = InputHandler.InputBox("Enter URL > ")
-
-main_settings_button = urwid.Button("Settings", on_press=settings.show_settings_call)
-main_clear_button = urwid.Button("Clear", on_press=ControlClass.clear)
-main_footer_clipboard_autopaste_button = urwid.Button("Autopaste", on_press=settings.clipboard_autopaste_switch)
-
-main_footer_buttons = urwid.GridFlow([main_settings_button, main_clear_button, main_footer_clipboard_autopaste_button], cell_width=13, h_sep=2, v_sep=1, align="left")
-logger.debug(main_footer_buttons.contents)
-main_footer_buttons_with_attrmap = urwid.AttrMap(main_footer_buttons, "buttons_footer")
-
-auto_update_avalible_text_indicator = urwid.Text("- - -")
-
-main_footer = urwid.Pile(
-		[
-		error_widget,
-		urwid.Text("- - -"),
-		log_widget,
-		urwid.Text("- - -"),
-		input_widget,
-		urwid.Divider(),
-		auto_update_avalible_text_indicator,
-		main_footer_buttons_with_attrmap,
-		])
-main_widget = urwid.Frame(
-	urwid.Filler(top_pile, "top"),
-	footer=main_footer,
-	focus_part='footer')
-
-loop = urwid.MainLoop(main_widget, palette=colors.custom_palette)
+loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
 
 RenderClass.width, RenderClass.height = loop.screen.get_cols_rows()
 RenderClass.loop = loop
@@ -1056,7 +638,6 @@ RenderClass.loop = loop
 # Some debug info writer
 logger.debug("width: %s", RenderClass.width)
 logger.debug("height: %s", RenderClass.height)
-logger.debug("config path: %s", configpath)
 
 # Output collected to-later-print logs
 for i in logs_that_will_be_printed_later:
@@ -1245,9 +826,9 @@ settings_sections = SettingsSections()
 
 def update_checkboxes():
 	"""
-	!LEGACY!: update the checkboxes so that their status is not a lie 
+	!LEGACY!: update the checkboxes so that their status is not a lie
 	"""
-	if RenderClass.settings_show is True:
+	if settings_menu_variables.settings_show is True:
 		sett.update()
 
 def gen_SimpleFocusListWalker_with_footer(contents, footer, width=20):
@@ -1283,9 +864,9 @@ class SettingsRenderClass:
 		self.load_settings_button = urwid.Button("Load from config file", on_press=settings.load)
 
 		self.footer_widget = urwid.Pile([
-			error_widget,
+			widgets.error_widget,
 			urwid.Text("- - -"),
-			log_widget,
+			widgets.log_widget,
 		])
 
 		# - =
@@ -1369,7 +950,7 @@ class SettingsRenderClass:
 
 	def tick_handler_settings(self, _, _1):
 		""" Same as tick_handler, but responsible only for settings menu """
-		if RenderClass.settings_show is True:
+		if settings_menu_variables.settings_show is True:
 			lol = sett.left_widget_sflw.focus_position - 1 # -1 because header is widget too
 			if not lol > len(self.connected_sections)-1: # prevent crash on bottom buttons selection, -1 because len makes +1
 				if self.current_section != self.connected_sections[lol]:
@@ -1377,7 +958,7 @@ class SettingsRenderClass:
 
 		# - = - = - = - = - = - = - = - = -
 		# Settings page show handler
-		if RenderClass.settings_show is True and RenderClass.settings_showed is False:
+		if settings_menu_variables.settings_show is True and settings_menu_variables.settings_showed is False:
 			try:
 				# - = - = -
 				# Return to default position
@@ -1385,13 +966,13 @@ class SettingsRenderClass:
 				self.set_right_section(None, self.connected_sections[0], update=False)
 				# - = - = -
 				self.update()
-				RenderClass.settings_showed = True
+				settings_menu_variables.settings_showed = True
 			except:
 				exit_with_exception(traceback.format_exc())
-		if RenderClass.settings_show is False and RenderClass.settings_showed is True:
+		if settings_menu_variables.settings_show is False and settings_menu_variables.settings_showed is True:
 			try:
-				loop.widget = main_widget
-				RenderClass.settings_showed = False
+				loop.widget = widgets.main_widget
+				settings_menu_variables.settings_showed = False
 			except:
 				exit_with_exception(traceback.format_exc())
 		# - = - = - = - = - = - = - = - = -

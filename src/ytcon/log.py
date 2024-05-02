@@ -4,8 +4,8 @@ from control.variables import variables
 class Lol:
 	pass
 RenderClass = Lol()
-RenderClass.width = 150
-log_folder = "/tmp/"
+RenderClass.width = 150 # TODO BUG
+log_folder = "/tmp/" # TODO BUG
 
  # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
 logger = logging.getLogger('main_logger')
