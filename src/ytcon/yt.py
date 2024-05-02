@@ -998,7 +998,7 @@ def get_resolution_ffprobe(file):
 	return None
 
 # - = - = -
-from control.control import *
+from control.control import ControlClass
 
 variables.ydl_opts = {
 	'logger': journal,

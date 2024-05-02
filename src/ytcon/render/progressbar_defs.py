@@ -50,7 +50,7 @@ class ProgressBarDefs:
 		if error:
 			return f"|{'#'*progress}{' '*white_space}|"
 
-		style = "detailed"#settings.get_setting("progressbar_appearance") # TODO
+		style = "detailed"#settings.get_setting("progressbar_appearance") # TODO # BUG
 
 		if style == "detailed":
 			return tqdm.format_meter(percent, 100, 0, ascii=False, bar_format="|{bar}|", ncols=27, mininterval=0, maxinterval=0)
