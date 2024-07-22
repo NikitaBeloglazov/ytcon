@@ -12,7 +12,10 @@ from control.variables import variables
 from control.control import ControlClass
 from control.exit import exit_with_exception, traceback
 from settings.settings_processor import settings
+
 from app_update import app_updates
+
+from downloader.main import downloader
 
 class InputHandlerClass:
 	"""
@@ -193,7 +196,7 @@ class InputHandlerClass:
 				app_updates.pypi_version = "0.0.99"
 
 			else:
-				threading.Thread(target=downloadd, args=(original_text,), daemon=True).start() # TODO BUG
+				threading.Thread(target=downloader, args=(original_text,), daemon=True).start()
 
 		except self.InputProcessed:
 			pass

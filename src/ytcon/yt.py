@@ -12,8 +12,6 @@ import urwid
 import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 
 import clipman
-
-import yt_dlp
 #import notify2
 
 debug_that_will_be_saved_later = []
@@ -76,14 +74,16 @@ from widgets.main_widgets import widgets
 
 from settings.settings_processor import settings
 
-from settings_menu.variables import settings_menu_variables
-from settings_menu.render import sett, settings_sections
+#from settings_menu.variables import settings_menu_variables
+#from settings_menu.render import sett, settings_sections
 
 from render.loop import loop_container
 
 RenderClass = render
 
 from app_update import app_updates
+
+from downloader.main import downloader
 
 def hook(d):
 	""" A hook that is called every time by yt-dlp when the state of the task changes (example percent changed),
@@ -166,196 +166,6 @@ def hook(d):
 		pass
 	except:
 		exit_with_exception(traceback.format_exc())
-
-def downloadd(url): # pylint: disable=too-many-return-statements
-	"""
-	The main component of ytcon, this class sets the basic parameters for the video,
-	composes the title and starts downloading.
-
-	For each link one thread (exception: playlists)
-	"""
-	try:
-		if url in variables.queue_list:
-			if variables.queue_list[url]["status"] not in ("exists", "finished"):
-				journal.error(f"[YTCON] Video link \"{progressbar_defs.name_shortener(url, 40)}\" is already downloading!")
-				return None
-
-		with yt_dlp.YoutubeDL(variables.ydl_opts) as ydl:
-			# needed for some sites. you may need to replace it with the correct one
-			if settings.get_setting("special_mode") is True:
-				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-				# "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
-			# - = - = - = Get downloading formats (yt) and generate filename (global) = -
-			infolist = ydl.extract_info(url, download=False)
-
-			# - = - = - log spam filter - = - = - = - =
-			if infolist is None: # yt-dlp returns videos with errors as None :|| # TODO?
-				journal.warning("ydl.extract_info RETURNED NONE", show=False)
-				return None
-			if "automatic_captions" in infolist:
-				del infolist["automatic_captions"]
-			if "formats" in infolist:
-				del infolist["formats"]
-			if "thumbnails" in infolist:
-				del infolist["thumbnails"]
-			if "heatmap" in infolist:
-				del infolist["heatmap"]
-			logger.debug(pprint.pformat(infolist))
-			# - = - = - = - = - = - = - = - = - = - = -
-
-			# - Playlists support - = - = - = - = - = - = - = - = - = - = -
-			if "entries" in infolist:
-				for i in infolist["entries"]:
-					if i is None: # yt-dlp returns videos with errors as None :||
-						continue
-					threading.Thread(target=downloadd, args=(i["webpage_url"],), daemon=True).start()
-				return None
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
-
-			# - Name fiter + assemble - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
-			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"].replace("&", "and")) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
-			temp1 = " ".join(temp1.removesuffix(" 1").split()) # remove space duplicates and remove 1 in the end because for some reason yt-dlp adds it on its own
-			id_in_filename = infolist["id"].removesuffix("-1")
-			filename = f'{temp1} [{id_in_filename}].{infolist["ext"]}'
-
-			# Name too long handler (https://github.com/ytdl-org/youtube-dl/issues/29912 and more more more issues)
-			if len(filename.encode('utf-8')) > 190:
-				# ^^^^^^^^^^^^^^^^^^^^^^^ counting bytes in filename
-				logger.debug("ERROR: FILENAME MORE THAN 190 BYTES. SHORTING...")
-				while len(filename.encode('utf-8')) > 190:
-					temp1 = " ".join(temp1.split()[:-1]) # remove 1 last word
-					filename = f'{temp1} [{id_in_filename}].{infolist["ext"]}'
-					logger.debug(filename)
-					logger.debug(len(filename.encode('utf-8')))
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
-
-			# Check if file exists
-			exists = os.path.exists(filename)
-			if exists:
-				journal.warning(f'[YTCON] FILE "{filename}" EXISTS')
-
-			# - = - = - = Set parameters = -
-			multiple_formats = False
-			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
-				multiple_formats = True
-
-			temp1_index = map_variables.main(multiple_formats, infolist, filename)
-
-			if exists:
-				variables.queue_list[infolist["original_url"]]["status"] = "exists"
-				if multiple_formats:
-					for i in infolist["requested_formats"]:
-						temp1_index = infolist["original_url"] + ":" + i["format_id"]
-						variables.queue_list[temp1_index]["status"] = "exists"
-						variables.queue_list[temp1_index]["downloaded"] = variables.queue_list[temp1_index]["size"]
-						variables.queue_list[temp1_index]["status_short_display"] = "Exist"
-						variables.queue_list[temp1_index]["percent"] = "100.0%"
-				else:
-					variables.queue_list[temp1_index]["downloaded"] = variables.queue_list[temp1_index]["size"]
-					variables.queue_list[temp1_index]["status_short_display"] = "Exist"
-					variables.queue_list[temp1_index]["percent"] = "100.0%"
-			# - = - = - = - = - = - = - = - = - = - = - = - =
-			logger.debug(pprint.pformat(variables.queue_list))
-
-			with yt_dlp.YoutubeDL(variables.ydl_opts | {"outtmpl": filename}) as ydl2:
-				logger.debug(ydl2.download(url))
-				if variables.last_error.find("[Errno 36] File name too long") > -1:
-					raise yt_dlp.utils.DownloadError(variables.last_error)
-			# - = Mark meta as finished = -
-			if "meta_index" in variables.queue_list[infolist["original_url"]]:
-				variables.queue_list[infolist["original_url"]]["status"] = "finished"
-
-	except yt_dlp.utils.DownloadError as e:
-		journal.error(str(e), show=False)
-		map_variables.mark_as_error(url)
-		return None
-	except:
-		exit_with_exception(traceback.format_exc())
-		return None
-
-	# - = - = - = [Post-processing] = - = - = - #
-	try:
-		if variables.queue_list[temp1_index]["status"] == "exists":
-			return None # skip post-process if file already exists
-
-		# = - = -
-		if variables.queue_list[temp1_index]["status"] != "finished":
-			# IF DOWNLOAD THREAD EXITS WITHOUT ERROR (this usually occurs due to the "ignoreerrors" flag)
-			journal.debug("DOWNLOAD THREAD EXITED WITHOUT ERROR")
-			map_variables.mark_as_error(url)
-			return None
-		# = - = -
-
-		# Removes Last-modified header. Repeats --no-mtime functionality which is not present in yt-dlp embeded version
-		os.utime(variables.queue_list[temp1_index]["file"])
-
-		# Remove file after downloading
-		if variables.delete_after_download is True:
-			journal.warning(f"[YTCON] REMOVING {variables.queue_list[temp1_index]['file']}...")
-			os.remove(variables.queue_list[temp1_index]["file"])
-	except:
-		exit_with_exception(traceback.format_exc())
-
-	return None
-
-class MapVariablesClass:
-	""" Created to simplify the distribution of parameters, work is organized here with playlists and requesting several formats on youtube """
-
-	def main(self, multiple_formats, infolist, filename):
-		""" Finding some specific parameters and using a loop assign if there are several files """
-		if multiple_formats:
-			variables.queue_list[infolist["original_url"]] = {}
-			variables.queue_list[infolist["original_url"]]["meta_index"] = True
-			variables.queue_list[infolist["original_url"]]["multiple_formats"] = True
-			variables.queue_list[infolist["original_url"]]["formats"] = []
-			variables.queue_list[infolist["original_url"]]["status"] = "waiting"
-			for i in infolist["requested_formats"]:
-				temp1_index = infolist["original_url"] + ":" + i["format_id"]
-				variables.queue_list[infolist["original_url"]]["formats"].append(i["format_id"])
-				self.map_variables(temp1_index, infolist, i, filename)
-			return temp1_index
-		# else:
-		temp1_index = infolist["original_url"]
-		self.map_variables(temp1_index, infolist, infolist, filename)
-		return temp1_index
-
-	def map_variables(self, temp1_index, infolist, i, filename):
-		""" Main parameter assigner. In some cases, it can be used in a loop """
-		variables.queue_list[temp1_index] = {}
-		variables.queue_list[temp1_index]["status"] = "waiting"
-		variables.queue_list[temp1_index]["status_short_display"] = "Wait"
-		variables.queue_list[temp1_index]["percent"] = "0.0%"
-		variables.queue_list[temp1_index]["speed"] = "0KiB/s"
-		try:
-			variables.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
-		except KeyError:
-			variables.queue_list[temp1_index]["size"] = "???MiB"
-		variables.queue_list[temp1_index]["downloaded"] = "0MiB"
-		variables.queue_list[temp1_index]["eta"] = "ETA ??:??"
-		variables.queue_list[temp1_index]["name"] = infolist["fulltitle"]
-		if i["resolution"] == "audio only":
-			variables.queue_list[temp1_index]["resolution"] = "audio"
-		else:
-			if i.get("width", None) is None and i.get("height", None) is None:
-				variables.queue_list[temp1_index]["resolution"] = "???х???"
-			else:
-				variables.queue_list[temp1_index]["resolution"] = (str(i.get("width", None)) + "x" + str(i.get("height", None))).replace("None", "???")
-		variables.queue_list[temp1_index]["site"] = infolist["extractor"].lower()
-		variables.queue_list[temp1_index]["file"] = filename
-
-	def mark_as_error(self, url):
-		""" Change the status of the downloaded link to Error if such link exists """
-		if url in variables.queue_list:
-			variables.queue_list[url]["status"] = "error"
-			if "multiple_formats" in variables.queue_list[url]:
-				for i in url["formats"]:
-					temp1_index = url + ":" + i
-					variables.queue_list[temp1_index]["status"] = "error"
-					variables.queue_list[temp1_index]["status_short_display"] = "Error"
-			else:
-				variables.queue_list[url]["status_short_display"] = "Error"
-
-map_variables = MapVariablesClass()
 
 def render_tasks(loop, _):
 	"""
@@ -590,7 +400,7 @@ def clipboard_checker():
 			if new_clip != old_clip:
 				if re.fullmatch(url_regex, new_clip):
 					journal.info("[CLIP] New URL detected: " + new_clip)
-					threading.Thread(target=downloadd, args=(new_clip,), daemon=True).start()
+					threading.Thread(target=downloader, args=(new_clip,), daemon=True).start()
 				else:
 					logger.debug("clipboard content: %s", new_clip)
 					journal.info("[CLIP] New clipboard content detected. But this is not URL. Ignoring..")
@@ -685,6 +495,6 @@ loop_container.loop.set_alarm_in(1, tick_handler_big_delay)
 loop_container.loop.set_alarm_in(1, sett.tick_handler_settings)
 
 # for testing purposes?
-# threading.Thread(target=downloadd, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
+# threading.Thread(target=downloader, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
 
 loop_container.loop.run()
