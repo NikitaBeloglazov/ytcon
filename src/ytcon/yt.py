@@ -75,7 +75,7 @@ from widgets.main_widgets import widgets
 from settings.settings_processor import settings
 
 #from settings_menu.variables import settings_menu_variables
-#from settings_menu.render import sett, settings_sections
+from settings_menu.render import sett #, settings_sections
 
 from render.loop import loop_container
 
