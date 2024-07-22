@@ -1,3 +1,4 @@
+import os
 import time
 import urwid
 
@@ -8,9 +9,10 @@ class RenderClass:
 	def __init__(self):
 		self.errorprinter_animation = 3
 
-		# Variables that cannot have initial values but need to be declared
-		self.width = None
-		self.height = None
+		# We need to have some numbers for initializing,
+		# but loop_container.loop.screen.get_cols_rows() is not ready.
+		# so i use os.get_terminal_size(0) for some numbers to init.
+		self.width, self.height = os.get_terminal_size(0)
 
 	def add_row(self, text):
 		""" Add an additional widget to top_pile for drawing a new task """

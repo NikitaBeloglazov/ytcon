@@ -89,7 +89,7 @@ class SettingsClass:
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
 		self.write_setting(name, state)
 		self.update_ydl_opts()
-		sett.settings_soft_update_scheduled = True
+		settings_menu_variables.settings_soft_update_scheduled = True
 
 	def setting_change_content(self, _=None, _1=None, data=None):
 		"""
@@ -106,7 +106,7 @@ class SettingsClass:
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {set_data}")
 		self.write_setting(name, set_data)
 		self.update_ydl_opts()
-		sett.settings_soft_update_scheduled = True
+		settings_menu_variables.settings_soft_update_scheduled = True
 
 	def update_ydl_opts(self):
 		""" Updates some setting-related ydl_opts. Maybe something like post-change scripts? """
