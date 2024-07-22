@@ -8,6 +8,7 @@
 [![maintainer: NikitaBeloglazov](https://img.shields.io/badge/Maintainer:_.%E2%80%A2%C2%B0%E2%97%8F%E2%9D%A4%EF%B8%8F%20NikitaBeloglazov%20Software%20Foundation%20%E2%9D%A4%EF%B8%8F%E2%97%8F%C2%B0%E2%80%A2.-informational?logoColor=white&style=for-the-badge&logo=github)](https://github.com/NikitaBeloglazov)
 #### TUI for the yt-dlp utility, with support for many settings, some fixes, and multithreading
 #### 🚧 Currently in the BETA stage of development
+#### ⚠️ Please note, project is not dead, i'm still working in dev branches. Stable release coming soon
 
 # 📘 Features:
 * yt-dlp features
