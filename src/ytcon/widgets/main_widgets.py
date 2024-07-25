@@ -3,6 +3,7 @@ from log import logger
 from control.control import ControlClass
 from settings.settings_processor import settings
 from widgets.input_handler import InputHandler
+from widgets.top_pile import widgets_tp
 
 from render.static_methods import render_static
 from render.colors import colors
@@ -10,11 +11,6 @@ from render.colors import colors
 class Widgets:
 	""" It stores main widgets inside it. """
 	def __init__(self):
-		self.top_pile = urwid.Pile([])
-
-		#logger.debug(pprint.pformat(top_pile.contents))
-		#logger.debug(pprint.pformat(calculate_widget_height(top_pile)))
-
 		self.log_widget = urwid.Text("Initializing, please wait")
 		self.error_widget = urwid.Text("Initializing, please wait")
 		self.input_widget = InputHandler.InputBox("Enter URL > ")
@@ -43,7 +39,7 @@ class Widgets:
 				self.main_footer_buttons_with_attrmap,
 				])
 		self.main_widget = urwid.Frame(
-			urwid.Filler(self.top_pile, "top"),
+			urwid.Filler(widgets_tp.top_pile, "top"),
 			footer=self.main_footer,
 			focus_part='footer')
 
