@@ -124,7 +124,7 @@ def hook(d):
 
 		variables.queue_list[indexx]["file"] = d["info_dict"]['_filename']
 		if variables.queue_list[indexx]["status"] == "exists" and d["status"] == "finished":
-			raise InputHandler.InputProcessed
+			return None # i'll guess it's made to avoid bugs that overwriting some data
 		variables.queue_list[indexx]["status"] = d["status"]
 
 		if int(d["_percent_str"].strip().split(".")[0]) > 100:
@@ -162,8 +162,6 @@ def hook(d):
 		d["info_dict"]["fragments"] = []
 
 		logger.debug(pprint.pformat(variables.queue_list))
-	except InputHandler.InputProcessed:
-		pass
 	except:
 		exit_with_exception(traceback.format_exc())
 
