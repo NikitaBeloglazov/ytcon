@@ -1,6 +1,9 @@
 from log import journal, logger
+
 from control.variables import variables
 from control.exit import exit_with_exception, traceback
+
+from widgets.top_pile import widgets_tp
 
 class ControlClass_base:
 	""" It stores information about the download queue and some information that must be passed through several functions. """
@@ -17,7 +20,7 @@ class ControlClass_base:
 						temp1 = temp1 + 1
 			variables.queue_list = temp2_new
 			logger.debug(variables.queue_list)
-			RenderClass.remove_all_widgets()
+			widgets_tp.top_pile.contents = [] # see render.render.remove_all_widgets
 			return str(temp1)
 		except:
 			exit_with_exception(traceback.format_exc())
@@ -27,7 +30,6 @@ class ControlClass_base:
 		""" Clears errors and finished downloads from memory """
 		journal.clear_errors()
 		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
-		RenderClass.flash_button_text(main_clear_button, RenderClass.light_yellow, 2)
 
 	def delete_after_download_switch(self, _=None, _1=None):
 		""" Special mode switch function for urwid.Button's """

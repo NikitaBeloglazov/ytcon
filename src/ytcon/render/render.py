@@ -2,7 +2,8 @@ import os
 import time
 import urwid
 
-from widgets.main_widgets import widgets
+#from widgets.main_widgets import widgets
+from widgets.top_pile import widgets_tp
 
 class RenderClass:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
@@ -16,25 +17,25 @@ class RenderClass:
 
 	def add_row(self, text):
 		""" Add an additional widget to top_pile for drawing a new task """
-		widgets.top_pile.contents = widgets.top_pile.contents + [[urwid.Text(text), widgets.top_pile.options()],]
+		widgets_tp.top_pile.contents = widgets_tp.top_pile.contents + [[urwid.Text(text), widgets_tp.top_pile.options()],]
 
 	def edit_or_add_row(self, text, pos):
 		""" Edit a widget with a specific serial number, and if there is none, then create a new one """
-		if pos > self.calculate_widget_height(widgets.top_pile) - 1:
+		if pos > self.calculate_widget_height(widgets_tp.top_pile) - 1:
 			self.add_row(text)
 		else:
-			widgets.top_pile.contents[pos][0].set_text(text)
+			widgets_tp.top_pile.contents[pos][0].set_text(text)
 
 	#def remove_all_widgets(self):
 	#	- = + DEPRECATED + = -
-	#	USE widgets.top_pile.contents = [] UNSTEAD
+	#	USE widgets_tp.top_pile.contents = [] UNSTEAD
 	#
 	#	"""
 	#	If there are obsolete widgets in top_pile that will not be changed, they are considered garbage,
 	#	for this you need to call remove_all_widgets, all widgets, including unnecessary old ones,
 	#	will be removed, but will be recreated if needed
 	#	"""
-	#	widgets.top_pile.contents = []
+	#	widgets_tp.top_pile.contents = []
 
 	def calculate_widget_height(self, widget):
 		""" (recursively) Counts how many rows the widget occupies in height """

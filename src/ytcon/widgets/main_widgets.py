@@ -4,6 +4,9 @@ from control.control import ControlClass
 from settings.settings_processor import settings
 from widgets.input_handler import InputHandler
 
+from render.static_methods import render_static
+from render.colors import colors
+
 class Widgets:
 	""" It stores main widgets inside it. """
 	def __init__(self):
@@ -17,7 +20,7 @@ class Widgets:
 		self.input_widget = InputHandler.InputBox("Enter URL > ")
 
 		self.main_settings_button = urwid.Button("Settings", on_press=settings.show_settings_call)
-		self.main_clear_button = urwid.Button("Clear", on_press=ControlClass.clear)
+		self.main_clear_button = urwid.Button("Clear", on_press=self.main_clear_button_ON_PRESS)
 		self.main_footer_clipboard_autopaste_button = urwid.Button("Autopaste", on_press=settings.clipboard_autopaste_switch)
 
 		self.main_footer_buttons = urwid.GridFlow(
@@ -43,5 +46,9 @@ class Widgets:
 			urwid.Filler(self.top_pile, "top"),
 			footer=self.main_footer,
 			focus_part='footer')
+
+	def main_clear_button_ON_PRESS(self, _=None):
+		ControlClass.clear()
+		render_static.flash_button_text(self.main_clear_button, colors.light_yellow, 2)
 
 widgets = Widgets()
