@@ -6,27 +6,14 @@ import time
 import pprint
 import threading
 import traceback
-import subprocess
 # - = - = - = - = - = - = -
 import urwid
-import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 
 import clipman
 #import notify2
 
 debug_that_will_be_saved_later = []
 logs_that_will_be_printed_later = []
-
-# - = - Check ffmpeg installed in system - = - = - = -
-try:
-	# Try to launch it
-	subprocess.run("ffmpeg -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	subprocess.run("ffprobe -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-except subprocess.CalledProcessError as e:
-	# If there was a command execution error, ffmpeg is not installed
-	print("\n[!!] FFMPEG and FFPROBE is not installed in your system. Install it using system package manager:\n - sudo apt install ffmpeg\n - sudo dnf install ffmpeg\n - sudo zypper install ffmpeg\n - sudo pacman -S ffmpeg.\n\nProgram execution cannot be continued. YTCON will be exit now.\n")
-	sys.exit(1)
-# - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 # - = CHECK SYSTEM PATHS - = - = - = - = - = - = - = - =
 # Check if it is android termux emulator and change dir to user-reachable internal storage
@@ -69,6 +56,8 @@ from control.exit import exit_with_exception, traceback
 from render.colors import colors
 from render.progressbar_defs import progressbar_defs
 from render.render import render
+from render.loop import loop_container
+RenderClass = render
 
 from widgets.main_widgets import widgets
 
@@ -77,11 +66,9 @@ from settings.settings_processor import settings
 #from settings_menu.variables import settings_menu_variables
 from settings_menu.render import sett #, settings_sections
 
-from render.loop import loop_container
-
-RenderClass = render
-
 from app_update import app_updates
+
+from misc.ffmpeg import get_resolution_ffprobe
 
 from downloader.main import downloader
 
@@ -407,21 +394,6 @@ def clipboard_checker():
 	except:
 		exit_with_exception(str(traceback.format_exc()))
 		return None
-
-def get_resolution_ffprobe(file):
-	""" Uses ffprobe to get video (even not fully downloaded) resolution """
-	try:
-		probe = ffmpeg.probe(file)
-	except ffmpeg.Error as e:
-		logger.debug("ffprobe error:")
-		logger.debug(e.stderr)
-		return None
-	logger.debug("ffprobe response:")
-	logger.debug(pprint.pformat(probe))
-	for i in probe["streams"]:
-		if "width" in i and "height" in i:
-			return str(i["width"]) + "x" + str(i["height"])
-	return None
 
 # - = - = -
 from control.control import ControlClass

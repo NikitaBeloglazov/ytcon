@@ -4,7 +4,9 @@ from control.variables import variables
 class Lol:
 	pass
 RenderClass = Lol()
+# please note: logprinter must cut log messages, not logger. current version is cruel shit
 RenderClass.width = 150 # TODO BUG
+
 log_folder = "/tmp/" # TODO BUG
 
  # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
