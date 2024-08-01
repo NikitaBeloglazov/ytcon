@@ -9,7 +9,6 @@ import traceback
 # - = - = - = - = - = - = -
 import urwid
 
-import clipman
 #import notify2
 
 debug_that_will_be_saved_later = []

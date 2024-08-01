@@ -16,12 +16,17 @@ from settings_menu.render import update_checkboxes
 from downloader.main import downloader
 #from render.loop import loop_container
 
+# TODO: INIT MODE NEEDS REWRITING.
+# - also, separate control class for clipboard,
+#   not variables.clipboard_checker_state_launched
+
+# 	↓ shit
 def clipboard_init():
 	try:
 		clipman.init()
 	except Exception as e: # pylint: disable=broad-except
 		logger.info(traceback.format_exc())
-		print("[!!] An Clipboard error occurred!\n")
+		print("[!!] An clipboard error occurred!\n")
 		print(f"- {type(e).__name__}: {e}")
 		print("\nYou can follow instructions in this error message, or ignore it")
 		print("BUT, if you ignore it, clipboard auto-paste will be unavalible.\n")
@@ -31,7 +36,7 @@ def clipboard_init():
 		print("Full traceback can be found in info.log\n")
 
 		try:
-			user_answer = input("Ignore it? [yes/NO] > ")
+			user_answer = input("Ignore it? [y/N] > ")
 		except KeyboardInterrupt:
 			print("Exiting..")
 			sys.exit(1)
