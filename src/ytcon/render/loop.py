@@ -1,4 +1,5 @@
 class LoopContainer:
+	""" Placeholder """
 	def __init__(self):
 		""" Placeholder """
 		self.loop = None

@@ -1,10 +1,6 @@
-# - = Standart modules = -
 import os
 import sys
-import time
-import threading
-import traceback
-# - = - = - = - = - = - = -
+
 import urwid
 
 #import notify2
@@ -41,17 +37,18 @@ try:
 	os.remove("/tmp/write_test")
 	log_folder = "/tmp/"
 except:
-	logs_that_will_be_printed_later.append("[YTCON] /tmp folder is unavalible (windows, android?). setting current dir for logs..")
+	logs_that_will_be_printed_later.append("[YTCON] /tmp folder is unavalible (windows, android?). Set current dir for logs")
 	log_folder = ""
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 from log import journal, logger
 
+#from control.control import ControlClass
 from control.variables import variables
-from control.exit import exit_with_exception, traceback
+#from control.exit import exit_with_exception, traceback
 
 from render.colors import colors
-from render.progressbar_defs import progressbar_defs
+#from render.progressbar_defs import progressbar_defs
 from render.render import render
 from render.loop import loop_container
 RenderClass = render
@@ -63,209 +60,15 @@ from settings.settings_processor import settings
 #from settings_menu.variables import settings_menu_variables
 from settings_menu.render import sett #, settings_sections
 
-from app_update import app_updates
+#from app_update import app_updates
 
 #from misc.ffmpeg import get_resolution_ffprobe
-from misc.clipboard import clipboard_init, clipboard_checker
+from misc.clipboard import clipboard_init#, clipboard_checker
 
 #from downloader.main import downloader
 from downloader.hook import hook
 
-def render_tasks(loop, _):
-	"""
-	Graphic part of ytcon - draws a colored video queue from variables.queue_list
-	Shows names, extractors, ETAs, generates progress bars, etc.
-	"""
-	try:
-		if not variables.queue_list: # if variables.queue_list == {}
-			RenderClass.edit_or_add_row((colors.cyan, "No tasks"), 0)
-		else:
-			r = 0
-			for _, i in variables.queue_list.items():
-				if "meta_index" in i:
-					continue # just ignore meta-downloads
-
-				rcm = progressbar_defs
-				ws = rcm.whitespace_stabilization
-
-				errorr = i["status"] == "error"
-
-				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"], errorr)}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
-				fileshortname = rcm.name_shortener(i["name"], RenderClass.width - len(temp1))
-				temp1 = temp1 + fileshortname
-
-				if i["status"] == "waiting":
-					RenderClass.edit_or_add_row((colors.cyan, temp1), r)
-				elif i["status"] == "error":
-					RenderClass.edit_or_add_row((colors.red, temp1), r)
-				elif i["status"] == "exists":
-					RenderClass.edit_or_add_row((colors.yellow, temp1), r)
-				elif i["status"] == "finished":
-					RenderClass.edit_or_add_row((colors.green, temp1), r)
-				else:
-					RenderClass.edit_or_add_row(temp1, r)
-
-				r = r+1
-		loop.set_alarm_in(0.3, render_tasks)
-	except:
-		exit_with_exception(traceback.format_exc())
-
-def errorprinter(loop, _):
-	""" Draws errors in widgets.error_widget in red, after some time (specified in the timer) removes error messages """
-	try:
-		# - = skip, do not re-render if there is no errors - = - = - = - = -
-		# if variables.prev_last_error == variables.last_error and variables.prev_error_countdown == variables.error_countdown:
-		#	time.sleep(0.6)
-		#	continue
-		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - = -
-		to_render = []
-		to_render.append("- - -\n")
-
-		if variables.error_countdown != 0:
-			error_text_generator = "[" + progressbar_defs.whitespace_stabilization(str(variables.error_countdown), 2) + "] " + str(variables.last_error)
-		else:
-			error_text_generator = str(variables.last_error)
-
-		error_text_generator = error_text_generator.replace("; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U", "")
-
-		if variables.last_error == "":
-			to_render.append((colors.cyan, error_text_generator))
-		else:
-			to_render.append((colors.red, error_text_generator))
-
-		to_render.append("\n")
-
-		# - = - = - = - = - = - unfold animation - = - = - = - = - = -
-		if RenderClass.errorprinter_animation == 0:
-			widgets.error_widget.set_text(to_render)
-		elif RenderClass.errorprinter_animation == 1:
-			widgets.error_widget.set_text(to_render[:-1])
-		elif RenderClass.errorprinter_animation == 2:
-			if to_render[:-2] == ["- - -\n"]:
-				widgets.error_widget.set_text("- - -")
-			else:
-				widgets.error_widget.set_text(to_render[:-2])
-		elif RenderClass.errorprinter_animation == 3:
-			if not to_render[:-3]:
-				widgets.error_widget.set_text("")
-			else:
-				widgets.error_widget.set_text(to_render[:-3])
-
-		if variables.last_error == "":
-			if RenderClass.errorprinter_animation < 3 and RenderClass.errorprinter_animation >= 0:
-				RenderClass.errorprinter_animation += 1
-		else:
-			if RenderClass.errorprinter_animation <= 3 and RenderClass.errorprinter_animation > 0:
-				RenderClass.errorprinter_animation = RenderClass.errorprinter_animation - 1
-		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
-
-		variables.prev_last_error = variables.last_error
-		variables.prev_error_countdown = variables.error_countdown
-
-		if variables.error_countdown != 0:
-			variables.error_countdown = variables.error_countdown - 1
-			if variables.error_countdown == 0:
-				journal.clear_errors()
-
-		#widgets.error_widget.set_text(to_render)
-		loop.set_alarm_in(0.3, errorprinter)
-	except:
-		exit_with_exception(str(traceback.format_exc()))
-
-def logprinter(loop, _):
-	""" Prints the last 6 lines of logs in widgets.log_widget """
-	try:
-		# - = skip, do not re-render if it doesn't change - = - = - =
-		# if ControlClass.oldlog == variables.log:
-		#	time.sleep(0.5)
-		#	continue
-		# else:
-		#	ControlClass.oldlog = variables.log.copy()
-		#
-		# controlclass snippet:
-		# self.oldlog = ["", "", "", "", "", ""]
-		# - = - = - = - = - = - = - = - = - = - = - = - = - - = - = - =
-
-		to_render = variables.log[0] + "\n"
-		to_render += variables.log[1] + "\n"
-		to_render += variables.log[2] + "\n"
-		to_render += variables.log[3] + "\n"
-		to_render += variables.log[4] + "\n"
-		to_render += variables.log[5]
-		widgets.log_widget.set_text(to_render)
-
-		loop.set_alarm_in(0.3, logprinter)
-	except:
-		exit_with_exception(traceback.format_exc())
-
-def tick_handler(loop, _):
-	""" It just checks some conditions every few seconds and executes them. Directly not responsible for rendering, but changes some buttons color """
-
-	# - = - = - = - = - = - = - = - = -
-	# Autopaste button color changer
-	if (settings.get_setting("clipboard_autopaste") is True and variables.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and variables.clipboard_checker_state_launched is not False):
-		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "yellow"), widgets.main_footer_buttons.contents[2][1])
-		variables.temp["autopaste_button_color"] = "yellow" # some kind of cache
-	elif variables.clipboard_checker_state_launched is not True and variables.temp["autopaste_button_color"] != "light_red":
-		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "light_red"), widgets.main_footer_buttons.contents[2][1])
-		variables.temp["autopaste_button_color"] = "light_red" # some kind of cache
-	elif variables.clipboard_checker_state_launched is True and variables.temp["autopaste_button_color"] != "buttons_footer":
-		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "buttons_footer"), widgets.main_footer_buttons.contents[2][1])
-		variables.temp["autopaste_button_color"] = "buttons_footer" # some kind of cache
-	# - = - = - = - = - = - = - = - = -
-
-	# - = Clipboard thread activator = -
-	if settings.get_setting("clipboard_autopaste") and variables.clipboard_checker_state_launched is False:
-		threading.Thread(target=clipboard_checker, daemon=True).start()
-	# - = - = - = - = - = - = - = - = -
-
-	# - = - = - = - = - = - = - = - = -
-	# The error handler, if it sees variables.exit = True,
-	# then exits the program commenting this with the text from variables.exception.
-	# The parent function of such actions: exit_with_exception()
-	if variables.exit is True:
-		loop.stop()
-		print("An unknown error has occurred!\n")
-		time.sleep(0.5)
-		print(variables.exception)
-		sys.exit(1)
-
-	if variables.auto_update_safe_gui_stop is True:
-		try:
-			loop.stop()
-		except:
-			journal.debug(traceback.format_exc())
-
-		try:
-			app_updates.update_thread.join()
-		except KeyboardInterrupt:
-			print(" - Okay, canceled")
-		sys.exit()
-	# - = - = - = - = - = - = - = - = -
-
-	# Prevent focus from remaining on footer buttons after pressing them
-	widgets.main_footer.set_focus(widgets.input_widget)
-
-	# - =
-	loop.set_alarm_in(0.3, tick_handler)
-
-def tick_handler_big_delay(loop, _):
-	""" Same as tick_handler, but with bigger delay. Made for optimization purposes. """
-
-	# - = - = - = - = - = - = - = - = -
-	# Draw version in settings
-	app_updates.update_settings_version_text()
-
-	# New-update-avalible notificator
-	if app_updates.auto_update_avalible is True:
-		widgets.auto_update_avalible_text_indicator.set_text((colors.cyan, f"- - -\nAuto update {app_updates.version} -> {app_updates.pypi_version} is avalible! Write \"update\" to easy update right now!"))
-	# - = - = - = - = - = - = - = - = -
-
-	# - =
-	loop.set_alarm_in(4, tick_handler_big_delay)
-
 # - = - = -
-#from control.control import ControlClass
 
 variables.ydl_opts = {
 	'logger': journal,
@@ -302,11 +105,18 @@ if settings.get_setting("clipboard_autopaste") is True:
 	clipboard_init()
 # - = - = - = - = - = - = - = - = - = - = - = -
 
-loop_container.loop.set_alarm_in(0, render_tasks)
-loop_container.loop.set_alarm_in(0, logprinter)
-loop_container.loop.set_alarm_in(0, errorprinter)
-loop_container.loop.set_alarm_in(0, tick_handler)
-loop_container.loop.set_alarm_in(1, tick_handler_big_delay)
+from loops import render_tasks
+from loops import log_printer
+from loops import error_printer
+
+from loops import tick_handlers
+
+loop_container.loop.set_alarm_in(0, render_tasks.render_tasks)
+loop_container.loop.set_alarm_in(0, log_printer.log_printer)
+loop_container.loop.set_alarm_in(0, error_printer.error_printer)
+
+loop_container.loop.set_alarm_in(0, tick_handlers.tick_handler)
+loop_container.loop.set_alarm_in(1, tick_handlers.tick_handler_big_delay)
 loop_container.loop.set_alarm_in(1, sett.tick_handler_settings)
 
 # for testing purposes?

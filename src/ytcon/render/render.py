@@ -8,8 +8,6 @@ from widgets.top_pile import widgets_tp
 class RenderClass:
 	""" It stores some information about rendering, screen, some functions for working with widgets and some functions that are related to rendering. """
 	def __init__(self):
-		self.errorprinter_animation = 3
-
 		# We need to have some numbers for initializing,
 		# but loop_container.loop.screen.get_cols_rows() is not ready.
 		# so i use os.get_terminal_size(0) for some numbers to init.
