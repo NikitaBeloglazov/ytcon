@@ -103,6 +103,15 @@ variables.ydl_opts = {
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 	}
 
+# TODO LIST:
+# 'ratelimit': 207200
+#
+# Angry mode
+# 'retries': float("inf"),
+# 'fragment_retries': 999\
+#
+# Desktop notifications
+
 loop_container.loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
 
 RenderClass.width, RenderClass.height = loop_container.loop.screen.get_cols_rows()
