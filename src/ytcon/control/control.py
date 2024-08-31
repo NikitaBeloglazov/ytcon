@@ -1,3 +1,5 @@
+""" This module contains some functions for controlling some variables in control.variables. """
+
 from log import journal, logger
 
 from control.variables import variables
@@ -6,8 +8,7 @@ from control.exit import exit_with_exception, traceback
 from widgets.top_pile import widgets_tp
 
 class ControlClass_base:
-	""" It stores information about the download queue and some information that must be passed through several functions. """
-
+	""" This module contains some functions for controlling some variables in control.variables. """
 	def delete_finished(self):
 		""" Removes all completed operations from ControlClass.queue_list with a loop """
 		try:
@@ -33,6 +34,7 @@ class ControlClass_base:
 
 	def delete_after_download_switch(self, _=None, _1=None):
 		""" Special mode switch function for urwid.Button's """
+		# TODO: Move to normal settings
 		journal.info("")
 		if variables.delete_after_download: # true
 			variables.delete_after_download = False

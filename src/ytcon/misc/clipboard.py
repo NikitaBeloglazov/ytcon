@@ -1,3 +1,4 @@
+""" The module that is responsible for the operation of the clipboard in ytcon """
 import re
 import sys
 import time
@@ -16,12 +17,13 @@ from settings_menu.render import update_checkboxes
 from downloader.main import downloader
 #from render.loop import loop_container
 
-# TODO: INIT MODE NEEDS REWRITING.
+# TODO: INIT NEEDS REWRITING.
 # - also, separate control class for clipboard,
 #   not variables.clipboard_checker_state_launched
 
 # 	↓ shit
 def clipboard_init():
+	""" Initializes clipman in ytcon boot stage. If ytcon already booted, it clipman inits in clipboard_checker() """
 	try:
 		clipman.init()
 	except Exception as e: # pylint: disable=broad-except

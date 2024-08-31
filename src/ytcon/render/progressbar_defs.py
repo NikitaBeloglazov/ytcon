@@ -1,5 +1,6 @@
-from tqdm import tqdm
+""" This module contains methods for drawing progress bars """
 import time
+from tqdm import tqdm
 
 from settings.settings_processor import settings
 
@@ -68,7 +69,7 @@ class ProgressBarDefs:
 
 		if style == "pacman":
 			# [---------Co o o o o o o ]
-			#           ^^ background ^^
+			#            ^ background ^
 
 			mseconds = time.time() - round(time.time())
 			if mseconds > 0: # pylint: disable=simplifiable-if-statement # no, because bool(-1) is True

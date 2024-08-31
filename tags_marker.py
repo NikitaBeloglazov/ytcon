@@ -1,3 +1,4 @@
+""" Tags version in files for publishing in pypi. TODO: Deprecated """
 import subprocess
 import os
 
@@ -12,7 +13,7 @@ print("[TAG MARKER] FOUND TAG: " + tag)
 
 print("[TAG MARKER] MARKING VERSION IN pyproject.toml")
 # Open the file for reading and writing (the 'r+' mode provides both read and write access)
-with open('pyproject.toml', 'r+') as file:
+with open('pyproject.toml', 'r+', encoding="UTF-8") as file:
 	# Reading the contents of a file
 	content = file.read()
 	# Replace the desired part of the text using the replace method
@@ -26,7 +27,7 @@ with open('pyproject.toml', 'r+') as file:
 print("[TAG MARKER] DONE")
 
 print("[TAG MARKER] MARKING VERSION IN src/ytcon/__version__.py")
-with open('src/ytcon/__version__.py', 'r+') as file:
+with open('src/ytcon/__version__.py', 'r+', encoding="UTF-8") as file:
 	# Reading the contents of a file
 	content = file.read()
 	# Replace the desired part of the text using the replace method

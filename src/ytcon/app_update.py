@@ -1,3 +1,4 @@
+""" DEPRECATED: WILL BE DELETED AND REWORKED IN THE FUTURE """
 # TODO: delete auto-update, rework detection func
 
 import os

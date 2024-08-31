@@ -1,3 +1,4 @@
+""" Сontains settings data and methods for them """
 import os
 import sys
 import pickle
@@ -56,7 +57,7 @@ class SettingsClass:
 			with open(self.configpath + "settings.db", "rb") as filee:
 				self.settings.update(pickle.load(filee))
 			journal.info(f"[YTCON] {self.configpath}settings.db loaded")
-			# update_checkboxes() # TODO BUG
+			settings_menu_variables.settings_soft_update_scheduled = True # update checkboxes
 			self.update_ydl_opts()
 			render_static.flash_button_text(button, colors.green)
 		except FileNotFoundError:
@@ -69,7 +70,7 @@ class SettingsClass:
 			journal.warning(f"[YTCON] Saved settings load FAILED: EOFError: {exc}: {self.configpath}settings.db")
 			journal.error("[YTCON] YOUR SETTINGS FILE IS CORRUPTED. Default settings restored and corrupted save file removed.")
 			self.write_setting("clipboard_autopaste", False)
-			# update_checkboxes() # TODO BUG
+			settings_menu_variables.settings_soft_update_scheduled = True # update checkboxes
 			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
 			logger.debug(os.remove(f"{self.configpath}settings.db"))
 

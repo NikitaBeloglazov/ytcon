@@ -1,3 +1,7 @@
+"""
+	A hook that is called every time by yt-dlp when the state of the task changes (example percent changed),
+	and the hook writes the necessary information to the class in order to draw it later
+"""
 import pprint
 
 from log import journal, logger
@@ -87,3 +91,4 @@ def hook(d):
 		#logger.debug(pprint.pformat(variables.queue_list))
 	except:
 		exit_with_exception(traceback.format_exc())
+	return None

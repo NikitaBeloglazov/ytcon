@@ -1,3 +1,10 @@
+"""
+	The main component of ytcon, this class sets the basic parameters for the video,
+	composes the title and starts downloading.
+
+	For each link one thread (exception: playlists)
+"""
+
 import os
 import re
 import pprint

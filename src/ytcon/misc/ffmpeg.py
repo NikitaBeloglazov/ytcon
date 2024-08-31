@@ -1,7 +1,8 @@
+""" Module that responsible for contolling ffmpeg/ffprobe checks and calls. """
 import sys
 import subprocess
 import pprint
-import ffmpeg # | !!!! "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
+import ffmpeg # | !!! pip install "ffmpeg-python", NOT "ffmpeg" !!! | # https://kkroening.github.io/ffmpeg-python/ # python310-ffmpeg-python
 
 from log import logger
 
@@ -12,7 +13,7 @@ try:
 	subprocess.run("ffprobe -version", shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 except subprocess.CalledProcessError as e:
 	# If there was a command execution error, ffmpeg is not installed
-	print("\n[!!] FFMPEG and FFPROBE is not installed in your system. Install it using system package manager:\n - sudo apt install ffmpeg\n - sudo dnf install ffmpeg\n - sudo zypper install ffmpeg\n - sudo pacman -S ffmpeg.\n\nProgram execution cannot be continued. YTCON will be exit now.\n")
+	print("\n[!!] FFMPEG and/or FFPROBE is not installed/broken in your system. Install it using system package manager:\n - sudo apt install ffmpeg\n - sudo dnf install ffmpeg\n - sudo zypper install ffmpeg\n - sudo pacman -S ffmpeg.\n\nYTCON execution cannot be continued.\n")
 	sys.exit(1)
 # - = - = - = - = - = - = - = - = - = - = - = - = - = -
 

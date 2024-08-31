@@ -1,5 +1,13 @@
+"""
+This module stores information about the download queue
+and some information that must be passed through several functions.
+"""
 
 class VariablesStorage:
+	"""
+	This class stores information about the download queue
+	and some information that must be passed through several functions.
+	"""
 	def __init__(self):
 		self.queue_list = {}
 		self.ydl_opts = {}
@@ -14,7 +22,9 @@ class VariablesStorage:
 
 		self.delete_after_download = False
 
+		# TODO: SEE log.py, line 93
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
+
 		self.exit = False
 		self.auto_update_safe_gui_stop = False
 		self.exception = ""

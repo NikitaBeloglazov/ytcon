@@ -1,3 +1,4 @@
+""" Stores most widgets, which are located on ytcon's main screen """
 import urwid
 from log import logger
 from control.control import ControlClass
@@ -43,7 +44,8 @@ class Widgets:
 			footer=self.main_footer,
 			focus_part='footer')
 
-	def main_clear_button_ON_PRESS(self, _=None):
+	def main_clear_button_ON_PRESS(self, _=None): # TODO: ?
+		""" Funcion that called by < Clear > button press """
 		ControlClass.clear()
 		render_static.flash_button_text(self.main_clear_button, colors.light_yellow, 2)
 

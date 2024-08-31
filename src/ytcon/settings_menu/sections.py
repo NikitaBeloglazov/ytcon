@@ -1,3 +1,11 @@
+"""
+	The module which contains the settings category classes.
+
+	They will be automatically found and placed in a special dynamic list (self.settings_sections)
+	that will be shown to the user
+"""
+
+# TODO: Please consider rewrite to dynamic plug-ins system
 import urwid
 
 from control.variables import variables
@@ -12,7 +20,7 @@ from settings.settings_processor import settings
 
 class SettingsSections:
 	"""
-	The class in which the settings category classes are placed.
+	The module which contains the settings category classes.
 
 	They will be automatically found and placed in a special dynamic list (self.settings_sections)
 	that will be shown to the user

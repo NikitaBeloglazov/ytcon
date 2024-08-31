@@ -1,3 +1,23 @@
+"""
+ * Main init part of app
+
+ * - = - = - =
+ * Copyright (C) 2023-2024 Nikita Beloglazov <nnikita.beloglazov@gmail.com>
+ *
+ * This file is part of github.com/NikitaBeloglazov/ytcon.
+ *
+ * NikitaBeloglazov/ytcon is free software; you can redistribute it and/or
+ * modify it under the terms of the Mozilla Public License 2.0
+ * published by the Mozilla Foundation.
+ *
+ * NikitaBeloglazov/ytcon is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY.
+ *
+ * You should have received a copy of the Mozilla Public License 2.0
+ * along with NikitaBeloglazov/ytcon
+ * If not, see https://mozilla.org/en-US/MPL/2.0.
+"""
+
 import os
 import sys
 
@@ -41,7 +61,8 @@ except:
 	log_folder = ""
 # - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
-from log import journal, logger
+from log import init_logger, journal, logger
+init_logger(log_folder)
 
 #from control.control import ControlClass
 from control.variables import variables

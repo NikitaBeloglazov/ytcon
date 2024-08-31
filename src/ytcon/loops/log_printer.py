@@ -4,7 +4,7 @@ from control.exit import exit_with_exception, traceback
 
 from widgets.main_widgets import widgets
 
-def log_printer(loop, _): # TODO: POSSIBLE, NEEDS REWRITE/BUGFIX
+def log_printer(loop, _): # TODO: POSSIBLE, NEEDS REWRITE/BUGFIX. SEE log.py, line 93
 	""" Prints the last 6 lines of logs in widgets.log_widget """
 	try:
 		# - = skip, do not re-render if it doesn't change - = - = - =

@@ -1,39 +1,44 @@
+"""
+	A log wrapper for yt-dlp and a logging class for the whole application.
+	info, warning and error will be added to the logs field. (logprinter())
+	For debug messages it is highly recommended to use logger.debug instead of journal
+"""
+
 import logging
 from control.variables import variables
 
-class Lol:
-	pass
-RenderClass = Lol()
-# please note: logprinter must cut log messages, not logger. current version is cruel shit
-RenderClass.width = 150 # TODO BUG
+from render.render import render
 
-log_folder = "/tmp/" # TODO BUG
-
- # - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
 logger = logging.getLogger('main_logger')
-logger.setLevel(logging.DEBUG)
+def init_logger(log_folder):
+	"""
+	Logger initialization. Made because imports cannot have argument funcionality,
+	Because we can't check log folder in log.py, and it must be detected in yt.py
+	"""
+	# - = logging init - = - = - = - = - = - = - = - = - = - = - = - =
+	logger.setLevel(logging.DEBUG)
 
-# Create handler for the INFO level
-info_file_handler = logging.FileHandler(log_folder+'info.log', mode='w')
-info_file_handler.setLevel(logging.INFO)
+	# Create handler for the INFO level
+	info_file_handler = logging.FileHandler(log_folder+'info.log', mode='w')
+	info_file_handler.setLevel(logging.INFO)
 
-# Create handler for the DEBUG level
-debug_file_handler = logging.FileHandler(log_folder+'debug.log', mode='w')
-debug_file_handler.setLevel(logging.DEBUG)
+	# Create handler for the DEBUG level
+	debug_file_handler = logging.FileHandler(log_folder+'debug.log', mode='w')
+	debug_file_handler.setLevel(logging.DEBUG)
 
-# Add formatter
-formatter = logging.Formatter('%(levelname)s: %(message)s')
-info_file_handler.setFormatter(formatter)
-debug_file_handler.setFormatter(formatter)
+	# Add formatter
+	formatter = logging.Formatter('%(levelname)s: %(message)s')
+	info_file_handler.setFormatter(formatter)
+	debug_file_handler.setFormatter(formatter)
 
-# Add handlers to the logger
-logger.addHandler(info_file_handler)
-logger.addHandler(debug_file_handler)
+	# Add handlers to the logger
+	logger.addHandler(info_file_handler)
+	logger.addHandler(debug_file_handler)
 
-# Write test logs
-logger.debug('== DEBUG LOG FILE ==')
-logger.info('== INFO LOG FILE ==')
-# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
+	# Write test logs
+	logger.debug('== DEBUG LOG FILE ==')
+	logger.info('== INFO LOG FILE ==')
+	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - =
 
 class JournalClass:
 	"""
@@ -84,8 +89,10 @@ class JournalClass:
 			return None
 
 		del variables.log[0]
-		if len(msg) > RenderClass.width:
-			temp1 = RenderClass.width - 3
+
+		# TODO: loops.log_printer must cut log messages, not logger. current version is cruel shit
+		if len(msg) > render.width:
+			temp1 = render.width - 3
 			variables.log.append(msg[0:temp1]+"...")
 		else:
 			variables.log.append(msg)

@@ -1,8 +1,10 @@
+""" Contains some static methods for rendering """
 import time
 
 from render.loop import loop_container
 
 class RenderStatic:
+	""" Contains some static methods for rendering """
 	def __init__(self):
 		pass
 

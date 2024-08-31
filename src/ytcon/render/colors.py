@@ -1,7 +1,8 @@
+""" This module stores some information about colors and some color presets """
 import urwid
 
 class ColorsBase:
-	""" It stores some information about colors render. """
+	""" Stores some information about colors and some color presets. """
 	def __init__(self):
 		# Init colors
 		self.red = urwid.AttrSpec('dark red', 'default')

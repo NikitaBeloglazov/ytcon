@@ -1,5 +1,9 @@
+"""
+	This module stores some information about rendering, screen,
+	some functions for working with widgets
+	and some functions that are related to rendering.
+"""
 import os
-import time
 import urwid
 
 #from widgets.main_widgets import widgets

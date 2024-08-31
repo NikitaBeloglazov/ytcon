@@ -1,3 +1,4 @@
+""" The module that is responsible for rendering some things the settings menu """
 import traceback
 import urwid
 
