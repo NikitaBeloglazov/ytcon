@@ -43,6 +43,6 @@ yt-dlp pseudo-graphical console interface (TUI)
 %license LICENSE LICENSE
 %python_alternative %{_bindir}/ytcon
 %{python_sitelib}/ytcon
-%{python_sitelib}/ytcon-v%{version}.dist-info
+# %{python_sitelib}/ytcon-v%{version}.dist-info
 
 %changelog
