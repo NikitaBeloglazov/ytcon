@@ -7,6 +7,7 @@ Release:        0
 Summary:        yt-dlp pseudo-graphical console interface (TUI)
 License:        MIT
 URL:            https://github.com/NikitaBeloglazov/ytcon
+Source0:        _service
 BuildRequires:  python-rpm-macros
 BuildRequires:  %{python_module setuptools}
 BuildRequires:  %{python_module hatchling}
