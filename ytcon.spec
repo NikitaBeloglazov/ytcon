@@ -3,7 +3,7 @@
 %{?!python_module:%define python_module() python-%{**} python3-%{**}}
 Name:           ytcon
 Version:        0.0.0
-# Release:        0
+Release:        0
 Summary:        yt-dlp pseudo-graphical console interface (TUI)
 License:        MPL-2.0
 URL:            https://github.com/NikitaBeloglazov/ytcon
