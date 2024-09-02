@@ -18,7 +18,6 @@ BuildArch:      noarch
 %python_subpackages
 
 %description
-# ShellGPT
 yt-dlp pseudo-graphical console interface (TUI)
 
 %prep
@@ -29,20 +28,10 @@ yt-dlp pseudo-graphical console interface (TUI)
 
 %install
 %pyproject_install
-%python_clone -a %{buildroot}%{_bindir}/ytcon
 %python_expand %fdupes %{buildroot}%{$python_sitelib}
 
-%post
-%python_install_alternative ytcon
-
-%postun
-%python_uninstall_alternative ytcon
-
 %files %{python_files}
-%doc README.md README.md
-%license LICENSE LICENSE
-%python_alternative %{_bindir}/ytcon
 %{python_sitelib}/ytcon
-# %{python_sitelib}/ytcon-v%{version}.dist-info
+%{python_sitelib}/ytcon-%{version}.dist-info
 
 %changelog
