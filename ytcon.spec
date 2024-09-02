@@ -3,11 +3,11 @@
 %{?!python_module:%define python_module() python-%{**} python3-%{**}}
 Name:           ytcon
 Version:        0.0.0
-Release:        0
+# Release:        0
 Summary:        yt-dlp pseudo-graphical console interface (TUI)
-License:        MIT
+License:        MPL-2.0
 URL:            https://github.com/NikitaBeloglazov/ytcon
-Source0:        *.tar
+Source0:        %{name}-%{version}.tar
 BuildRequires:  python-rpm-macros
 BuildRequires:  %{python_module setuptools}
 BuildRequires:  %{python_module hatchling}
