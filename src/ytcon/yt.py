@@ -20,10 +20,36 @@
 
 import os
 import sys
-
 import urwid
 
-#import notify2
+# - = - = - = - = - = - = - = - = - =
+# Part of code, which sets the path for relative file imports
+# like this: from control.variables import variables
+
+# Unfortunately, this is a rather crooked solution,
+# but unfortunately,other options simply do not work or are not acceptable
+
+# - from .control.variables import variables
+# is unacceptable because
+
+# Traceback (most recent call last):
+# File "/home/nikita/ytcon/src/ytcon/__init__.py", line 18, in <module>
+#  from . import yt
+# File "/home/nikita/ytcon/src/ytcon/yt.py", line 64, in <module>
+#  from .log import init_logger, journal, logger
+# File "/home/nikita/ytcon/src/ytcon/log.py", line 10, in <module>
+#  from .render.render import render
+# File "/home/nikita/ytcon/src/ytcon/render/render.py", line 10, in <module>
+#  from .widgets.top_pile import widgets_tp
+# ModuleNotFoundError: No module named 'ytcon.render.widgets'
+
+# - from ytcon.control.variables import variables
+# is unacceptable because git installation method will stop working
+
+modules_path = os.path.dirname(os.path.realpath(__file__)) # get currently running script path
+# print(modules_path)
+sys.path.append(modules_path)
+# - = - = - = - = - = - = - = - = - =
 
 debug_that_will_be_saved_later = []
 logs_that_will_be_printed_later = []
