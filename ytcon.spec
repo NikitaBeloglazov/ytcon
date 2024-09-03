@@ -13,8 +13,9 @@ BuildRequires:  %{python_module setuptools}
 BuildRequires:  %{python_module setuptools_scm}
 BuildRequires:  %{python_module hatchling}
 BuildRequires:  %{python_module pip}
-BuildRequires:    fdupes
-Requires:         python3
+BuildRequires:  fdupes
+BuildRequires:  git
+Requires:       python3
 BuildArch:      noarch
 %python_subpackages
 
