@@ -29,7 +29,7 @@ echo "NIKITADEBUG PREP RUNNING"
 %build
 echo "NIKITADEBUG BUILD RUNNING"
 ls -a
-git describe --tags
+python3 -c "import sys; print(sys.version)"
 git fsck
 git log
 %pyproject_wheel
