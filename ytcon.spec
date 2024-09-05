@@ -23,13 +23,17 @@ BuildArch:      noarch
 yt-dlp pseudo-graphical console interface (TUI)
 
 %prep
+echo "NIKITADEBUG PREP RUNNING"
+git log
 %autosetup -p1 -n ytcon-%{version}
 
 %build
-%python_exec test.py
+echo "NIKITADEBUG BUILD RUNNING"
+git log
 %pyproject_wheel
 
 %install
+echo "NIKITADEBUG INSTALL RUNNING"
 %pyproject_install
 %python_expand %fdupes %{buildroot}%{$python_sitelib}
 
