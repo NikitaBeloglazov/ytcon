@@ -28,6 +28,7 @@ echo "NIKITADEBUG PREP RUNNING"
 
 %build
 echo "NIKITADEBUG BUILD RUNNING"
+git fsck
 git log
 %pyproject_wheel
 
