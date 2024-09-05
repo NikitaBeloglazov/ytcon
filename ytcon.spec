@@ -26,6 +26,7 @@ yt-dlp pseudo-graphical console interface (TUI)
 %autosetup -p1 -n ytcon-%{version}
 
 %build
+%python_exec test.py
 %pyproject_wheel
 
 %install
