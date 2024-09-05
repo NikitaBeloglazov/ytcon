@@ -24,7 +24,6 @@ yt-dlp pseudo-graphical console interface (TUI)
 
 %prep
 echo "NIKITADEBUG PREP RUNNING"
-git log
 %autosetup -p1 -n ytcon-%{version}
 
 %build
