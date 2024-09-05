@@ -29,7 +29,7 @@ echo "NIKITADEBUG PREP RUNNING"
 %build
 echo "NIKITADEBUG BUILD RUNNING"
 ls -a
-ls -a .obs
+git describe --tags
 git fsck
 git log
 %pyproject_wheel
