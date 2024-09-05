@@ -39,5 +39,6 @@ echo "DEBUG - INSTALL RUNNING"
 %files %{python_files}
 %{python_sitelib}/ytcon
 %{python_sitelib}/ytcon-%{version}.dist-info
+%python_alternative %{_bindir}/ytcon
 
 %changelog
