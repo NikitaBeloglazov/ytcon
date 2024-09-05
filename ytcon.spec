@@ -34,6 +34,7 @@ export SETUPTOOLS_SCM_PRETEND_VERSION="%{version}"
 %install
 echo "DEBUG - INSTALL RUNNING"
 %pyproject_install
+%python_clone -a %{buildroot}%{_bindir}/ytcon
 %python_expand %fdupes %{buildroot}%{$python_sitelib}
 
 %files %{python_files}
