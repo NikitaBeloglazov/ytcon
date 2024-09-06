@@ -39,6 +39,7 @@ BuildRequires:  git
 Requires:       python
 Requires:       python-requests
 Requires:       python-tqdm
+Requires:       python-urwid
 Requires:       python-clipman
 Requires:       python-ffmpeg-python
 Requires:       ffmpeg
