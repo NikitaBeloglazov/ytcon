@@ -36,13 +36,13 @@ BuildRequires:  %{python_module pip}
 BuildRequires:  fdupes
 BuildRequires:  git
 
-Requires:       python3
-Requires:       python3-requests
-Requires:       python3-tqdm
-Requires:       python3-clipman
-Requires:       python3-ffmpeg-python
+Requires:       python
+Requires:       python-requests
+Requires:       python-tqdm
+Requires:       python-clipman
+Requires:       python-ffmpeg-python
 Requires:       ffmpeg
-Requires:       python3-yt-dlp
+Requires:       python-yt-dlp
 
 Provides:       ytcon
 BuildArch:      noarch
