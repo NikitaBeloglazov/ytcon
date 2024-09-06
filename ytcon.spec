@@ -44,6 +44,7 @@ Requires:       python3-ffmpeg-python
 Requires:       ffmpeg
 Requires:       python3-yt-dlp
 
+Provides:       ytcon
 BuildArch:      noarch
 %python_subpackages
 
