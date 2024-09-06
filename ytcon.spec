@@ -56,7 +56,7 @@ echo "DEBUG - PREP RUNNING"
 
 %build
 echo "DEBUG - BUILD RUNNING"
-export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}-rpm"
+export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}"
 %pyproject_wheel
 
 %install
