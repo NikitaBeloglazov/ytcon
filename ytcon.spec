@@ -19,7 +19,7 @@
 #  * Please submit bugfixes or comments via https://github.com/NikitaBeloglazov/ytcon/issues
 #  * - = - = - =
 
-%{?!python_module:%define python_module() python-%{**} python3-%{**}}
+%define pythons python3
 Name:           ytcon
 # Version sets dynamically by _service
 Version:        0.0.0
@@ -35,18 +35,16 @@ BuildRequires:  %{python_module pip}
 BuildRequires:  fdupes
 BuildRequires:  git
 
-Requires:       python
-Requires:       python-requests
-Requires:       python-tqdm
-Requires:       python-urwid
-Requires:       python-clipman
-Requires:       python-ffmpeg-python
+Requires:       python3
+Requires:       python3-requests
+Requires:       python3-tqdm
+Requires:       python3-urwid
+Requires:       python3-clipman
+Requires:       python3-ffmpeg-python
 Requires:       ffmpeg
-Requires:       python-yt-dlp
+Requires:       python3-yt-dlp
 
-Provides:       ytcon
 BuildArch:      noarch
-%python_subpackages
 
 %description
 yt-dlp pseudo-graphical console interface (TUI). More at https://github.com/NikitaBeloglazov/ytcon
@@ -63,12 +61,10 @@ export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}"
 %install
 echo "DEBUG - INSTALL RUNNING"
 %pyproject_install
-%python_clone -a %{buildroot}%{_bindir}/ytcon
-%python_expand %fdupes %{buildroot}%{$python_sitelib}
 
 %files %{python_files}
 %{python_sitelib}/ytcon
 %{python_sitelib}/ytcon-%{version}.dist-info
-%python_alternative %{_bindir}/ytcon
+%{_bindir}/ytcon
 
 %changelog
