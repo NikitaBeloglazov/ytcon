@@ -64,11 +64,12 @@ export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}"
 %install
 echo "DEBUG - INSTALL RUNNING"
 %pyproject_install
+rm -rv %{python_sitelib}/ytcon/__pycache__
+rm -rv %{python_sitelib}"/ytcon/*/__pycache__"
 
 %files
 %{_bindir}/ytcon
 %{python_sitelib}/ytcon
 %{python_sitelib}/ytcon-%{version}.dist-info
-%pycache_only %{python_sitelib}/__pycache__
 
 %changelog
