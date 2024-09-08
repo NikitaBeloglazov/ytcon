@@ -61,7 +61,7 @@ export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}"
 %install
 echo "DEBUG - INSTALL RUNNING"
 %pyproject_install
-ls %{python_sitelib}/ytcon-%{version}.dist-info
+ls
 
 %files
 %{python_sitelib}/ytcon
