@@ -52,6 +52,8 @@ yt-dlp pseudo-graphical console interface (TUI). More at https://github.com/Niki
 %prep
 echo "DEBUG - PREP RUNNING"
 %autosetup -p1 -n ytcon-%{version}
+# This is needed for the auto-update system, so that ytcon will know that this is an RPM and will refuse to auto-update.
+bash -c 'echo "__source__ = source = \'RPM\'" > src/ytcon/__source__.py'
 
 %build
 echo "DEBUG - BUILD RUNNING"
@@ -61,7 +63,6 @@ export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}"
 %install
 echo "DEBUG - INSTALL RUNNING"
 %pyproject_install
-ls
 
 %files
 %{python_sitelib}/ytcon
