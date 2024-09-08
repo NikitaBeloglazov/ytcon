@@ -64,8 +64,7 @@ export SETUPTOOLS_SCM_PRETEND_VERSION="v%{version}"
 %install
 echo "DEBUG - INSTALL RUNNING"
 %pyproject_install
-rm -rv %{python_sitelib}/ytcon/__pycache__
-rm -rv %{python_sitelib}"/ytcon/*/__pycache__"
+ls build
 
 %files
 %{_bindir}/ytcon
