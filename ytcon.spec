@@ -33,7 +33,6 @@ BuildRequires:  %{python_module setuptools}
 BuildRequires:  %{python_module setuptools_scm}
 BuildRequires:  %{python_module pip}
 BuildRequires:  fdupes
-BuildRequires:  git
 
 Requires:       python3
 Requires:       python3-requests
@@ -69,5 +68,7 @@ echo "DEBUG - INSTALL RUNNING"
 %{_bindir}/ytcon
 %{python_sitelib}/ytcon
 %{python_sitelib}/ytcon-%{version}.dist-info
+%license LICENSE
+%doc README.md
 
 %changelog
