@@ -39,19 +39,30 @@ def hook(d):
 			indexx = d["info_dict"]["original_url"]
 
 		# - = - resolution detector - = - = - = - = - = - = - = - = - = -
-		if variables.queue_list[indexx]["resolution"].find("???") > -1 and (variables.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and variables.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
-			# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
-			logger.debug("DOWNBYTES: %s", str(d["downloaded_bytes"]))
-			temp1 = get_resolution_ffprobe(d["tmpfilename"])
-			temp2 = str(variables.queue_list[indexx].get("resolution_detection_tries", 0)+1)
+		if variables.queue_list[indexx]["resolution"].find("???") > -1: # if resolution is unknown
+			if (variables.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and variables.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
+				# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
+				logger.debug("DOWNBYTES: %s", str(d["downloaded_bytes"]))
+				temp1 = get_resolution_ffprobe(d["tmpfilename"])
+				temp2 = str(variables.queue_list[indexx].get("resolution_detection_tries", 0)+1)
 
-			if temp1 is not None:
-				variables.queue_list[indexx]["resolution"] = temp1
-				journal.info(f"[YTCON] Detected resolution: {temp1} (on try {temp2})" )
-			else:
-				journal.warning(f'[YTCON] Resolution detection failed: ffprobe gave an error (try {temp2})')
-			variables.queue_list[indexx]["resolution_detection_tried_on_byte"] = int(d["downloaded_bytes"])
-			variables.queue_list[indexx]["resolution_detection_tries"] = variables.queue_list[indexx].get("resolution_detection_tries", 0) + 1
+				if temp1 is not None:
+					variables.queue_list[indexx]["resolution"] = temp1
+					journal.info(f"[YTCON] Detected resolution: {temp1} (on try {temp2})" )
+				else:
+					journal.warning(f'[YTCON] Resolution detection failed: ffprobe gave an error (try {temp2})')
+				variables.queue_list[indexx]["resolution_detection_tried_on_byte"] = int(d["downloaded_bytes"])
+				variables.queue_list[indexx]["resolution_detection_tries"] = variables.queue_list[indexx].get("resolution_detection_tries", 0) + 1
+			# - = - = - = -
+			# Detects resolution on finished file if is it undetected
+			if d["status"] == "finished":
+				temp1 = get_resolution_ffprobe(variables.queue_list[indexx]["file"])
+
+				if temp1 is not None:
+					variables.queue_list[indexx]["resolution"] = temp1
+					journal.info(f"[YTCON] Detected resolution: {temp1} (after full download)" )
+				else:
+					journal.warning('[YTCON] Resolution detection failed: ffprobe gave an error even after full download')
 		# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 		variables.queue_list[indexx]["file"] = d["info_dict"]['_filename']
