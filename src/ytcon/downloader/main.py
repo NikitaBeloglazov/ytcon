@@ -22,7 +22,7 @@ from downloader.map_variables import map_variables
 
 from render.progressbar_defs import progressbar_defs
 
-def downloader(url): # pylint: disable=too-many-return-statements
+def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-statements
 	"""
 	The main component of ytcon, this class sets the basic parameters for the video,
 	composes the title and starts downloading.
@@ -61,9 +61,12 @@ def downloader(url): # pylint: disable=too-many-return-statements
 			# - Playlists support - = - = - = - = - = - = - = - = - = - = -
 			if "entries" in infolist:
 				for i in infolist["entries"]:
+					if playlist_redirect is True:
+						journal.error("[YTCON] Playlist in playlist (recursion) detected! Aborting for security reasons.")
+						return None
 					if i is None: # yt-dlp returns videos with errors as None :||
 						continue
-					threading.Thread(target=downloader, args=(i["webpage_url"],), daemon=True).start()
+					threading.Thread(target=downloader, args=(i["webpage_url"], True,), daemon=True).start()
 				return None
 			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
@@ -136,7 +139,7 @@ def downloader(url): # pylint: disable=too-many-return-statements
 		# = - = -
 		if variables.queue_list[temp1_index]["status"] != "finished":
 			# IF DOWNLOAD THREAD EXITS WITHOUT ERROR (this usually occurs due to the "ignoreerrors" flag)
-			journal.debug("DOWNLOAD THREAD EXITED WITHOUT ERROR")
+			logger.debug("DOWNLOAD THREAD EXITED WITHOUT ERROR")
 			map_variables.mark_as_error(url)
 			return None
 		# = - = -
