@@ -31,9 +31,11 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 	"""
 	try:
 		if url in variables.queue_list:
-			if variables.queue_list[url]["status"] not in ("exists", "finished"):
+			if variables.queue_list[url]["status"] not in ("exists", "finished", "error"):
 				journal.error(f"[YTCON] Video link \"{progressbar_defs.name_shortener(url, 40)}\" is already downloading!")
 				return None
+			if variables.queue_list[url]["status"] in ("error"):
+				journal.error("[YTCON] Resuming download after error is not recommended, except cases when network error happened!")
 
 		with yt_dlp.YoutubeDL(variables.ydl_opts) as ydl:
 			# needed for some sites. you may need to replace it with the correct one
