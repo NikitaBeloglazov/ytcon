@@ -32,7 +32,7 @@ def hook(d):
 		d["info_dict"]["fragments"] = []
 		# - = - = - = - = - = - = - = - = - = - = -
 
-		logger.debug(pprint.pformat(d))
+		#logger.debug(pprint.pformat(d))
 		if "multiple_formats" in variables.queue_list[d["info_dict"]["original_url"]]:
 			indexx = d["info_dict"]["original_url"] + ":" + d["info_dict"]["format_id"]
 		else:

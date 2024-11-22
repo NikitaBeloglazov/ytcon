@@ -90,7 +90,7 @@ class UpdateAndVersionsClass:
 		""" Get newest version number via PyPI public API """
 		try:
 			temp1 = requests.get("https://pypi.org/pypi/ytcon/json", timeout=20).json()
-			logger.debug(pprint.pformat(temp1))
+			#logger.debug(pprint.pformat(temp1))
 			self.pypi_version = temp1["info"]["version"]
 			#self.pypi_version = "0.0.14"
 		except:

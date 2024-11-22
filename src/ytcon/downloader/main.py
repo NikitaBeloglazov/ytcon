@@ -57,7 +57,7 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 				del infolist["thumbnails"]
 			if "heatmap" in infolist:
 				del infolist["heatmap"]
-			#logger.debug(pprint.pformat(infolist))
+			logger.debug(pprint.pformat(infolist))
 			# - = - = - = - = - = - = - = - = - = - = -
 
 			# - Playlists support - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
@@ -103,12 +103,12 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 
 			# - = - = - = Set parameters = -
 			multiple_formats = False
-			if infolist["extractor"] == "youtube" and "requested_formats" in infolist:
-				multiple_formats = True
+			if "requested_formats" in infolist: # and infolist["extractor"] == "youtube" (also happens on twitter)
+				multiple_formats = True # P.S. I DON'T KNOW can this be allowed by DEFAULT for any sites, if there are some bugs, please create an issue!!!!
 
 			temp1_index = map_variables.main(multiple_formats, infolist, filename)
 
-			if exists:
+			if exists: # TODO move to map_variables.py?
 				variables.queue_list[infolist["original_url"]]["status"] = "exists"
 				if multiple_formats:
 					for i in infolist["requested_formats"]:
