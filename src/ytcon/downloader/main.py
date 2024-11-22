@@ -55,20 +55,27 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 				del infolist["thumbnails"]
 			if "heatmap" in infolist:
 				del infolist["heatmap"]
-			logger.debug(pprint.pformat(infolist))
+			#logger.debug(pprint.pformat(infolist))
 			# - = - = - = - = - = - = - = - = - = - = -
 
-			# - Playlists support - = - = - = - = - = - = - = - = - = - = -
+			# - Playlists support - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			if "entries" in infolist:
+				if playlist_redirect is True:
+					journal.error("[YTCON] Playlist in playlist (recursion) detected! Aborting for security reasons.")
+					return None
+
+				playlist_entries = [] # collecting playlist entries urls
 				for i in infolist["entries"]:
-					if playlist_redirect is True:
-						journal.error("[YTCON] Playlist in playlist (recursion) detected! Aborting for security reasons.")
-						return None
 					if i is None: # yt-dlp returns videos with errors as None :||
 						continue
-					threading.Thread(target=downloader, args=(i["webpage_url"], True,), daemon=True).start()
+					playlist_entries.append(i["webpage_url"]) # collecting playlist entries urls
+
+				playlist_entries = list(dict.fromkeys(playlist_entries)) # REMOVE DUPLICATED URLS
+
+				for i in playlist_entries:
+					threading.Thread(target=downloader, args=(i, True,), daemon=True).start()
 				return None
-			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+			# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 			# - Name fiter + assemble - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 			temp1 = re.sub(r"[^A-Za-z0-9А-Яа-я \-_.,]", "", infolist["title"].replace("&", "and")) # get title, remove all characters except allowed # >"|" -> "｜" yt-dlp, wtf?
