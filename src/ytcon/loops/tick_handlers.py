@@ -19,7 +19,6 @@ from render.colors import colors
 from widgets.main_widgets import widgets
 from settings.settings_processor import settings
 
-from app_update import app_updates
 from misc.clipboard import clipboard_checker
 
 def tick_handler(loop, _):
@@ -61,11 +60,6 @@ def tick_handler(loop, _):
 			loop.stop()
 		except:
 			journal.debug(traceback.format_exc())
-
-		try:
-			app_updates.update_thread.join()
-		except KeyboardInterrupt:
-			print(" - Okay, canceled")
 		sys.exit()
 	# - = - = - = - = - = - = - = - = -
 
@@ -76,18 +70,14 @@ def tick_handler(loop, _):
 	loop.set_alarm_in(0.3, tick_handler)
 
 
-
-def tick_handler_big_delay(loop, _):
-	""" Same as tick_handler, but with bigger delay. Made for optimization purposes. """
-
-	# - = - = - = - = - = - = - = - = -
-	# Draw version in settings
-	app_updates.update_settings_version_text()
-
-	# New-update-avalible notificator
-	if app_updates.auto_update_avalible is True:
-		widgets.auto_update_avalible_text_indicator.set_text((colors.cyan, f"- - -\nAuto update {app_updates.version} -> {app_updates.pypi_version} is avalible! Write \"update\" to easy update right now!"))
-	# - = - = - = - = - = - = - = - = -
-
-	# - =
-	loop.set_alarm_in(4, tick_handler_big_delay)
+# def tick_handler_big_delay(loop, _):
+# 	# Same as tick_handler, but with bigger delay. Made for optimization purposes.
+#
+# 	# - = - = - = - = - = - = - = - = -
+# 	# Auto-update has been here
+# 	# - = - = - = - = - = - = - = - = -
+#
+# 	# - =
+# 	loop.set_alarm_in(4, tick_handler_big_delay)
+#
+# loop_container.loop.set_alarm_in(1, tick_handlers.tick_handler_big_delay)

@@ -172,7 +172,6 @@ loop_container.loop.set_alarm_in(0, log_printer.log_printer)
 loop_container.loop.set_alarm_in(0, error_printer.error_printer)
 
 loop_container.loop.set_alarm_in(0, tick_handlers.tick_handler)
-loop_container.loop.set_alarm_in(1, tick_handlers.tick_handler_big_delay)
 loop_container.loop.set_alarm_in(1, sett.tick_handler_settings)
 
 # for testing purposes?

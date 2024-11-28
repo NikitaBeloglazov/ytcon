@@ -15,9 +15,6 @@ from settings.settings_processor import settings
 from settings_menu.variables import settings_menu_variables
 from settings_menu.sections import settings_sections
 
-from app_update import app_updates
-
-
 def update_checkboxes():
 	"""
 	!LEGACY!: update the checkboxes so that their status is not a lie
@@ -118,7 +115,6 @@ class SettingsRenderClass:
 			urwid.Padding(urwid.Filler(self.current_section_initialized.get(), valign='top'), left=2, right=2, align='center'),
 
 			footer = urwid.Pile([
-				app_updates.settings_version_text,
 				urwid.LineBox(
 					self.footer_widget,
 					tlcorner='╭', trcorner='╮', # Rounding corners

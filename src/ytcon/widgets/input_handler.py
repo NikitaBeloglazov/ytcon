@@ -17,8 +17,6 @@ from control.control import ControlClass
 from control.exit import exit_with_exception, traceback
 from settings.settings_processor import settings
 
-from app_update import app_updates
-
 from downloader.main import downloader
 
 class InputHandlerClass:
@@ -190,14 +188,6 @@ class InputHandlerClass:
 			elif text == "load":
 				settings.load()
 				#journal.info(settings.settings)
-
-			elif text == "update":
-				#app_updates.update_run_and_restart()
-				app_updates.update_thread = threading.Thread(target=app_updates.update_run_and_restart, daemon=True)
-				app_updates.update_thread.start()
-
-			elif text == "fake update":
-				app_updates.pypi_version = "0.0.99"
 
 			else:
 				threading.Thread(target=downloader, args=(original_text,), daemon=True).start()
