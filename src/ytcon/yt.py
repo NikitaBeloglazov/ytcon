@@ -135,7 +135,8 @@ variables.ydl_opts = {
 # Angry mode
 # 'retries': float("inf"),
 # 'fragment_retries': 999\
-#
+# --no-progress
+# https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection-examples
 # Desktop notifications
 
 loop_container.loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
