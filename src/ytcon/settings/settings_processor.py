@@ -22,6 +22,8 @@ class SettingsClass:
 			"no_check_certificate": False,
 			"ignoreerrors": False,
 			"progressbar_appearance": "detailed",
+			"check_updates_on_boot": True,
+			"show_updates_bottom_sign": True,
 			}
 		self.configpath = configpath
 

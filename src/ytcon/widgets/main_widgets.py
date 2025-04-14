@@ -26,7 +26,7 @@ class Widgets:
 		logger.debug(self.main_footer_buttons.contents)
 		self.main_footer_buttons_with_attrmap = urwid.AttrMap(self.main_footer_buttons, "buttons_footer")
 
-		self.auto_update_avalible_text_indicator = urwid.Text("- - -")
+		self.bottom_separator = urwid.Text("- - -")
 
 		self.main_footer = urwid.Pile(
 				[
@@ -36,7 +36,7 @@ class Widgets:
 				urwid.Text("- - -"),
 				self.input_widget,
 				urwid.Divider(),
-				self.auto_update_avalible_text_indicator,
+				self.bottom_separator,
 				self.main_footer_buttons_with_attrmap,
 				])
 		self.main_widget = urwid.Frame(

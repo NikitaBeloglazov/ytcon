@@ -9,30 +9,44 @@ import importlib
 import traceback
 import threading
 import subprocess
-
+import requests
 from shutil import which # for binary detection
 
-import urwid
-import requests
-
-#from log import journal, logger
+from log import journal, logger
 #from control.variables import variables
 #from render.colors import colors
 
 class UpdateAndVersionsClass:
 	""" The class stores everything related to determining the version number and auto-updates """
 	def __init__(self):
+		""" Just adds placeholders """
+		self.version = "0.0.0"
+		self.version_tuple = (0, 0, 0)
+		self.detected_by = None
+
+		self.install_source = None
+		self.pypi_version = None
+
+		self.auto_update_avalible = False
+		self.auto_update_command = None
+		self.auto_update_comment = "Refresh required"
+
+		self.new_version_available = False
+
+		self.initialize_called = False
+
+	def initialize(self):
+		""" Pushes useful information in variables """
 		self.version, self.version_tuple, self.detected_by = self.get_version()
 		self.install_source = self.get_source()
 		self.pypi_version = self.get_pypi_version()
 
-		self.auto_update_avalible = False
-		self.auto_update_command = None
+		self.auto_update_avalible, self.auto_update_command, self.auto_update_comment = self.auto_update_determine()
 
-		# Widget from settings that shows versions
+		self.new_version_available = self.check_new_version_available()
 
-		# Variables that cannot have initial values but need to be declared
-		self.update_thread = None
+		self.initialize_called = True
+		logger.debug("app_update init finished")
 
 	def get_version(self):
 		"""
@@ -90,9 +104,9 @@ class UpdateAndVersionsClass:
 				if len(list(results)) > 0: # search results and if results more than one
 					return "rpm"
 			except (ImportError, ModuleNotFoundError):
-				print("rpm module not found on this system.")
+				logger.debug("rpm module not found on this system.")
 			except:
-				print(traceback.format_exc())
+				logger.debug(traceback.format_exc())
 
 		# - = pipx - = - = - = - = -
 		if os.path.abspath(__file__).find("/pipx/venvs") > 0:
@@ -119,6 +133,9 @@ class UpdateAndVersionsClass:
 		# - = - = - = - = - = - = -
 		return None
 
+	# def get_pypi_version_new_thread(self):
+	# 	""" Just starts a new thread self.get_pypi_version. Made for not to slow down GUI or utility launch """
+	# 	threading.Thread(target=self.get_pypi_version, daemon=True).start()
 
 	def get_pypi_version(self):
 		""" Get newest version number via PyPI public API """
@@ -127,39 +144,55 @@ class UpdateAndVersionsClass:
 			#logger.debug(pprint.pformat(json_response))
 			return json_response["info"]["version"]
 		except:
-			print(traceback.format_exc())
+			logger.debug(traceback.format_exc())
 		return None
 
 	def auto_update_determine(self):
 		"""
 		A function that stores commands for updating
+		outputs: avalible(bool), command(string/None), comment(string/None)
 		"""
 		if self.install_source == "pipx":
-			return True, "pipx upgrade ytcon"
+			return True, "pipx upgrade ytcon", None
 
 		if self.install_source == "git":
 			ytcon_files_path = os.path.dirname(os.path.realpath(__file__))
-			return True, f"git -C {ytcon_files_path} pull"
+			return True, f"git -C {ytcon_files_path} pull", None
 
 		if self.install_source == "pip_in_venv":
 			python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 			if which('pip'+python_version) is not None:
-				return True, f"pip{python_version} install -U ytcon --require-virtualenv"
+				return True, f"pip{python_version} install -U ytcon --require-virtualenv", None
 			elif which('pip3') is not None:
-				return True, "pip3 install -U ytcon --require-virtualenv"
+				return True, "pip3 install -U ytcon --require-virtualenv", None
 			elif which('pip') is not None:
-				return True, "pip install -U ytcon --require-virtualenv"
+				return True, "pip install -U ytcon --require-virtualenv", None
 			else:
-				return False, None
+				return False, None, "pip binary not found"
 
 		if self.install_source == "pip":
-			return False, None
+			return False, None, "pip without env is unsupported. Use pipx or pip in venv"
 
-		return False, None
+		return False, None, "Install source is unknown"
 
+	def check_new_version_available(self):
+		"""
+			A function that checks whether an update is needed at all
+			outputs: update_required(bool), avalible(bool), command(string/None) # TODO
+		"""
+		if self.pypi_version != "0.0.0" and self.pypi_version is not None and self.version != "0.0.0":
+			if len(self.pypi_version.split(".")) == 3:
+				pypi_version_split = self.pypi_version.split(".")
+				if pypi_version_split[0].isnumeric() and pypi_version_split[1].isnumeric() and pypi_version_split[2].isnumeric():
+					pypi_version_split[0] = int(pypi_version_split[0])
+					pypi_version_split[1] = int(pypi_version_split[1])
+					pypi_version_split[2] = int(pypi_version_split[2]) # TODO: lolololol real shit. there is need convert ("0", "0", "0") to (0, 0, 0)
 
-	# def get_pypi_version_new_thread(self):
-	# 	""" Just starts a new thread self.get_pypi_version. Made for not to slow down GUI or utility launch """
-	# 	threading.Thread(target=self.get_pypi_version, daemon=True).start()
+					if tuple(pypi_version_split) > self.version_tuple:
+						return True
+			return False
+		else:
+			return False
+
 
 app_updates = UpdateAndVersionsClass()

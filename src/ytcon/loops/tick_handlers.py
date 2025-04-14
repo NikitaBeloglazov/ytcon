@@ -10,7 +10,7 @@ import traceback
 
 import urwid
 
-from log import journal
+from log import journal, logger
 
 from control.variables import variables
 
@@ -55,11 +55,12 @@ def tick_handler(loop, _):
 		print(variables.exception)
 		sys.exit(1)
 
-	if variables.auto_update_safe_gui_stop is True:
+	if variables.auto_update_safe_gui_stop is True: # TODO: looks like is it not working anymore
+		logger.debug("auto_update_safe_gui_stop spotted")
 		try:
 			loop.stop()
 		except:
-			journal.debug(traceback.format_exc())
+			logger.debug(traceback.format_exc())
 		sys.exit()
 	# - = - = - = - = - = - = - = - = -
 

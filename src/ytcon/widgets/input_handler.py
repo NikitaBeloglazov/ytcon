@@ -182,6 +182,12 @@ class InputHandlerClass:
 			elif text == "s ls":
 				journal.info(settings.settings)
 
+			elif text == "fake update":
+				from app_update.variables import app_updates
+				app_updates.pypi_version = "9.9.9"
+				app_updates.new_version_available = app_updates.check_new_version_available()
+				journal.info("PyPI version set to 9.9.9. I wish you good testing:)")
+
 			elif text == "save":
 				settings.save()
 				#journal.info(settings.settings)

@@ -20,6 +20,7 @@
 
 import os
 import sys
+import threading
 import urwid
 
 # - = - = - = - = - = - = - = - = - =
@@ -104,10 +105,7 @@ from widgets.main_widgets import widgets
 
 from settings.settings_processor import settings
 
-#from settings_menu.variables import settings_menu_variables
-from settings_menu.render import sett #, settings_sections
-
-#from app_update import app_updates
+from app_update.variables import app_updates
 
 #from misc.ffmpeg import get_resolution_ffprobe
 from misc.clipboard import clipboard_init#, clipboard_checker
@@ -160,6 +158,8 @@ settings.load()
 
 if settings.get_setting("clipboard_autopaste") is True:
 	clipboard_init()
+if settings.get_setting("check_updates_on_boot") is True:
+	threading.Thread(target=app_updates.initialize(), daemon=True).start()
 # - = - = - = - = - = - = - = - = - = - = - = -
 
 from loops import render_tasks
@@ -168,12 +168,19 @@ from loops import error_printer
 
 from loops import tick_handlers
 
+from settings_menu.render import sett
+
+from app_update import bottom_widget_updater
+
 loop_container.loop.set_alarm_in(0, render_tasks.render_tasks)
 loop_container.loop.set_alarm_in(0, log_printer.log_printer)
 loop_container.loop.set_alarm_in(0, error_printer.error_printer)
 
 loop_container.loop.set_alarm_in(0, tick_handlers.tick_handler)
+
 loop_container.loop.set_alarm_in(1, sett.tick_handler_settings)
+
+loop_container.loop.set_alarm_in(1, bottom_widget_updater.update)
 
 # for testing purposes?
 # threading.Thread(target=downloader, args=("https://www.youtube.com/watch?v=Kek5Inz-wjQ",), daemon=True).start()
