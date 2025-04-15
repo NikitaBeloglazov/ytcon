@@ -59,7 +59,8 @@ class UpdateAndVersionsClass:
 			if version != "0.0.0":
 				return version, version_tuple, "direct_import"
 		except:
-			pass
+			logger.debug("version detect with direct_import failed:")
+			logger.debug(traceback.format_exc())
 		# - = - = - = - = - = - = -
 
 		# - = git - = - = - = - = - = -
@@ -67,7 +68,7 @@ class UpdateAndVersionsClass:
 			try:
 				# Use GIT to check tags, makes sense if git clone was used to install
 				ytcon_files_path = os.path.dirname(os.path.realpath(__file__)) # get currently running script path
-				tag = subprocess.check_output(('git', '-C', ytcon_files_path, 'describe', '--tags'), encoding="UTF-8")
+				tag = subprocess.check_output(('git', '-C', ytcon_files_path, 'describe', '--tags'), stderr=subprocess.PIPE, encoding="UTF-8")
 
 				# Formating it a little
 				# v0.0.11-3-g0ada3b4 -> 0.0.11
@@ -77,10 +78,16 @@ class UpdateAndVersionsClass:
 
 				return tag, tuple(map(int, tag.split('.'))), "git"
 				# - - - - - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ convert to typle like (0, 5, 3)
+			except subprocess.CalledProcessError as e:
+				logger.debug("version detect with git failed:")
+				logger.debug(traceback.format_exc())
+				logger.debug("git stderr:")
+				logger.debug(e.stderr)
 			except:
-				pass
+				logger.debug("version detect with git failed:")
+				logger.debug(traceback.format_exc())
 		# - = - = - = - = - = - = -
-		return None, None, None # if none is detected
+		return "0.0.0", (0, 0, 0), None # if none is detected
 
 
 	def get_source(self):
