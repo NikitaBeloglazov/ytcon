@@ -178,7 +178,9 @@ class UpdateAndVersionsClass:
 				return False, None, "pip binary not found"
 
 		if self.install_source == "pip":
-			return False, None, "pip without env is unsupported. Use pipx or pip in venv"
+			return False, None, "pip without environment (env) is unsupported. Use pipx (recommended) or pip in venv"
+		if self.install_source == "rpm":
+			return False, None, "Restricted. To update the RPM version of YTCON, use the system package manager (zypper, dnf)"
 
 		return False, None, "Install source is unknown"
 

@@ -129,7 +129,7 @@ class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # 
 		elif app_updates.version == "0.0.0" or app_updates.install_source is None:
 			self.update_description.set_text("Temporary unavalible due to: Running version number is invalid or install source is not defined")
 		else:
-			self.update_description.set_text("Temporary unavalible due to: Unknown reasons. Look at information above")
+			self.update_description.set_text("Temporary unavalible due to: Unknown reasons. Look at information above for some useful info")
 
 class Update_Settings_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 	""" Fetching settings section - related to yt-dlp downloding """
