@@ -90,7 +90,7 @@ class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # 
 		else:
 			self.detected_by_text.set_text("Detected by algorithm: " + str(app_updates.detected_by))
 
-		if app_updates.version == "0.0.0" or app_updates.version is None:
+		if app_updates.pypi_version == "0.0.0" or app_updates.pypi_version is None:
 			self.pypi_version_text.set_text("Newest version on PyPI: Unknown")
 		else:
 			self.pypi_version_text.set_text("Newest version on PyPI: " + str(app_updates.pypi_version))
