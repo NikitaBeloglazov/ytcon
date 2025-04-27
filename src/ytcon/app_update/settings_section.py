@@ -1,14 +1,7 @@
-
-# TODO: Please consider rewrite to dynamic plug-ins system
+""" Two pages in the settings, needed to obtain information and manage self-updates """
 import urwid
 
-from control.variables import variables
 from render.colors import colors
-
-from render.render import render
-from render.static_methods import render_static
-
-from control.control import ControlClass
 
 from settings.settings_processor import settings
 
@@ -16,7 +9,10 @@ from app_update.variables import app_updates
 from app_update.updater import update_run_and_restart
 
 class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
-	""" Settings section related to auto-update feature """
+	"""
+	Button section related to self-update feature
+	P.S. Previously it was called auto-update, but now it has become self-update, because there was no automatic update in fact)
+	"""
 	name = "Update Status"
 	def get(self):
 		""" Get content of section """
@@ -36,7 +32,7 @@ class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # 
 		self.refresh_description = urwid.Text("It takes some time to check versions. Internet connection required for PyPI")
 		self.refresh_button = urwid.Button((colors.light_blue, "Refresh now"), on_press=self.refresh_button_pressed)
 
-		self.update_title = urwid.Text( (colors.cyan, "- Update") )
+		self.update_title = urwid.Text( (colors.cyan, "- Self-update") )
 		self.update_description = urwid.Text("Temporary unavalible due to: Refresh required")
 		self.update_button = urwid.Button((colors.light_red, "Unavalible"))
 		# - = - = - = - =
@@ -73,8 +69,8 @@ class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # 
 
 		return settings_pile
 
-	def refresh_button_pressed(self, button):
-		#render_static.flash_button_text(button, colors.green)
+	def refresh_button_pressed(self, _):
+		""" On press, checks for updates including on pypi and updates the page """
 		app_updates.initialize()
 		self.update()
 
@@ -101,14 +97,14 @@ class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # 
 			self.installation_source_text.set_text("Installation source: " + str(app_updates.install_source))
 
 		if app_updates.auto_update_avalible is True:
-			self.auto_update_avalible_text.set_text( (colors.green, "Auto-update availability: " + str(app_updates.auto_update_avalible)) )
+			self.auto_update_avalible_text.set_text( (colors.green, "Self-update availability: " + str(app_updates.auto_update_avalible)) )
 		else:
-			self.auto_update_avalible_text.set_text( (colors.light_red, "Auto-update availability: " + str(app_updates.auto_update_avalible)) )
+			self.auto_update_avalible_text.set_text( (colors.light_red, "Self-update availability: " + str(app_updates.auto_update_avalible)) )
 
 		if app_updates.auto_update_avalible is not True or app_updates.auto_update_command is None:
-			self.auto_update_command_text.set_text("Update command: -")
+			self.auto_update_command_text.set_text("Self-update command: -")
 		else:
-			self.auto_update_command_text.set_text("Update command: " + str(app_updates.auto_update_command))
+			self.auto_update_command_text.set_text("Self-update command: " + str(app_updates.auto_update_command))
 
 		if app_updates.new_version_available is True:
 			self.new_version_available_text.set_text( (colors.green, "New version available: " + str(app_updates.new_version_available)) )
@@ -132,7 +128,7 @@ class Update_Status_SECTION: # pylint: disable=attribute-defined-outside-init # 
 			self.update_description.set_text("Temporary unavalible due to: Unknown reasons. Look at information above for some useful info")
 
 class Update_Settings_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
-	""" Fetching settings section - related to yt-dlp downloding """
+	""" Self-update behavior settings """
 	name = "Update Settings"
 	def get(self):
 		""" Get content of section """

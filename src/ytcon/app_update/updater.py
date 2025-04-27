@@ -1,3 +1,4 @@
+""" A piece of code that runs a command to self-update ytcon. After completion, restarts app """
 import time
 import os
 import sys
@@ -6,7 +7,7 @@ from app_update.variables import app_updates
 from render.loop import loop_container
 
 def update_run_and_restart(_=None):
-	""" Starts auto-update """
+	""" Starts self-update """
 	if app_updates.auto_update_command is None:
 		return None
 
@@ -41,4 +42,3 @@ def update_run_and_restart(_=None):
 		print("\n\n[!!] Update was interrupted by user")
 		sys.exit(1)
 	return None
-

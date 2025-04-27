@@ -1,23 +1,21 @@
-""" DEPRECATED: WILL BE DELETED AND REWORKED IN THE FUTURE """
-# TODO: delete auto-update, rework detection func
-
+""" The module that is responsible for updates, determining versions, sources, and storing variables about them """
 import os
 import sys
-import time
-import pprint
-import importlib
 import traceback
-import threading
 import subprocess
-import requests
 from shutil import which # for binary detection
 
-from log import journal, logger
+import requests
+
+from log import logger
 #from control.variables import variables
 #from render.colors import colors
 
 class UpdateAndVersionsClass:
-	""" The class stores everything related to determining the version number and auto-updates """
+	"""
+	The class stores everything related to determining the version number and self-update feature
+	P.S. Previously it was called auto-update, but now it has become self-update, because there was no automatic update in fact)
+	"""
 	def __init__(self):
 		""" Just adds placeholders """
 		self.version = "0.0.0"
@@ -25,7 +23,9 @@ class UpdateAndVersionsClass:
 		self.detected_by = None
 
 		self.install_source = None
+
 		self.pypi_version = None
+		self.pypi_version_split = None
 
 		self.auto_update_avalible = False
 		self.auto_update_command = None
@@ -36,10 +36,10 @@ class UpdateAndVersionsClass:
 		self.initialize_called = False
 
 	def initialize(self):
-		""" Pushes useful information in variables """
+		""" Checks for updates by calling various functions. Pushes useful information in variables """
 		self.version, self.version_tuple, self.detected_by = self.get_version()
 		self.install_source = self.get_source()
-		self.pypi_version = self.get_pypi_version()
+		self.pypi_version, self.pypi_version_split = self.get_pypi_version()
 
 		self.auto_update_avalible, self.auto_update_command, self.auto_update_comment = self.auto_update_determine()
 
@@ -55,6 +55,12 @@ class UpdateAndVersionsClass:
 		"""
 		# - = - = - = - = - = - = -
 		try:
+			# - = WARINING = -: If you install ytcon using `pip install git+https://github.com/NikitaBeloglazov/ytcon`
+			# In version and version_tuple there will be sudden garbage
+			# Like this: 0.6.0.dev8+g914b4b0 AND (0, 6, 0, "dev8", "g914b4b0")
+			# This is absolute crap and it needs to be fixed somehow in the scm config.
+			# I didn't notice any bugs, the comparison somehow continues to work fine
+			# p.s. also notice that `(0, 6, 0, "dev8", "g914b4b0") > (0, 6, 0)` is true
 			from __version__ import version, version_tuple # pylint: disable=import-outside-toplevel
 			if version != "0.0.0":
 				return version, version_tuple, "direct_import"
@@ -149,10 +155,18 @@ class UpdateAndVersionsClass:
 		try:
 			json_response = requests.get("https://pypi.org/pypi/ytcon/json", timeout=20).json()
 			#logger.debug(pprint.pformat(json_response))
-			return json_response["info"]["version"]
+			version = json_response["info"]["version"]
+
+			version_split = version.split(".")
+			if len(version_split) == 3 and all(map(str.isdigit, version_split)): # Check all fields in typle are digit
+				version_split = tuple(map(int, version_split)) # Convert ("0", "0", "0") to (0, 0, 0)
+			else:
+				return None, None # Something's wrong
+
+			return version, version_split
 		except:
 			logger.debug(traceback.format_exc())
-		return None
+		return None, None
 
 	def auto_update_determine(self):
 		"""
@@ -170,12 +184,11 @@ class UpdateAndVersionsClass:
 			python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 			if which('pip'+python_version) is not None:
 				return True, f"pip{python_version} install -U ytcon --require-virtualenv", None
-			elif which('pip3') is not None:
+			if which('pip3') is not None:
 				return True, "pip3 install -U ytcon --require-virtualenv", None
-			elif which('pip') is not None:
+			if which('pip') is not None:
 				return True, "pip install -U ytcon --require-virtualenv", None
-			else:
-				return False, None, "pip binary not found"
+			return False, None, "pip binary not found"
 
 		if self.install_source == "pip":
 			return False, None, "pip without environment (env) is unsupported. Use pipx (recommended) or pip in venv"
@@ -185,23 +198,10 @@ class UpdateAndVersionsClass:
 		return False, None, "Install source is unknown"
 
 	def check_new_version_available(self):
-		"""
-			A function that checks whether an update is needed at all
-			outputs: update_required(bool), avalible(bool), command(string/None) # TODO
-		"""
+		""" Checks if the pypi version is higher than the installed one. """
 		if self.pypi_version != "0.0.0" and self.pypi_version is not None and self.version != "0.0.0":
-			if len(self.pypi_version.split(".")) == 3:
-				pypi_version_split = self.pypi_version.split(".")
-				if pypi_version_split[0].isnumeric() and pypi_version_split[1].isnumeric() and pypi_version_split[2].isnumeric():
-					pypi_version_split[0] = int(pypi_version_split[0])
-					pypi_version_split[1] = int(pypi_version_split[1])
-					pypi_version_split[2] = int(pypi_version_split[2]) # TODO: lolololol real shit. there is need convert ("0", "0", "0") to (0, 0, 0)
-
-					if tuple(pypi_version_split) > self.version_tuple:
-						return True
-			return False
-		else:
-			return False
-
+			if self.pypi_version_split > self.version_tuple:
+				return True
+		return False
 
 app_updates = UpdateAndVersionsClass()

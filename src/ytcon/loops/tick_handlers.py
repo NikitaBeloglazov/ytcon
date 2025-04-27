@@ -10,11 +10,9 @@ import traceback
 
 import urwid
 
-from log import journal, logger
+from log import logger
 
 from control.variables import variables
-
-from render.colors import colors
 
 from widgets.main_widgets import widgets
 from settings.settings_processor import settings
