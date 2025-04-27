@@ -82,7 +82,13 @@ class UpdateAndVersionsClass:
 				if tag.find("-") > 1:
 					tag = tag[0:tag.find("-")]
 
-				return tag, tuple(map(int, tag.split('.'))), "git"
+				tag_split = tag.split(".")
+				if len(tag_split) == 3 and all(map(str.isdigit, tag_split)): # Check all fields in typle are digit
+					tag_split = tuple(map(int, tag_split)) # Convert ("0", "0", "0") to (0, 0, 0)
+				else:
+					return "0.0.0", (0, 0, 0), None # Something's wrong
+
+				return tag, tag_split, "git"
 				# - - - - - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ convert to typle like (0, 5, 3)
 			except subprocess.CalledProcessError as e:
 				logger.debug("version detect with git failed:")
