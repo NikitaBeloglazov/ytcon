@@ -89,7 +89,7 @@ class UpdateAndVersionsClass:
 					logger.debug("git detection failed: something wrong with tags:")
 					logger.debug(tag)
 					logger.debug(tag_split)
-					return "0.0.0", (0, 0, 0), None # Something's wrong
+					return "0.0.0", (0, 0, 0), None
 
 				return tag, tag_split, "git"
 				# - - - - - ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ convert to typle like (0, 5, 3)
