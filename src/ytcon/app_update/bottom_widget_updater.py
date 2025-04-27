@@ -17,4 +17,6 @@ def update(loop, _):
 	else:
 		if app_updates.new_version_available is True:
 			widgets.bottom_separator.set_text(["- - -\n", (colors.cyan, f"New update ({app_updates.version} > {app_updates.pypi_version}) is avalible! Go to \"Update Status\" for information")])
+		elif app_updates.new_version_available is False:
+			widgets.bottom_separator.set_text("- - -") # This can create some issues if some other code rewrites this widget
 		loop.set_alarm_in(10, update)
