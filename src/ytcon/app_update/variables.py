@@ -85,7 +85,10 @@ class UpdateAndVersionsClass:
 				tag_split = tag.split(".")
 				if len(tag_split) == 3 and all(map(str.isdigit, tag_split)): # Check all fields in typle are digit
 					tag_split = tuple(map(int, tag_split)) # Convert ("0", "0", "0") to (0, 0, 0)
-				else:
+				else: # if something is wrong
+					logger.debug("git detection failed: something wrong with tags:")
+					logger.debug(tag)
+					logger.debug(tag_split)
 					return "0.0.0", (0, 0, 0), None # Something's wrong
 
 				return tag, tag_split, "git"
@@ -166,8 +169,11 @@ class UpdateAndVersionsClass:
 			version_split = version.split(".")
 			if len(version_split) == 3 and all(map(str.isdigit, version_split)): # Check all fields in typle are digit
 				version_split = tuple(map(int, version_split)) # Convert ("0", "0", "0") to (0, 0, 0)
-			else:
-				return None, None # Something's wrong
+			else: # if something is wrong
+				logger.debug("pypi request: something wrong with versions:")
+				logger.debug(version)
+				logger.debug(version_split)
+				return None, None
 
 			return version, version_split
 		except:
