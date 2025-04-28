@@ -114,7 +114,7 @@ class SettingsSections:
 		name = "Fetching"
 		def get(self):
 			""" Get content of section """
-			self.settings_checkbox_sp = urwid.CheckBox([(colors.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode")
+			self.settings_checkbox_sp = urwid.CheckBox([(colors.light_yellow, "\"Special mode\""), "\nUse different user-agent and extract cookies from chromium"], on_state_change=settings.setting_switch, user_data="special_mode") # TODO: Split this into separate settings
 			self.settings_checkbox_nocert = urwid.CheckBox([(colors.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
 
 			# UPDATE CHECKBOXES

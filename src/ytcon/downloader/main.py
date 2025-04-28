@@ -32,6 +32,8 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 	try:
 		if url in variables.queue_list:
 			if variables.queue_list[url]["status"] not in ("exists", "finished", "error"):
+				# TODO: If you run two identical URLs at the same time before they are registered,
+				# the elements in variables.queue_list will be overwritten and after this a file error will appear.
 				journal.error(f"[YTCON] Video link \"{progressbar_defs.name_shortener(url, 40)}\" is already downloading!")
 				return None
 			if variables.queue_list[url]["status"] in ("error"):
