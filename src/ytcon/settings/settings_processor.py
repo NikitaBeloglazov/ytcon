@@ -22,6 +22,8 @@ class SettingsClass:
 			"no_check_certificate": False,
 			"ignoreerrors": False,
 			"progressbar_appearance": "detailed",
+			"check_updates_on_boot": True,
+			"show_updates_bottom_sign": True,
 			}
 		self.configpath = configpath
 
@@ -37,7 +39,7 @@ class SettingsClass:
 		try:
 			return self.settings[setting_name]
 		except KeyError as exc:
-			raise self.SettingNotFoundError from exc
+			raise self.SettingNotFoundError(f"Setting with name \"{setting_name}\" not found. Maybe someone forgot put it in defaults?") from exc
 
 	def write_setting(self, setting_name, setting_content):
 		""" Writes the settings to the memory. Made for the possible use of some "hooks" in the future """

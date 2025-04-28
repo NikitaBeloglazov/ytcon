@@ -17,8 +17,6 @@ from control.control import ControlClass
 from control.exit import exit_with_exception, traceback
 from settings.settings_processor import settings
 
-from app_update import app_updates
-
 from downloader.main import downloader
 
 class InputHandlerClass:
@@ -184,20 +182,20 @@ class InputHandlerClass:
 			elif text == "s ls":
 				journal.info(settings.settings)
 
+			elif text == "fake update":
+				# For debug purposes, lol
+				from app_update.variables import app_updates # pylint: disable=import-outside-toplevel
+				app_updates.pypi_version = "9.9.9"
+				app_updates.pypi_version_split = (9, 9, 9)
+				app_updates.new_version_available = app_updates.check_new_version_available()
+				journal.info("PyPI version set to 9.9.9. I wish you good testing:)")
+
 			elif text == "save":
 				settings.save()
 				#journal.info(settings.settings)
 			elif text == "load":
 				settings.load()
 				#journal.info(settings.settings)
-
-			elif text == "update":
-				#app_updates.update_run_and_restart()
-				app_updates.update_thread = threading.Thread(target=app_updates.update_run_and_restart, daemon=True)
-				app_updates.update_thread.start()
-
-			elif text == "fake update":
-				app_updates.pypi_version = "0.0.99"
 
 			else:
 				threading.Thread(target=downloader, args=(original_text,), daemon=True).start()

@@ -2,8 +2,7 @@
 	A hook that is called every time by yt-dlp when the state of the task changes (example percent changed),
 	and the hook writes the necessary information to the class in order to draw it later
 """
-import pprint
-
+#import pprint
 from log import journal, logger
 
 from control.variables import variables

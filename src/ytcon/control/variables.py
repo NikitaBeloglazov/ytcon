@@ -3,7 +3,7 @@ This module stores information about the download queue
 and some information that must be passed through several functions.
 """
 
-class VariablesStorage:
+class VariablesStorage: # TODO: maybe rework to static class? https://stackoverflow.com/a/10672749
 	"""
 	This class stores information about the download queue
 	and some information that must be passed through several functions.

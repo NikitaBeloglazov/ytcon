@@ -7,11 +7,26 @@ class ColorsBase:
 		# Init colors
 		self.red = urwid.AttrSpec('dark red', 'default')
 		self.light_red = urwid.AttrSpec('light red', 'default')
-		self.yellow = urwid.AttrSpec('brown', 'default')
-		self.light_yellow = urwid.AttrSpec('yellow', 'default')
+
+		self.dark_yellow = urwid.AttrSpec('brown', 'default') # fkng urwid why there is no dark yellow, only brown???
+		self.yellow = urwid.AttrSpec('yellow', 'default')
+		self.light_yellow = self.yellow
+
 		self.green = urwid.AttrSpec('dark green', 'default')
+		self.light_green = urwid.AttrSpec('light green', 'default')
+
 		self.cyan = urwid.AttrSpec('dark cyan', 'default')
-		# self.light_white = urwid.AttrSpec('bold', 'default') # unused
+		self.light_cyan = urwid.AttrSpec('light cyan', 'default')
+
+		self.blue = urwid.AttrSpec('dark blue', 'default')
+		self.light_blue = urwid.AttrSpec('light blue', 'default')
+
+		self.magenta = urwid.AttrSpec('dark magenta', 'default')
+		self.light_magenta = urwid.AttrSpec('light magenta', 'default')
+
+		self.bold = urwid.AttrSpec('bold', 'default')
+		self.light_white = urwid.AttrSpec('bold', 'default')
+		self.dark_gray = urwid.AttrSpec('dark gray', 'default')
 
 		self.custom_palette = [
 			# ('name_of_style', 'color_text', 'color_background')
