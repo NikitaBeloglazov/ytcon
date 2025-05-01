@@ -37,7 +37,7 @@ def render_tasks(loop, _):
 				elif i["status"] == "error":
 					render.edit_or_add_row((colors.red, temp1), r)
 				elif i["status"] == "exists":
-					render.edit_or_add_row((colors.yellow, temp1), r)
+					render.edit_or_add_row((colors.dark_yellow, temp1), r)
 				elif i["status"] == "finished":
 					render.edit_or_add_row((colors.green, temp1), r)
 				else:
