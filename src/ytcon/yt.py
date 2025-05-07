@@ -125,17 +125,24 @@ variables.ydl_opts = {
 	'fragment_retries': 40,
 	'retry_sleep': 'http,fragment:exp',
 	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
+
+	'skip_unavailable_fragments': False # DO NOT SKIP FRAGMENTS (relevant when loading on Twitter on weak internet) https://github.com/yt-dlp/yt-dlp/issues/6078#issuecomment-2647248422
 	}
 
 # TODO LIST:
 # 'ratelimit': 207200
 #
 # Angry mode
-# 'retries': float("inf"),
-# 'fragment_retries': 999\
+# 'retries': 999, # You can use float("inf") but this will lead to an endless retries
+# 'fragment_retries': 999,
+
 # --no-progress
 # https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection-examples
 # Desktop notifications
+
+# Replace ignore-errors with https://github.com/yt-dlp/yt-dlp/issues/4914
+# Replace EXISTS status yellow color to dark green(?) https://t.me/ru_openSUSE/248537/509523
+# limit debug.log file size
 
 loop_container.loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
 

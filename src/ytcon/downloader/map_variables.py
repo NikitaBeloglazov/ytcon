@@ -4,6 +4,7 @@ work is organized here with playlists and requesting several formats on youtube
 """
 
 from control.variables import variables
+from log import journal, logger
 
 class MapVariablesClass:
 	""" Created to simplify the distribution of parameters, work is organized here with playlists and requesting several formats on youtube """
@@ -55,7 +56,7 @@ class MapVariablesClass:
 		if url in variables.queue_list:
 			variables.queue_list[url]["status"] = "error"
 			if "multiple_formats" in variables.queue_list[url]:
-				for i in url["formats"]:
+				for i in variables.queue_list[url]["formats"]:
 					temp1_index = url + ":" + i
 					variables.queue_list[temp1_index]["status"] = "error"
 					variables.queue_list[temp1_index]["status_short_display"] = "Error"
