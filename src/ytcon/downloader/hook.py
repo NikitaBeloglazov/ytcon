@@ -42,14 +42,16 @@ def hook(d):
 			if (variables.queue_list[indexx].get("resolution_detection_tried_on_byte", 0) + 4000000) < int(d.get("downloaded_bytes", 0)) and variables.queue_list[indexx].get("resolution_detection_tries", 0) < 5:
 				# int(d["downloaded_bytes"]) > 4000000 # if the file size is too smol, it does not have the needed metadata and ffprobe gives an error
 				logger.debug("DOWNBYTES: %s", str(d["downloaded_bytes"]))
-				temp1 = get_resolution_ffprobe(d["tmpfilename"])
+				temp1 = get_resolution_ffprobe(d["tmpfilename"]) # TODO: idiot why the hell you call variables like that
 				temp2 = str(variables.queue_list[indexx].get("resolution_detection_tries", 0)+1)
 
 				if temp1 is not None:
 					variables.queue_list[indexx]["resolution"] = temp1
 					journal.info(f"[YTCON] Detected resolution: {temp1} (on try {temp2})" )
 				else:
-					journal.warning(f'[YTCON] Resolution detection failed: ffprobe gave an error (try {temp2})')
+					if temp2 == "5":
+						journal.warning('[YTCON] Resolution detection failed: ffprobe keeps giving an error after 5 tries. Waiting for full download..')
+					logger.debug('[YTCON] Resolution detection failed: ffprobe gave an error (try %s)', temp2)
 				variables.queue_list[indexx]["resolution_detection_tried_on_byte"] = int(d["downloaded_bytes"])
 				variables.queue_list[indexx]["resolution_detection_tries"] = variables.queue_list[indexx].get("resolution_detection_tries", 0) + 1
 			# - = - = - = -

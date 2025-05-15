@@ -4,7 +4,6 @@ work is organized here with playlists and requesting several formats on youtube
 """
 
 from control.variables import variables
-from log import journal, logger
 
 class MapVariablesClass:
 	""" Created to simplify the distribution of parameters, work is organized here with playlists and requesting several formats on youtube """
