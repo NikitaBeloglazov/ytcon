@@ -71,7 +71,7 @@ def hook(d):
 			return None # i'll guess it's made to avoid bugs that overwriting some data
 		variables.queue_list[indexx]["status"] = d["status"]
 
-		if int(d["_percent_str"].strip().split(".")[0]) > 100:
+		if int(d["_percent_str"].strip().split(".")[0]) > 100: # TODO: use numberic field: _percent
 			journal.warning("[YTCON] yt-dlp returned percent more than 100%: \"" + d["_percent_str"].strip() + "\". Values remain unchanged...")
 		else:
 			variables.queue_list[indexx]["status_short_display"] = d["_percent_str"].strip()
@@ -82,7 +82,10 @@ def hook(d):
 			if variables.queue_list[indexx]["eta"].count(":") > 1:
 				variables.queue_list[indexx]["eta"] = d["_eta_str"].strip()
 			else:
-				variables.queue_list[indexx]["eta"] = "ETA " + d["_eta_str"].strip()
+				if d["_eta_str"] == 'Unknown':
+					variables.queue_list[indexx]["eta"] = "ETA ??:??"
+				else:
+					variables.queue_list[indexx]["eta"] = "ETA " + d["_eta_str"].strip()
 		except KeyError:
 			if d["status"] == "finished":
 				variables.queue_list[indexx]["eta"] = "ETA 00:00"
