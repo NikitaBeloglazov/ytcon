@@ -28,7 +28,7 @@ def render_tasks(loop, _):
 
 				errorr = i["status"] == "error"
 
-				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"], errorr)}{ws(i["speed"], 13)}|{ws(rcm.bettersize(i["downloaded"])+"/"+rcm.bettersize(i["size"]), 15)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
+				temp1 = f'{ws(i["status_short_display"], 7)}{rcm.progressbar_generator(i["percent"], errorr)}{ws(i["speed"], 13)}|{ws(rcm.bytes_to_str(i["downloaded"])+"/"+rcm.bytes_to_str(i["size"]), 17)}| {ws(i["eta"], 9)} | {ws(i["site"], 7)} | {ws(i["resolution"], 9)} | '
 				fileshortname = rcm.name_shortener(i["name"], render.width - len(temp1))
 				temp1 = temp1 + fileshortname
 

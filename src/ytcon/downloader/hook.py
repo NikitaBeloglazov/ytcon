@@ -88,15 +88,19 @@ def hook(d):
 				variables.queue_list[indexx]["eta"] = "ETA 00:00"
 
 		try:
-			if d["_total_bytes_estimate_str"].strip() == "N/A":
-				variables.queue_list[indexx]["size"] = d["_total_bytes_str"].strip()
-			else:
-				variables.queue_list[indexx]["size"] = d["_total_bytes_estimate_str"].strip()
+			if d.get("total_bytes") is not None:
+				variables.queue_list[indexx]["size"] = d["total_bytes"]
+			elif d["info_dict"].get("filesize") is not None:
+				variables.queue_list[indexx]["size"] = d["info_dict"]["filesize"]
+			elif d["info_dict"].get("filesize_approx") is not None:
+				variables.queue_list[indexx]["size"] = d["info_dict"]["filesize_approx"]
+			elif d.get("total_bytes_estimate") is not None:
+				variables.queue_list[indexx]["size"] = d["total_bytes_estimate"]
 		except KeyError:
 			pass
 
 		try:
-			variables.queue_list[indexx]["downloaded"] = d["_downloaded_bytes_str"].strip()
+			variables.queue_list[indexx]["downloaded"] = d["downloaded_bytes"]
 		except:
 			pass
 

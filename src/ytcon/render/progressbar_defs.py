@@ -12,13 +12,24 @@ class ProgressBarDefs:
 			return name
 		return name[0:symbols-3].strip() + "..."
 
-	def bettersize(self, text):
-		""" Rounds up file sizes """
-		if text == "NaN":
-			return "NaN"
-		if len(text.split(".")) == 1:
-			return text
-		return text.split(".")[0] + text[-3:-1] + text[-1]
+	def bytes_to_str(self, size):
+		""" Convert bytes (21924456) to human-readable string '1.5 GB' """
+		if size is None:
+			return "??? MiB"
+		elif size == 0:
+			return "0 MiB"
+		# (Suffix name, Round value)
+		# Round value for сorrect display of fractional numbers in the right places (None = do not show fractional numbers)
+		# i.e. 157 MB, but 1.5 GB
+		suffixes=((' B', None), (' KiB', None), (' MiB', None), (' GiB', 1), (' TiB', 2))
+		suffix_index = 0
+
+		# Continue dividing by 1024 as long as the size is larger than 1024
+		# and we haven't reached the largest available suffix
+		while size > 1024 and suffix_index < len(suffixes)-1:
+			suffix_index += 1 # Move to the next larger unit
+			size = size/1024.0 # Convert to the larger unit by dividing by 1024
+		return str(round(size, suffixes[suffix_index][1])) + suffixes[suffix_index][0]
 
 	def divide_without_remainder(self, num):
 		"""

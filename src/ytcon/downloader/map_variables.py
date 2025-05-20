@@ -34,10 +34,10 @@ class MapVariablesClass:
 		variables.queue_list[temp1_index]["percent"] = "0.0%"
 		variables.queue_list[temp1_index]["speed"] = "0KiB/s"
 		try:
-			variables.queue_list[temp1_index]["size"] = str(round(i["filesize"]/1e+6)) + "MiB"
+			variables.queue_list[temp1_index]["size"] = i["filesize"]
 		except KeyError:
-			variables.queue_list[temp1_index]["size"] = "???MiB"
-		variables.queue_list[temp1_index]["downloaded"] = "0MiB"
+			variables.queue_list[temp1_index]["size"] = None
+		variables.queue_list[temp1_index]["downloaded"] = 0
 		variables.queue_list[temp1_index]["eta"] = "ETA ??:??"
 		variables.queue_list[temp1_index]["name"] = infolist["fulltitle"]
 		if i["resolution"] == "audio only":
