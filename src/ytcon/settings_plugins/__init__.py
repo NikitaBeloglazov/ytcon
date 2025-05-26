@@ -2,8 +2,8 @@
 import os
 import sys
 
-import urwid
 import pprint
+import urwid
 
 from log import logger, journal
 
@@ -33,6 +33,11 @@ class Dynamic:
 			# # "if_disabled": module.if_disabled,
 			# }
 
+		# - = - = - = - = - = -
+		# Add to settings_processor, for saving ability
+		settings.write_setting(module.savename, False)
+		# - = - = - = - = - = -
+
 		logger.debug(pprint.pformat(self.settings_map))
 		journal.info("[YTCON][plugins] Loaded: " + module.savename)
 
@@ -61,11 +66,10 @@ class DynamicParser:
 
 	def update(self):
 		""" Update checkbox states for they don't lie """
-		pass
-		#for widget in self.settings_pile_list:
-		#	if widget.__class__ is urwid.CheckBox: # Check widget is CheckBox
-		#		user_data = widget._urwid_signals["change"][0][2] # get user_data from button class
-		#		widget.set_state(settings.get_setting(user_data), do_callback=False) # update state
+		for widget in self.settings_pile_list:
+			if widget.__class__ is urwid.CheckBox: # Check widget is CheckBox
+				user_data = widget._urwid_signals["change"][0][2] # get user_data from button class
+				widget.set_state(settings.get_setting(user_data), do_callback=False) # update state
 
 # - = - = - = - = - = - = - = - = - = - = - = -
 # Unstead of "from plugins import *"
