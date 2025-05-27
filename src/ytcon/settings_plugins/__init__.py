@@ -52,10 +52,9 @@ class DynamicParser:
 	def get(self):
 		""" Get content of section """
 		for i in dynamic_modules.settings_map:
-			#module_for_iteration = dynamic_modules.settings_map[i]
-			self.settings_pile_list.append(urwid.CheckBox( # make checkbox widget
-				[(colors.cyan, i.title), "\n"+i.description],  on_state_change=settings.setting_switch, user_data=i.savename)
-				)
+			widget = urwid.CheckBox([(colors.cyan, i.title), "\n"+i.description], on_state_change=settings.setting_switch, user_data=i.savename)
+			# i.widget = widget
+			self.settings_pile_list.append(widget)
 			self.settings_pile_list.append(urwid.Divider())
 
 		# UPDATE CHECKBOXES
@@ -67,9 +66,31 @@ class DynamicParser:
 	def update(self):
 		""" Update checkbox states for they don't lie """
 		for widget in self.settings_pile_list:
-			if widget.__class__ is urwid.CheckBox: # Check widget is CheckBox
-				user_data = widget._urwid_signals["change"][0][2] # get user_data from button class
+			if isinstance(widget, urwid.CheckBox):
+				# get user_data from button class
+				# Pylint disabled because there is no normal way to get user_data
+				user_data = widget._urwid_signals["change"][0][2] # pylint: disable=protected-access
 				widget.set_state(settings.get_setting(user_data), do_callback=False) # update state
+
+class DynamicOpts:
+	def __init__(self):
+		pass
+
+	def get_opts(self):
+		ydl_opts_from_plugins = {}
+
+		for plugin in dynamic_modules.settings_map:
+			if settings.get_setting(plugin.savename) is True:
+				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first key to check duplicates
+					ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
+				else:
+					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
+
+		logger.debug("DynamicOpts:")
+		logger.debug(ydl_opts_from_plugins)
+
+		return ydl_opts_from_plugins
+
 
 # - = - = - = - = - = - = - = - = - = - = - = -
 # Unstead of "from plugins import *"
