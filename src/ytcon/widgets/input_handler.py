@@ -176,9 +176,6 @@ class InputHandlerClass:
 			elif text == "s":
 				settings_menu_variables.settings_show = True
 
-			elif text == "flags":
-				journal.info(pprint.pformat(variables.ydl_opts))
-
 			elif text == "s ls":
 				journal.info(settings.settings)
 

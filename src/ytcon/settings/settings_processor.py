@@ -6,7 +6,6 @@ import traceback
 from pathlib import Path
 
 from log import journal, logger
-from control.variables import variables
 from render.colors import colors
 from render.static_methods import render_static
 from settings_menu.variables import settings_menu_variables
@@ -60,7 +59,6 @@ class SettingsClass:
 				self.settings.update(pickle.load(filee))
 			journal.info(f"[YTCON] {self.configpath}settings.db loaded")
 			settings_menu_variables.settings_soft_update_scheduled = True # update checkboxes
-			self.update_ydl_opts()
 			render_static.flash_button_text(button, colors.green)
 		except FileNotFoundError:
 			# If file not found
@@ -91,7 +89,6 @@ class SettingsClass:
 		journal.info("")
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
 		self.write_setting(name, state)
-		self.update_ydl_opts()
 		settings_menu_variables.settings_soft_update_scheduled = True
 
 	def setting_change_content(self, _=None, _1=None, data=None):
@@ -108,36 +105,7 @@ class SettingsClass:
 		journal.info("")
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {set_data}")
 		self.write_setting(name, set_data)
-		self.update_ydl_opts()
 		settings_menu_variables.settings_soft_update_scheduled = True
-
-	def update_ydl_opts(self):
-		""" Updates some setting-related ydl_opts. Maybe something like post-change scripts? """
-		#journal.info(pprint.pformat(variables.ydl_opts))
-		#journal.info("updated ydl_opts")
-
-		# - = Special mode cookie extractor activator = -
-		if settings.get_setting("special_mode") is True and "cookiesfrombrowser" not in variables.ydl_opts:
-			variables.ydl_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-		elif settings.get_setting("special_mode") is False and "cookiesfrombrowser" in variables.ydl_opts:
-			del variables.ydl_opts["cookiesfrombrowser"]
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		# - = Certificates ignore activator = -
-		if settings.get_setting("no_check_certificate") is True and "nocheckcertificate" not in variables.ydl_opts:
-			variables.ydl_opts["nocheckcertificate"] = True
-		elif settings.get_setting("no_check_certificate") is False and "nocheckcertificate" in variables.ydl_opts:
-			del variables.ydl_opts["nocheckcertificate"]
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		# - = Certificates ignore activator = -
-		if settings.get_setting("ignoreerrors") is True and "ignoreerrors" not in variables.ydl_opts:
-			variables.ydl_opts["ignoreerrors"] = True
-		elif settings.get_setting("ignoreerrors") is False and "ignoreerrors" in variables.ydl_opts:
-			del variables.ydl_opts["ignoreerrors"]
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		#journal.info(pprint.pformat(variables.ydl_opts))
 
 # - - - - - - - - - - - - -
 # Save file folder check

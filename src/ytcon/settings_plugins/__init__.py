@@ -76,12 +76,12 @@ class DynamicOpts:
 	def __init__(self):
 		pass
 
-	def get_opts(self):
+	def get(self):
 		ydl_opts_from_plugins = {}
 
 		for plugin in dynamic_modules.settings_map:
 			if settings.get_setting(plugin.savename) is True:
-				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first key to check duplicates
+				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first keys to check duplicates
 					ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
 				else:
 					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
@@ -91,6 +91,7 @@ class DynamicOpts:
 
 		return ydl_opts_from_plugins
 
+dynamic_ytdl_options = DynamicOpts()
 
 # - = - = - = - = - = - = - = - = - = - = - = -
 # Unstead of "from plugins import *"

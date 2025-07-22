@@ -10,7 +10,6 @@ class VariablesStorage: # TODO: maybe rework to static class? https://stackoverf
 	"""
 	def __init__(self):
 		self.queue_list = {}
-		self.ydl_opts = {}
 
 		self.temp = {}
 		self.temp["autopaste_button_color"] = "" # some kind of cache, see tick_handler

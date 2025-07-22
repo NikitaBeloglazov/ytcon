@@ -92,7 +92,7 @@ from log import init_logger, journal, logger
 init_logger(log_folder)
 
 #from control.control import ControlClass
-from control.variables import variables
+#from control.variables import variables
 #from control.exit import exit_with_exception, traceback
 
 from render.colors import colors
@@ -111,38 +111,9 @@ from app_update.variables import app_updates
 from misc.clipboard import clipboard_init#, clipboard_checker
 
 #from downloader.main import downloader
-from downloader.hook import hook
+#from downloader.hook import hook
 
 # - = - = -
-
-variables.ydl_opts = {
-	'logger': journal,
-	'progress_hooks': [hook],
-	'color': 'no_color',
-	#'outtmpl': '%(title)s [%(id)s].%(ext)s', # REALIZED IN own file handler
-	'socket_timeout': 15,
-	'retries': 20,
-	'fragment_retries': 40,
-	'retry_sleep': 'http,fragment:exp',
-	#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
-
-	'skip_unavailable_fragments': False # DO NOT SKIP FRAGMENTS (relevant when loading on Twitter on weak internet) https://github.com/yt-dlp/yt-dlp/issues/6078#issuecomment-2647248422
-	}
-
-# TODO LIST:
-# 'ratelimit': 207200
-#
-# Angry mode
-# 'retries': 999, # You can use float("inf") but this will lead to an endless retries
-# 'fragment_retries': 999,
-
-# --no-progress
-# https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection-examples
-# Desktop notifications
-
-# Replace ignore-errors with https://github.com/yt-dlp/yt-dlp/issues/4914
-# Replace EXISTS status yellow color to dark green(?) https://t.me/ru_openSUSE/248537/509523
-# limit debug.log file size
 
 loop_container.loop = urwid.MainLoop(widgets.main_widget, palette=colors.custom_palette)
 

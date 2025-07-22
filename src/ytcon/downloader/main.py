@@ -17,6 +17,7 @@ from control.variables import variables
 from control.exit import exit_with_exception, traceback
 
 from settings.settings_processor import settings
+from settings.ytdl_opts import ytdl_opts
 
 from downloader.map_variables import map_variables
 
@@ -39,7 +40,7 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 			if variables.queue_list[url]["status"] in ("error"):
 				journal.error("[YTCON] Resuming download after error is not recommended, except cases when network error happened!")
 
-		with yt_dlp.YoutubeDL(variables.ydl_opts) as ydl:
+		with yt_dlp.YoutubeDL(ytdl_opts.get()) as ydl:
 			# needed for some sites. you may need to replace it with the correct one
 			if settings.get_setting("special_mode") is True:
 				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
@@ -127,7 +128,7 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 			# - = - = - = - = - = - = - = - = - = - = - = - =
 			logger.debug(pprint.pformat(variables.queue_list))
 
-			with yt_dlp.YoutubeDL(variables.ydl_opts | {"outtmpl": filename}) as ydl2:
+			with yt_dlp.YoutubeDL(ytdl_opts.get() | {"outtmpl": filename}) as ydl2:
 				logger.debug(ydl2.download(url))
 				if variables.last_error.find("[Errno 36] File name too long") > -1:
 					raise yt_dlp.utils.DownloadError(variables.last_error)
