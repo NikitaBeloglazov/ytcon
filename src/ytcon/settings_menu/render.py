@@ -110,7 +110,10 @@ class SettingsRenderClass:
 
 	def update(self):
 		""" re-generate + re-render right visible part of the interface """
-		self.current_section_initialized = self.current_section()
+		if callable(self.current_section): # if class is not initialized (idk why do I initialize classes on the fly)
+			self.current_section_initialized = self.current_section()
+		else: # if class already initialized (DynamicSection says hello)
+			self.current_section_initialized = self.current_section
 		self.right_widget = urwid.Frame(
 			urwid.Padding(urwid.Filler(self.current_section_initialized.get(), valign='top'), left=2, right=2, align='center'),
 

@@ -43,25 +43,46 @@ class Dynamic:
 
 dynamic_modules = Dynamic()
 
-class DynamicParser:
-	name = "Dynamic"
-	def __init__(self):
-		self.settings_pile_list = [urwid.Divider()]
-		#self.sections_hierarchy = {}
+def get_all_sections():
+	modules_sorted_by_sections = {}
+	ready_sections_list = []
 
-	def get(self):
-		""" Get content of section """
-		for i in dynamic_modules.settings_map:
-			widget = urwid.CheckBox([(colors.cyan, i.title), "\n"+i.description], on_state_change=settings.setting_switch, user_data=i.savename)
+	for i in dynamic_modules.settings_map:
+		if i.section not in modules_sorted_by_sections:
+			modules_sorted_by_sections[i.section] = []
+		modules_sorted_by_sections[i.section].append(i)
+
+	logger.debug("modules_sorted_by_sections:")
+	logger.debug(pprint.pformat(modules_sorted_by_sections))
+
+	for i in modules_sorted_by_sections: # i contains json keys
+		ready_sections_list.append( DynamicSection(i+"*", modules_sorted_by_sections[i]) )
+
+	logger.debug(pprint.pformat(ready_sections_list))
+	return ready_sections_list
+
+class DynamicSection():
+	""" Base section class for use in a dynamic system. Takes a bunch of modular settings and builds a separate category with checkboxes from them """
+	def __init__(self, name, modules_list):
+		self.name = name
+		self.modules_list = modules_list # modules for this section
+		self.settings_pile_list = [urwid.Divider()]
+
+		for i in self.modules_list: # work with modules only for this section
+			widget = urwid.CheckBox([(colors.cyan, i.title), "\n"+i.description], on_state_change=settings.setting_switch, user_data=i.savename) # TODO modules can be not only checkbox
 			# i.widget = widget
 			self.settings_pile_list.append(widget)
 			self.settings_pile_list.append(urwid.Divider())
 
+		self.settings_pile = urwid.Pile(self.settings_pile_list)
+
+	def get(self):
+		""" Get content of section """
+
 		# UPDATE CHECKBOXES
 		self.update()
 
-		settings_pile = urwid.Pile(self.settings_pile_list)
-		return settings_pile
+		return self.settings_pile
 
 	def update(self):
 		""" Update checkbox states for they don't lie """
@@ -72,12 +93,14 @@ class DynamicParser:
 				user_data = widget._urwid_signals["change"][0][2] # pylint: disable=protected-access
 				widget.set_state(settings.get_setting(user_data), do_callback=False) # update state
 
+
 class DynamicOpts:
 	def __init__(self):
 		pass
 
 	def get(self):
 		ydl_opts_from_plugins = {}
+		logger.debug(dynamic_modules.settings_map)
 
 		for plugin in dynamic_modules.settings_map:
 			if settings.get_setting(plugin.savename) is True:
@@ -102,6 +125,3 @@ for module in os.listdir(os.path.dirname(__file__) + "/plugins"):
         continue
     __import__(module[:-3])
 # - = - = - = - = - = - = - = - = - = - = - = -
-
-# sections.settings_sections.settings_sections.append(DynamicParser())
-#section = DynamicParser

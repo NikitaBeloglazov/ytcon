@@ -19,7 +19,7 @@ from control.control import ControlClass
 
 from settings.settings_processor import settings
 
-from settings_plugins import DynamicParser
+from settings_plugins import get_all_sections
 from app_update import settings_section
 
 class SettingsSections:
@@ -37,7 +37,7 @@ class SettingsSections:
 		self.settings_sections = [cls for cls in class_attributes.values() if isinstance(cls, type)]
 		self.settings_sections.append(settings_section.Update_Status_SECTION)
 		self.settings_sections.append(settings_section.Update_Settings_SECTION)
-		self.settings_sections.append(DynamicParser)
+		self.settings_sections.extend(get_all_sections())
 
 		logger.debug(self.settings_sections)
 
