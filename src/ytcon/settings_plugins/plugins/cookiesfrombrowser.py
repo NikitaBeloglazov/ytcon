@@ -4,15 +4,15 @@ from settings_plugins import dynamic_modules
 # - = - = -
 
 class MainClass():
-	title = "Extract cookies from Chromium"
-	description = "give me fucking cookies"
+	title = "Extract cookies from browser"
+	description = "Use cookies from the browser you specified.\nChromium-based and Firefox are supported. Write with a lowercase letter"
 	section = "Cookies"
 
 	savename = "yt-dlp.cookiesfrombrowser"
 
-	widget_type = "checkbox"
+	widget_type = "input_field"
 
-	if_enabled = {"cookiesfrombrowser": ('chromium', )}
+	if_enabled = "cookiesfrombrowser"
 	# if_disabled = None
 
 # - = - = -

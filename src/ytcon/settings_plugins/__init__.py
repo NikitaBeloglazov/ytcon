@@ -15,12 +15,14 @@ class Dynamic:
 	""" Responsible for control and registering dynamic modules  """
 	def __init__(self):
 		self.settings_map = []
+		# self.settings_map_by_savename = {}
 		logger.debug("Dynamic modules class initiated!")
 
 	def register(self, module):
 		""" Registers dynamic module in json object """
 		logger.debug("[plugins] loading: %s", module.savename)
 		self.settings_map.append(module)
+		# self.settings_map_by_savename[module.savename] = module
 		# self.settings_map[module.savename] = {
 			# "title": module.title,
 			# "description": module.description,
@@ -38,8 +40,29 @@ class Dynamic:
 		settings.write_setting(module.savename, False)
 		# - = - = - = - = - = -
 
+		# - = - = - = - = - = -
+		# Make a widget for module
+		self.make_widget(module)
+		# - = - = - = - = - = -
+
 		logger.debug(pprint.pformat(self.settings_map))
 		journal.info("[YTCON][plugins] Loaded: " + module.savename)
+
+	def make_widget(self, module):
+		if module.widget_type == "checkbox":
+			module.widget = urwid.CheckBox([(colors.cyan, module.title), "\n"+module.description], on_state_change=settings.setting_switch_for_plugins, user_data=module)
+		elif module.widget_type == "input_field":
+			module_note = urwid.Text([(colors.cyan, module.title), "\n"+module.description])
+			module_edit = urwid.LineBox( urwid.Edit((colors.cyan, " > ")) )
+			#module_bottom = urwid.Text("└─── ── ──  ──  ─  ─  ─")
+			module_edit = urwid.AttrMap(module_edit, "dark_gray", "")
+
+			# .original_widget.original_widget two times because we using two decorations: urwid.LineBox then urwid.AttrMap
+			urwid.connect_signal(module_edit.original_widget.original_widget, "change", dynamic_verifier.edit_field, module)
+
+			module.widget = urwid.Pile((module_note, module_edit))#, module_bottom))
+		else:
+			raise NotImplementedError(f"[YTCON][PLUGINS] issue with plugin {module.savename}: \"{module.widget_type}\" is a unknown widget type!")
 
 dynamic_modules = Dynamic()
 
@@ -56,7 +79,7 @@ def get_all_sections():
 	logger.debug(pprint.pformat(modules_sorted_by_sections))
 
 	for i in modules_sorted_by_sections: # i contains json keys
-		ready_sections_list.append( DynamicSection(i+"*", modules_sorted_by_sections[i]) )
+		ready_sections_list.append(DynamicSection(i+"*", modules_sorted_by_sections[i]))
 
 	logger.debug(pprint.pformat(ready_sections_list))
 	return ready_sections_list
@@ -69,9 +92,7 @@ class DynamicSection():
 		self.settings_pile_list = [urwid.Divider()]
 
 		for i in self.modules_list: # work with modules only for this section
-			widget = urwid.CheckBox([(colors.cyan, i.title), "\n"+i.description], on_state_change=settings.setting_switch, user_data=i.savename) # TODO modules can be not only checkbox
-			# i.widget = widget
-			self.settings_pile_list.append(widget)
+			self.settings_pile_list.append(i.widget)
 			self.settings_pile_list.append(urwid.Divider())
 
 		self.settings_pile = urwid.Pile(self.settings_pile_list)
@@ -90,9 +111,22 @@ class DynamicSection():
 			if isinstance(widget, urwid.CheckBox):
 				# get user_data from button class
 				# Pylint disabled because there is no normal way to get user_data
-				user_data = widget._urwid_signals["change"][0][2] # pylint: disable=protected-access
-				widget.set_state(settings.get_setting(user_data), do_callback=False) # update state
+				user_data = widget._urwid_signals["change"][0][2] # pylint: disable=protected-access # there must be module class result
+				if user_data.widget_type == "checkbox":
+					widget.set_state(settings.get_setting(user_data.savename), do_callback=False) # update state
 
+class DynamicVerifier:
+	""" Checks widget for right input """
+	def __init__(self):
+		pass
+
+	def edit_field(self, _=None, data=None, module=None):
+		if data == "":
+			settings.setting_switch_for_plugins(None, False, module)
+		else:
+			settings.setting_switch_for_plugins(None, data, module)
+
+dynamic_verifier = DynamicVerifier()
 
 class DynamicOpts:
 	def __init__(self):

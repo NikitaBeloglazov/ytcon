@@ -91,6 +91,12 @@ class SettingsClass:
 		self.write_setting(name, state)
 		settings_menu_variables.settings_soft_update_scheduled = True
 
+	def setting_switch_for_plugins(self, _=None, state=None, name=None):
+		if name is None:
+			raise TypeError
+
+		self.setting_switch(None, state, name.savename)
+
 	def setting_change_content(self, _=None, _1=None, data=None):
 		"""
 		Change content in setting where negative state cannot be determined.

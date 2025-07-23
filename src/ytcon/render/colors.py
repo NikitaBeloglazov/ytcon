@@ -39,6 +39,7 @@ class ColorsBase:
 			('cyan', 'dark cyan', ''),
 			('light_cyan', 'light cyan', ''),
 			('bold_default', 'white', ''),
+			('dark_gray', 'dark gray', ''),
 
 			('green_background', 'black', 'dark green'),
 			('cyan_background',  'black', 'dark cyan'),
