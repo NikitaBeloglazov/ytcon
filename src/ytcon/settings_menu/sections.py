@@ -171,7 +171,7 @@ class SettingsSections:
 		def get(self):
 			""" Get content of section """
 			self.settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
-			self.settings_checkbox_allow_non_matching_values = urwid.CheckBox("Allow saving non-allowed values for ytcon plugins", on_state_change=allow_non_matching_values_switch)
+			self.settings_checkbox_allow_non_matching_values = urwid.CheckBox("Allow saving non-allowed values for ytcon plugins", on_state_change=allow_non_matching_values_switch) # TODO REMAKE DEBUG SECTION TO PLUGINS
 
 			# UPDATE CHECKBOXES
 			self.update()
@@ -196,7 +196,7 @@ class SettingsSections:
 		def update(self):
 			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_delete_af.set_state(variables.delete_after_download, do_callback=False)
-			self.settings_checkbox_allow_non_matching_values.set_state(dynamic_verifier.allow_non_matching_values, do_callback=False)
+			self.settings_checkbox_allow_non_matching_values.set_state(dynamic_verifier.allow_non_matching_values, do_callback=False) # TODO REMAKE DEBUG SECTION TO PLUGINS
 
 	# = - E X A M P L E - =
 	#class Three_SECTION:

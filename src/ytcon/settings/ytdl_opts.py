@@ -74,7 +74,7 @@ class YtdlOptsStorage:
 		# - = - = - = - = Dynamic plug-ins = - = - = - = -
 		dynamic_opts = dynamic_ytdl_options.get()
 		duplicates_check = list(set(new_opts) & set(dynamic_opts)) # check for duplicates: list(set(a) & set(a))
-		if duplicates_check != []:
+		if duplicates_check:
 			journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: FOUND DUPLICATES OF FOLLOWING yt-dlp opts: {str(duplicates_check)}. These opts will be OVERWRITTEN. DO NOT USE AS IS.")
 		new_opts = new_opts | dynamic_opts
 		# - = - = - = - = - = - = - = - = - = - = - = - = -

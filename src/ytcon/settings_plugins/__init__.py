@@ -49,6 +49,7 @@ class Dynamic:
 		journal.info("[YTCON][plugins] Loaded: " + module.savename)
 
 	def make_widget(self, module):
+		""" Based on the plugin type, it assembles a widget with the required style and ready-made triggers, and places it in the plugin class """
 		if module.widget_type == "checkbox":
 			module.widget = urwid.CheckBox([(colors.cyan, module.title), "\n"+module.description], on_state_change=settings.setting_switch_for_plugins, user_data=module)
 		elif module.widget_type == "input_field":
@@ -67,6 +68,7 @@ class Dynamic:
 dynamic_modules = Dynamic()
 
 def get_all_sections():
+	""" Initializes each section with the corresponding plugins and gives all these sections in one list """
 	modules_sorted_by_sections = {}
 	ready_sections_list = []
 
@@ -78,8 +80,8 @@ def get_all_sections():
 	logger.debug("modules_sorted_by_sections:")
 	logger.debug(pprint.pformat(modules_sorted_by_sections))
 
-	for i in modules_sorted_by_sections: # i contains json keys
-		ready_sections_list.append(DynamicSection(i+"*", modules_sorted_by_sections[i]))
+	for section_name, modules_list in modules_sorted_by_sections.items(): # i contains json keys (names of section)
+		ready_sections_list.append(DynamicSection(section_name+"*", modules_list))
 
 	logger.debug(pprint.pformat(ready_sections_list))
 	return ready_sections_list
@@ -128,21 +130,16 @@ class DynamicSection():
 # - = - = - = - = - = - = - = - = - = - = - = -
 
 class DymanicEdit(urwid.Edit):
-	"""
-		A modified urwid.Edit Widget.
-		Made for getting enter/f10 press
-	"""
+	""" A modified urwid.Edit Widget. Made for getting enter/f10 press """
 	def keypress(self, size, key):
 		""" Overrides a regular class. """
-		#journal.info(key)
+		# journal.info(key)
 		super().keypress(size, key)
 
 		if key == 'f10':
-			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True, force=True)
+			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True, force=True) # pylint: disable=no-member # lying. this is just shitty code
 		if key == "enter":
-			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True)
-
-		return None
+			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True) # pylint: disable=no-member # lying. this is just shitty code
 
 # - = - = - = - = - = - = - = - = - = - = - = -
 
@@ -152,6 +149,7 @@ class DynamicVerifier:
 		self.allow_non_matching_values = False
 
 	def edit_field(self, _=None, data=None, module=None, verbose=False, force=False):
+		""" Input validator for plugins with module.widget_type == "input_field" """
 		if data == "":
 			self.edit_field_changecolor(module, colors.cyan)
 			if settings.get_setting(module.savename) is not False:
@@ -181,23 +179,29 @@ class DynamicVerifier:
 				settings.setting_switch_for_plugins(None, data, module)
 				self.edit_field_changecolor(module, colors.light_green)
 			return None
+
 		settings.setting_switch_for_plugins(None, data, module)
+		return None
 
 	def edit_field_changecolor(self, module, color):
+		""" Changes the color of the urwid.Edit caption """
 		module.original_widget.set_caption( (color, " > ") )
 
 dynamic_verifier = DynamicVerifier()
 
 def allow_non_matching_values_switch(_, data):
-	dynamic_verifier.allow_non_matching_values = data
+	""" TODO REMAKE DEBUG SECTION TO PLUGINS """
+	dynamic_verifier.allow_non_matching_values = data # TODO REMAKE DEBUG SECTION TO PLUGINS
 
 # - = - = - = - = - = - = - = - = - = - = - = -
 
 class DynamicOpts:
+	""" Responsible for applying plugin parameters in ytdl options. Used by downloader """
 	def __init__(self):
 		pass
 
 	def get(self):
+		""" Get options provided by active plugins """
 		ydl_opts_from_plugins = {}
 		logger.debug(dynamic_modules.settings_map)
 

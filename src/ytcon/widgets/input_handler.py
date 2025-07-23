@@ -2,7 +2,6 @@
 	Class for processing user input.
 	Contains a modified Urwid.edit widget and functions for processing commands and URLs
 """
-import pprint
 import traceback
 import threading
 
