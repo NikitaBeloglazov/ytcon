@@ -86,7 +86,7 @@ class SettingsClass:
 		if state is None:
 			state = not self.get_setting(name)
 
-		journal.info("")
+		#journal.info("")
 		journal.info(f"[YTCON] {name}: {self.get_setting(name)} -> {state}")
 		self.write_setting(name, state)
 		settings_menu_variables.settings_soft_update_scheduled = True
@@ -95,7 +95,8 @@ class SettingsClass:
 		if name is None:
 			raise TypeError
 
-		self.setting_switch(None, state, name.savename)
+		if state != self.get_setting(name.savename): # To stop log spam
+			self.setting_switch(None, state, name.savename)
 
 	def setting_change_content(self, _=None, _1=None, data=None):
 		"""

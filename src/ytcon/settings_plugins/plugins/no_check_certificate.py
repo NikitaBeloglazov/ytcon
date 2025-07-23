@@ -13,6 +13,7 @@ class MainClass():
 	widget_type = "checkbox"
 
 	if_enabled = {"nocheckcertificate": True}
+	if_enabled_type = "json_insert"
 	# if_disabled = None
 
 # - = - = -

@@ -20,6 +20,8 @@ from control.control import ControlClass
 from settings.settings_processor import settings
 
 from settings_plugins import get_all_sections
+from settings_plugins import allow_non_matching_values_switch, dynamic_verifier # FOR "ALLOW UNMATCHED VALUES SWITCH"
+
 from app_update import settings_section
 
 class SettingsSections:
@@ -169,6 +171,7 @@ class SettingsSections:
 		def get(self):
 			""" Get content of section """
 			self.settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
+			self.settings_checkbox_allow_non_matching_values = urwid.CheckBox("Allow saving non-allowed values for ytcon plugins", on_state_change=allow_non_matching_values_switch)
 
 			# UPDATE CHECKBOXES
 			self.update()
@@ -184,6 +187,8 @@ class SettingsSections:
 				urwid.Divider(),
 				self.settings_checkbox_delete_af,
 				urwid.Divider(),
+				self.settings_checkbox_allow_non_matching_values,
+				urwid.Divider(),
 				])
 
 			return settings_pile
@@ -191,6 +196,7 @@ class SettingsSections:
 		def update(self):
 			""" Update checkbox states for they don't lie """
 			self.settings_checkbox_delete_af.set_state(variables.delete_after_download, do_callback=False)
+			self.settings_checkbox_allow_non_matching_values.set_state(dynamic_verifier.allow_non_matching_values, do_callback=False)
 
 	# = - E X A M P L E - =
 	#class Three_SECTION:

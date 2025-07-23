@@ -15,6 +15,9 @@ class MainClass():
 	if_enabled = "cock"
 	# if_disabled = None
 
+	verify_input = "ignore"
+	verify_input_data = None
+
 # - = - = -
 dynamic_modules.register(MainClass)
 

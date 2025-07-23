@@ -53,9 +53,9 @@ class Dynamic:
 			module.widget = urwid.CheckBox([(colors.cyan, module.title), "\n"+module.description], on_state_change=settings.setting_switch_for_plugins, user_data=module)
 		elif module.widget_type == "input_field":
 			module_note = urwid.Text([(colors.cyan, module.title), "\n"+module.description])
-			module_edit = urwid.LineBox( urwid.Edit((colors.cyan, " > ")) )
+			module.original_widget = DymanicEdit((colors.cyan, " > "))
 			#module_bottom = urwid.Text("└─── ── ──  ──  ─  ─  ─")
-			module_edit = urwid.AttrMap(module_edit, "dark_gray", "")
+			module_edit = urwid.LineBox(urwid.AttrMap(module.original_widget, "dark_gray", ""))
 
 			# .original_widget.original_widget two times because we using two decorations: urwid.LineBox then urwid.AttrMap
 			urwid.connect_signal(module_edit.original_widget.original_widget, "change", dynamic_verifier.edit_field, module)
@@ -85,7 +85,7 @@ def get_all_sections():
 	return ready_sections_list
 
 class DynamicSection():
-	""" Base section class for use in a dynamic system. Takes a bunch of modular settings and builds a separate category with checkboxes from them """
+	""" Base section class for use in a dynamic system. Takes a bunch of modular settings and builds a separate category with plugins widgets from them """
 	def __init__(self, name, modules_list):
 		self.name = name
 		self.modules_list = modules_list # modules for this section
@@ -114,19 +114,84 @@ class DynamicSection():
 				user_data = widget._urwid_signals["change"][0][2] # pylint: disable=protected-access # there must be module class result
 				if user_data.widget_type == "checkbox":
 					widget.set_state(settings.get_setting(user_data.savename), do_callback=False) # update state
+			if isinstance(widget, urwid.Pile):
+				# possibly, this is a input_field
+				original_widget = widget.contents[1][0].original_widget.original_widget # unpacking pile
+
+				# Pylint disabled because there is no normal way to get user_data
+				user_data = original_widget._urwid_signals["change"][0][2] # pylint: disable=protected-access # there must be module class result
+				if user_data.widget_type == "input_field":
+					if settings.get_setting(user_data.savename) is not False:
+						user_data.original_widget.edit_text = str(settings.get_setting(user_data.savename))
+						user_data.original_widget.set_edit_pos(999) # Spawn cursor at the end and not at the beginning
+
+# - = - = - = - = - = - = - = - = - = - = - = -
+
+class DymanicEdit(urwid.Edit):
+	"""
+		A modified urwid.Edit Widget.
+		Made for getting enter/f10 press
+	"""
+	def keypress(self, size, key):
+		""" Overrides a regular class. """
+		#journal.info(key)
+		super().keypress(size, key)
+
+		if key == 'f10':
+			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True, force=True)
+		if key == "enter":
+			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True)
+
+		return None
+
+# - = - = - = - = - = - = - = - = - = - = - = -
 
 class DynamicVerifier:
 	""" Checks widget for right input """
 	def __init__(self):
-		pass
+		self.allow_non_matching_values = False
 
-	def edit_field(self, _=None, data=None, module=None):
+	def edit_field(self, _=None, data=None, module=None, verbose=False, force=False):
 		if data == "":
-			settings.setting_switch_for_plugins(None, False, module)
-		else:
+			self.edit_field_changecolor(module, colors.cyan)
+			if settings.get_setting(module.savename) is not False:
+				settings.setting_switch_for_plugins(None, False, module)
+			return None
+
+		if force is True:
+			journal.info("[YTCON] Forcing value for " + module.savename)
 			settings.setting_switch_for_plugins(None, data, module)
+			self.edit_field_changecolor(module, colors.magenta)
+			return None
+
+		if self.allow_non_matching_values is True or module.verify_input == "ignore":
+			settings.setting_switch_for_plugins(None, data, module)
+			self.edit_field_changecolor(module, colors.light_green)
+			return None
+
+		if module.verify_input == "compare_with_list":
+			if data not in module.verify_input_data:
+				self.edit_field_changecolor(module, colors.light_red)
+				if verbose is True:
+					journal.warning("[YTCON][!!] " + module.savename + " not saved - input does not match the allowed values.")
+					journal.warning("Allowed values can be viewed in the description or in debug.log")
+					logger.debug("If you are really sure of what you do, click F10 for forced save.")
+					logger.debug("Allowed values: %s", str(module.verify_input_data))
+			else:
+				settings.setting_switch_for_plugins(None, data, module)
+				self.edit_field_changecolor(module, colors.light_green)
+			return None
+		settings.setting_switch_for_plugins(None, data, module)
+
+	def edit_field_changecolor(self, module, color):
+		module.original_widget.set_caption( (color, " > ") )
 
 dynamic_verifier = DynamicVerifier()
+
+def allow_non_matching_values_switch(_, data):
+	dynamic_verifier.allow_non_matching_values = data
+
+# - = - = - = - = - = - = - = - = - = - = - = -
 
 class DynamicOpts:
 	def __init__(self):
@@ -137,9 +202,18 @@ class DynamicOpts:
 		logger.debug(dynamic_modules.settings_map)
 
 		for plugin in dynamic_modules.settings_map:
-			if settings.get_setting(plugin.savename) is True:
+			if settings.get_setting(plugin.savename) is not False:
 				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first keys to check duplicates
-					ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
+
+					if plugin.if_enabled_type == "json_insert": # for checkboxes
+						ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
+
+					# Sets if_enabled in yt-dlp options with contents of ytcon setting
+					elif plugin.if_enabled_type == "content": # mostly for edit fields
+						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: settings.get_setting(plugin.savename)}
+					elif plugin.if_enabled_type == "content_tuple": # mostly for edit fields
+						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: (settings.get_setting(plugin.savename), )}
+
 				else:
 					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
 
