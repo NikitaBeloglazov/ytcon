@@ -1,6 +1,7 @@
 """ Responsible for control, registering and importing dynamic modules  """
 import os
 import sys
+import re
 
 import pprint
 import urwid
@@ -54,9 +55,9 @@ class Dynamic:
 			module.widget = urwid.CheckBox([(colors.cyan, module.title), "\n"+module.description], on_state_change=settings.setting_switch_for_plugins, user_data=module)
 		elif module.widget_type == "input_field":
 			module_note = urwid.Text([(colors.cyan, module.title), "\n"+module.description])
-			module.original_widget = DymanicEdit((colors.cyan, " > "))
+			module.original_widget = DymanicEdit((colors.cyan, " > "), multiline=True)
 			#module_bottom = urwid.Text("└─── ── ──  ──  ─  ─  ─")
-			module_edit = urwid.LineBox(urwid.AttrMap(module.original_widget, "dark_gray", ""))
+			module_edit = urwid.AttrMap(urwid.LineBox(module.original_widget), "dark_gray", "")
 
 			# .original_widget.original_widget two times because we using two decorations: urwid.LineBox then urwid.AttrMap
 			urwid.connect_signal(module_edit.original_widget.original_widget, "change", dynamic_verifier.edit_field, module)
@@ -134,12 +135,14 @@ class DymanicEdit(urwid.Edit):
 	def keypress(self, size, key):
 		""" Overrides a regular class. """
 		# journal.info(key)
-		super().keypress(size, key)
 
 		if key == 'f10':
 			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True, force=True) # pylint: disable=no-member # lying. this is just shitty code
-		if key == "enter":
+		elif key == "enter":
 			dynamic_verifier.edit_field(None, self.get_edit_text(), self._urwid_signals["change"][0][2], verbose=True) # pylint: disable=no-member # lying. this is just shitty code
+		else:
+			super().keypress(size, key)
+
 
 # - = - = - = - = - = - = - = - = - = - = - = -
 
@@ -159,7 +162,7 @@ class DynamicVerifier:
 		if force is True:
 			journal.info("[YTCON] Forcing value for " + module.savename)
 			settings.setting_switch_for_plugins(None, data, module)
-			self.edit_field_changecolor(module, colors.magenta)
+			self.edit_field_changecolor(module, colors.yellow)
 			return None
 
 		if self.allow_non_matching_values is True or module.verify_input == "ignore":
@@ -171,10 +174,25 @@ class DynamicVerifier:
 			if data not in module.verify_input_data:
 				self.edit_field_changecolor(module, colors.light_red)
 				if verbose is True:
+					journal.info("")
 					journal.warning("[YTCON][!!] " + module.savename + " not saved - input does not match the allowed values.")
 					journal.warning("Allowed values can be viewed in the description or in debug.log")
 					logger.debug("If you are really sure of what you do, click F10 for forced save.")
 					logger.debug("Allowed values: %s", str(module.verify_input_data))
+			else:
+				settings.setting_switch_for_plugins(None, data, module)
+				self.edit_field_changecolor(module, colors.light_green)
+			return None
+
+		if module.verify_input == "regex":
+			# journal.info(re.match(module.verify_input_data, data))
+			if re.match(module.verify_input_data, data) is None:
+				self.edit_field_changecolor(module, colors.light_red)
+				if verbose is True:
+					journal.info("")
+					journal.warning("[YTCON][!!] " + module.savename + " not saved - input does not match with the allowing rules (regex).")
+					journal.warning("If you are really sure of what you do, click F10 for forced save")
+					logger.debug("Regex: %s", str(module.verify_input_data))
 			else:
 				settings.setting_switch_for_plugins(None, data, module)
 				self.edit_field_changecolor(module, colors.light_green)
@@ -213,10 +231,16 @@ class DynamicOpts:
 						ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
 
 					# Sets if_enabled in yt-dlp options with contents of ytcon setting
+					# content mostly used for edit fields
 					elif plugin.if_enabled_type == "content": # mostly for edit fields
 						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: settings.get_setting(plugin.savename)}
-					elif plugin.if_enabled_type == "content_tuple": # mostly for edit fields
+					elif plugin.if_enabled_type == "content_tuple":
 						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: (settings.get_setting(plugin.savename), )}
+					elif plugin.if_enabled_type == "content_in_nested_json":
+						# Currently only supports single-level nesting. Maybe there is a way to nest multiple levels, but I'm too lazy.
+						if plugin.if_enabled[0] not in ydl_opts_from_plugins:
+							ydl_opts_from_plugins[plugin.if_enabled[0]] = {}
+						ydl_opts_from_plugins[plugin.if_enabled[0]] = ydl_opts_from_plugins[plugin.if_enabled[0]] | {plugin.if_enabled[-1]: settings.get_setting(plugin.savename)}
 
 				else:
 					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
