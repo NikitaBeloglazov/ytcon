@@ -41,11 +41,6 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 				journal.error("[YTCON] Resuming download after error is not recommended, except cases when network error happened!")
 
 		with yt_dlp.YoutubeDL(ytdl_opts.get()) as ydl:
-			# needed for some sites. you may need to replace it with the correct one
-			if settings.get_setting("special_mode") is True:
-				ydl.params["http_headers"]["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-				# TODO: CONSIDER USING ydl_opts = {'http_headers':   headers, # https://t.me/c/1799440303/59510
-				# "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
 			# - = - = - = Get downloading formats (yt) and generate filename (global) = -
 			infolist = ydl.extract_info(url, download=False)
 

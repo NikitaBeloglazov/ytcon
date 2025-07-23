@@ -10,12 +10,11 @@
 #### 🚧 Currently in the BETA stage of development
 #### ⚠️ Please note, project is not dead, i'm still working in dev branches. Stable releases will come out when they are stable. Sometimes I write about progress here > https://t.me/nb_code
 
-# 📘 Features:
+# 📘 Features (TODO: UPDATE):
 * yt-dlp features
 * Self-update feature
 * Multiple downloads at the same time
 * Clipboard auto-paste
-* "Special mode"
 * Shows the resolution of downloading videos, even in generic extractor
 * Beautiful, colorful and comfortable human UI
 

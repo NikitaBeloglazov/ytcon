@@ -16,7 +16,6 @@ class SettingsClass:
 
 		# Default settings
 		self.settings = {
-			"special_mode": False,
 			"clipboard_autopaste": True,
 			"no_check_certificate": False,
 			"ignoreerrors": False,
