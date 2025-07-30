@@ -19,4 +19,3 @@ class MainClass():
 
 # - = - = -
 dynamic_modules.register(MainClass)
-

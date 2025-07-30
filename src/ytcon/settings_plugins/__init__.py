@@ -2,6 +2,7 @@
 import os
 import sys
 import re
+import importlib.util # for importing py files
 
 import pprint
 import urwid
@@ -10,7 +11,7 @@ from log import logger, journal
 
 from render.colors import colors
 # from settings_menu import sections
-from settings.settings_processor import settings # for switches
+from settings.settings_processor import settings, configpath # first for switches, 2nd for importring from saves path
 
 class Dynamic:
 	""" Responsible for control and registering dynamic modules  """
@@ -253,11 +254,25 @@ class DynamicOpts:
 dynamic_ytdl_options = DynamicOpts()
 
 # - = - = - = - = - = - = - = - = - = - = - = -
-# Unstead of "from plugins import *"
-sys.path.append(os.path.dirname(__file__) + "/plugins")
+# Import plugins from folders
 
-for module in os.listdir(os.path.dirname(__file__) + "/plugins"):
-    if module == '__init__.py' or module[-3:] != '.py':
-        continue
-    __import__(module[:-3])
+def import_plugins_from_folder(folder):
+	""" Lists folder for .py files and imports them. Done via importlib because sys.path.append is too ridiculous """
+	for module in os.listdir(folder):
+		# - = - Skip non-valid files - = -
+		if module == '__init__.py' or module[-3:] != '.py':
+			continue
+		# - = - = - = - = - = - = - - = -
+		# Making "specification" (stupid name)
+		spec = importlib.util.spec_from_file_location(module.removesuffix('.py'), folder + module)
+
+		# Importing and running (+ registering) plugin
+		imported_module = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(imported_module)
+
+for i in (
+	os.path.dirname(__file__) + "/plugins/", # ytcon build-in plugins
+	configpath + "/plugins/", # import plugins from saves folder
+	):
+	import_plugins_from_folder(i)
 # - = - = - = - = - = - = - = - = - = - = - = -

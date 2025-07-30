@@ -120,7 +120,15 @@ else:
 	configpath = os.path.expanduser("~/.config/ytcon/")
 
 try:
-	Path(configpath).mkdir(parents=True, exist_ok=True)
+	Path(configpath).mkdir(parents=True, exist_ok=True) # create saves folder
+
+	# - = - Plugins
+	Path(configpath + "plugins/").mkdir(parents=True, exist_ok=True) # create plugins folder
+	with open(configpath + "plugins/" + "PLUGINS-GO-HERE", "wb") as _:
+		pass
+	# - = -
+
+	# Testing write # TODO: unneeded?
 	with open(configpath + "write_test", "wb") as filee:
 		pass
 	os.remove(configpath + "write_test")
