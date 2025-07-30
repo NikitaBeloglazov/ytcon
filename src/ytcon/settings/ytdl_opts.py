@@ -55,17 +55,7 @@ class YtdlOptsStorage:
 	def get(self):
 		new_opts = copy.deepcopy(self.default_ydl_opts)
 
-		# - = Special mode cookie extractor activator = -
-		if settings.get_setting("special_mode") is True:
-			new_opts["cookiesfrombrowser"] = ('chromium', ) # needed for some sites with login only access. you may need to replace it with the correct one
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		# - = Certificates ignore activator = -
-		if settings.get_setting("no_check_certificate") is True:
-			new_opts["nocheckcertificate"] = True
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-		# - = Certificates ignore activator = -
+		# - = Certificates ignore activator = - # TODO
 		if settings.get_setting("ignoreerrors") is True:
 			new_opts["ignoreerrors"] = True
 		# - = - = - = - = - = - = - = - = - = - = - = - =

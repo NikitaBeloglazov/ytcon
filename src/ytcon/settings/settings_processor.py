@@ -17,7 +17,6 @@ class SettingsClass:
 		# Default settings
 		self.settings = {
 			"clipboard_autopaste": True,
-			"no_check_certificate": False,
 			"ignoreerrors": False,
 			"progressbar_appearance": "detailed",
 			"check_updates_on_boot": True,

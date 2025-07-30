@@ -4,8 +4,9 @@ from settings_plugins import dynamic_modules
 # - = - = -
 
 class MainClass():
+	# Links to test: https://badssl.com or https://stackoverflow.com/questions/1705198/example-sites-with-broken-security-certs
 	title = "Do not check website certificates"
-	description = "Enable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"
+	description = "Ignore SSL errors like \"SSL: CERTIFICATE_VERIFY_FAILED\".\nUseful for some broken sites"
 	section = "Fetching"
 
 	savename = "yt-dlp.nocheckcertificate"

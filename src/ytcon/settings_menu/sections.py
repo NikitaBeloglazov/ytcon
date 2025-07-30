@@ -112,29 +112,6 @@ class SettingsSections:
 			self.settings_checkbox_progresstype_arrow.set_state(settings.get_setting("progressbar_appearance") == "arrow", do_callback=False)
 			self.settings_checkbox_progresstype_pacman.set_state(settings.get_setting("progressbar_appearance") == "pacman", do_callback=False)
 
-
-	class Fetching_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
-		""" Fetching settings section - related to yt-dlp downloding """
-		name = "Fetching"
-		def get(self):
-			""" Get content of section """
-			self.settings_checkbox_nocert = urwid.CheckBox([(colors.light_yellow, "Do not check website certificates"), "\nEnable this if \"SSL: CERTIFICATE_VERIFY_FAILED\" error occurs"], on_state_change=settings.setting_switch, user_data="no_check_certificate")
-
-			# UPDATE CHECKBOXES
-			self.update()
-
-			settings_pile = urwid.Pile([
-				urwid.Divider(),
-				self.settings_checkbox_nocert,
-				urwid.Divider(),
-				])
-
-			return settings_pile
-
-		def update(self):
-			""" Update checkbox states for they don't lie """
-			self.settings_checkbox_nocert.set_state(settings.get_setting("no_check_certificate"), do_callback=False)
-
 	class Playlists_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" Playlist settings section """
 		name = "Playlists"
