@@ -48,7 +48,6 @@ class YtdlOptsStorage:
 		# https://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#format-selection-examples
 		# Desktop notifications
 
-		# Replace ignore-errors with https://github.com/yt-dlp/yt-dlp/issues/4914
 		# Replace EXISTS status yellow color to dark green(?) https://t.me/ru_openSUSE/248537/509523
 		# limit debug.log file size
 
