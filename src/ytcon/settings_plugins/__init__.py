@@ -52,10 +52,19 @@ class Dynamic:
 
 	def make_widget(self, module):
 		""" Based on the plugin type, it assembles a widget with the required style and ready-made triggers, and places it in the plugin class """
+		# - = - = Coloring support for plugins
+		if type(module.description) is str:
+			module_note = [(colors.cyan, module.title + "\n"), module.description]
+		elif type(module.description) is tuple or type(module.description) is list:
+			module_note = [(colors.cyan, module.title + "\n")] + list(module.description) # by urwid must be list, not tuple
+		else:
+			raise NotImplementedError(f"[YTCON][PLUGINS] issue with plugin {module.savename}: \"{type(module.description)}\" is unknown description type! Supported types: str, typle/list")
+		# - = - = - = - = - = - = - = - = - =
+
 		if module.widget_type == "checkbox":
-			module.widget = urwid.CheckBox([(colors.cyan, module.title), "\n"+module.description], on_state_change=settings.setting_switch_for_plugins, user_data=module)
+			module.widget = urwid.CheckBox(module_note, on_state_change=settings.setting_switch_for_plugins, user_data=module)
 		elif module.widget_type == "input_field":
-			module_note = urwid.Text([(colors.cyan, module.title), "\n"+module.description])
+			module_note = urwid.Text(module_note)
 			module.original_widget = DymanicEdit((colors.cyan, " > "), multiline=True)
 			#module_bottom = urwid.Text("└─── ── ──  ──  ─  ─  ─")
 			module_edit = urwid.AttrMap(urwid.LineBox(module.original_widget), "dark_gray", "")
