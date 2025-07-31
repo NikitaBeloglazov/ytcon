@@ -55,12 +55,6 @@ class YtdlOptsStorage:
 	def get(self):
 		new_opts = copy.deepcopy(self.default_ydl_opts)
 
-		# - = Certificates ignore activator = - # TODO
-		if settings.get_setting("ignoreerrors") is True:
-			new_opts["ignoreerrors"] = True
-		# - = - = - = - = - = - = - = - = - = - = - = - =
-
-
 		# - = - = - = - = Dynamic plug-ins = - = - = - = -
 		dynamic_opts = dynamic_ytdl_options.get()
 		duplicates_check = list(set(new_opts) & set(dynamic_opts)) # check for duplicates: list(set(a) & set(a))

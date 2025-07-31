@@ -112,32 +112,6 @@ class SettingsSections:
 			self.settings_checkbox_progresstype_arrow.set_state(settings.get_setting("progressbar_appearance") == "arrow", do_callback=False)
 			self.settings_checkbox_progresstype_pacman.set_state(settings.get_setting("progressbar_appearance") == "pacman", do_callback=False)
 
-	class Playlists_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
-		""" Playlist settings section """
-		name = "Playlists"
-		def get(self):
-			""" Get content of section """
-			self.settings_checkbox_ignerr = urwid.CheckBox([
-				(colors.light_yellow, "Ignore downloading errors"),
-				(colors.light_red, "\n<!!> Dangerous option - makes ytcon a little unstable\nPlease use only if necessary <!!>"),
-				"\nUse this so as not to interrupt the download if\none of the video in the playlist is not available"
-				], on_state_change=settings.setting_switch, user_data="ignoreerrors")
-
-			# UPDATE CHECKBOXES
-			self.update()
-
-			settings_pile = urwid.Pile([
-				urwid.Divider(),
-				self.settings_checkbox_ignerr,
-				urwid.Divider(),
-				])
-
-			return settings_pile
-
-		def update(self):
-			""" Update checkbox states for they don't lie """
-			self.settings_checkbox_ignerr.set_state(settings.get_setting("ignoreerrors"), do_callback=False)
-
 	class Debug_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" DEBUG settings section """
 		name = "Debug"
