@@ -62,7 +62,8 @@ class Dynamic:
 		# - = - = - = - = - = - = - = - = - =
 
 		if module.widget_type == "checkbox":
-			module.widget = urwid.CheckBox(module_note, on_state_change=settings.setting_switch_for_plugins, user_data=module)
+			module.widget = urwid.CheckBox(module_note, user_data=module)
+			urwid.connect_signal(module.widget, "postchange", dynamic_verifier.checkbox, module) # cause "change" state doesn't allow change state inside called def
 		elif module.widget_type == "input_field":
 			module_note = urwid.Text(module_note)
 			module.original_widget = DymanicEdit((colors.cyan, " > "), multiline=True)
@@ -124,7 +125,7 @@ class DynamicSection():
 			if isinstance(widget, urwid.CheckBox):
 				# get user_data from button class
 				# Pylint disabled because there is no normal way to get user_data
-				user_data = widget._urwid_signals["change"][0][2] # pylint: disable=protected-access # there must be module class result
+				user_data = widget._urwid_signals["postchange"][0][2] # pylint: disable=protected-access # there must be module class result
 				if user_data.widget_type == "checkbox":
 					widget.set_state(settings.get_setting(user_data.savename), do_callback=False) # update state
 			if isinstance(widget, urwid.Pile):
@@ -160,6 +161,45 @@ class DynamicVerifier:
 	""" Checks widget for right input """
 	def __init__(self):
 		self.allow_non_matching_values = False
+
+	def checkbox(self, _=None, data=None, module=None):
+		""" Input validator for plugins with module.widget_type == "checkbox" """
+		data = not data # i don't know what the fuck but for some reason checkbox with postchange signal returns inverted value?????
+
+		if self.allow_non_matching_values is True or module.verify_input == "ignore":
+			settings.setting_switch_for_plugins(None, data, module)
+			module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
+			return None
+
+		if module.verify_input == "exec":
+			exec_result = module.verify_input_data()
+			if isinstance(exec_result, (tuple, list)):
+				if exec_result[0] is False:
+					journal.info("")
+					journal.warning(f"[YTCON][!!] {module.savename} not saved - plugin said: {exec_result[1]}.")
+					self.checkbox_changecolor(module, colors.light_red)
+					module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
+					return None
+				else:
+					settings.setting_switch_for_plugins(None, data, module)
+					self.checkbox_changecolor(module, colors.cyan)
+
+			if isinstance(exec_result, bool):
+				if exec_result is False:
+					journal.info("")
+					journal.warning(f"[YTCON][!!] {module.savename} not saved - exec check failed, the plugin didn't say anything.")
+					self.checkbox_changecolor(module, colors.light_red)
+					module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
+					return None
+				else:
+					settings.setting_switch_for_plugins(None, data, module)
+					self.checkbox_changecolor(module, colors.cyan)
+
+		if data is True:
+			self.checkbox_changecolor(module, colors.green)
+		if data is False:
+			self.checkbox_changecolor(module, colors.cyan)
+		module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
 
 	def edit_field(self, _=None, data=None, module=None, verbose=False, force=False):
 		""" Input validator for plugins with module.widget_type == "input_field" """
@@ -208,8 +248,15 @@ class DynamicVerifier:
 				self.edit_field_changecolor(module, colors.light_green)
 			return None
 
-		settings.setting_switch_for_plugins(None, data, module)
 		return None
+
+	def checkbox_changecolor(self, module, color):
+		""" Changes the color of the urwid.Button caption """
+		if type(module.description) is str:
+			module_note = [(color, module.title + "\n"), module.description]
+		elif type(module.description) is tuple or type(module.description) is list:
+			module_note = [(color, module.title + "\n")] + list(module.description) # by urwid must be list, not tuple
+		module.widget.set_label(module_note)
 
 	def edit_field_changecolor(self, module, color):
 		""" Changes the color of the urwid.Edit caption """

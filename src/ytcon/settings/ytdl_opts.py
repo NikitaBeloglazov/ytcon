@@ -28,12 +28,6 @@ class YtdlOptsStorage:
 			'retry_sleep': 'http,fragment:exp',
 			#'download_archive': 'downloaded_videos.txt', # !!! DANGEROUS OPTION !!! # TODO?
 
-			'extractor_args': {'generic': {'impersonate': ['']}}, # TODO
-			# cloudflare avoider
-			# --extractor-args "generic:impersonate"
-			# Requires curl-cffi module, we can check it through yt_dlp.dependencies.curl_cffi is None
-			# https://github.com/yt-dlp/yt-dlp#impersonation, pip install "yt-dlp[default,curl-cffi]"
-
 			'skip_unavailable_fragments': False # DO NOT SKIP FRAGMENTS (relevant when loading on Twitter on weak internet) https://github.com/yt-dlp/yt-dlp/issues/6078#issuecomment-2647248422
 		}
 
