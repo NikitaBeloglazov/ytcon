@@ -156,7 +156,7 @@ def downloader(url, playlist_redirect=False): # pylint: disable=too-many-return-
 		os.utime(variables.queue_list[temp1_index]["file"])
 
 		# Remove file after downloading
-		if variables.delete_after_download is True:
+		if settings.get_setting("ytcon.debug.delete_after_download") is True:
 			journal.warning(f"[YTCON] REMOVING {variables.queue_list[temp1_index]['file']}...")
 			os.remove(variables.queue_list[temp1_index]["file"])
 	except:

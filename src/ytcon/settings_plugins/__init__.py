@@ -104,6 +104,9 @@ class DynamicSection():
 		self.name = name
 		self.modules_list = modules_list # modules for this section
 		self.settings_pile_list = [urwid.Divider()]
+		if self.name == "Debug*":
+			self.settings_pile_list.append(urwid.Text((colors.light_red, "The settings found here are made for testing purposes!\nChanging these settings is not recommended.\n\nUse them only if you know what you are doing.")))
+			self.settings_pile_list.append(urwid.Divider())
 
 		for i in self.modules_list: # work with modules only for this section
 			self.settings_pile_list.append(i.widget)
@@ -160,7 +163,7 @@ class DymanicEdit(urwid.Edit):
 class DynamicVerifier:
 	""" Checks widget for right input """
 	def __init__(self):
-		self.allow_non_matching_values = False
+		pass
 
 	def checkbox(self, _=None, data=None, module=None):
 		""" Input validator for plugins with module.widget_type == "checkbox" """
@@ -171,7 +174,7 @@ class DynamicVerifier:
 		if data is False:
 			self.checkbox_changecolor(module, colors.cyan)
 
-		if self.allow_non_matching_values is True or module.verify_input == "ignore":
+		if settings.get_setting("ytcon.debug.plugins_skip_input_checks") is True or module.verify_input == "ignore":
 			settings.setting_switch_for_plugins(None, data, module)
 			module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
 			return None
@@ -214,7 +217,7 @@ class DynamicVerifier:
 			self.edit_field_changecolor(module, colors.yellow)
 			return None
 
-		if self.allow_non_matching_values is True or module.verify_input == "ignore":
+		if settings.get_setting("ytcon.debug.plugins_skip_input_checks") is True or module.verify_input == "ignore":
 			settings.setting_switch_for_plugins(None, data, module)
 			self.edit_field_changecolor(module, colors.light_green)
 			return None
@@ -263,10 +266,6 @@ class DynamicVerifier:
 
 dynamic_verifier = DynamicVerifier()
 
-def allow_non_matching_values_switch(_, data):
-	""" TODO REMAKE DEBUG SECTION TO PLUGINS """
-	dynamic_verifier.allow_non_matching_values = data # TODO REMAKE DEBUG SECTION TO PLUGINS
-
 # - = - = - = - = - = - = - = - = - = - = - = -
 
 class DynamicOpts:
@@ -280,7 +279,7 @@ class DynamicOpts:
 		logger.debug(dynamic_modules.settings_map)
 
 		for plugin in dynamic_modules.settings_map:
-			if settings.get_setting(plugin.savename) is not False:
+			if settings.get_setting(plugin.savename) is not False and plugin.if_enabled is not None:
 				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first keys to check duplicates
 
 					if plugin.if_enabled_type == "json_insert": # for checkboxes
@@ -297,6 +296,8 @@ class DynamicOpts:
 						if plugin.if_enabled[0] not in ydl_opts_from_plugins:
 							ydl_opts_from_plugins[plugin.if_enabled[0]] = {}
 						ydl_opts_from_plugins[plugin.if_enabled[0]] = ydl_opts_from_plugins[plugin.if_enabled[0]] | {plugin.if_enabled[-1]: settings.get_setting(plugin.savename)}
+					# elif plugin.if_enabled_type == "internals":
+					#	pass
 
 				else:
 					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")

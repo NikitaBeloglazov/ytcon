@@ -9,18 +9,15 @@
 import urwid
 
 from log import logger
-from control.variables import variables
+# from control.variables import variables
 from render.colors import colors
 
 from render.render import render
 RenderClass = render
 
-from control.control import ControlClass
-
 from settings.settings_processor import settings
 
 from settings_plugins import get_all_sections
-from settings_plugins import allow_non_matching_values_switch, dynamic_verifier # FOR "ALLOW UNMATCHED VALUES SWITCH"
 
 from app_update import settings_section
 
@@ -111,39 +108,6 @@ class SettingsSections:
 			self.settings_checkbox_progresstype_simple.set_state(settings.get_setting("progressbar_appearance") == "simple", do_callback=False)
 			self.settings_checkbox_progresstype_arrow.set_state(settings.get_setting("progressbar_appearance") == "arrow", do_callback=False)
 			self.settings_checkbox_progresstype_pacman.set_state(settings.get_setting("progressbar_appearance") == "pacman", do_callback=False)
-
-	class Debug_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
-		""" DEBUG settings section """
-		name = "Debug"
-		def get(self):
-			""" Get content of section """
-			self.settings_checkbox_delete_af = urwid.CheckBox("Delete after download", on_state_change=ControlClass.delete_after_download_switch)
-			self.settings_checkbox_allow_non_matching_values = urwid.CheckBox("Allow saving non-allowed values for ytcon plugins", on_state_change=allow_non_matching_values_switch) # TODO REMAKE DEBUG SECTION TO PLUGINS
-
-			# UPDATE CHECKBOXES
-			self.update()
-
-			settings_pile = urwid.Pile([
-				urwid.Divider(),
-				urwid.Text((colors.light_red, "The settings found here are made for testing purposes!")),
-				urwid.Text((colors.light_red, "Changing these settings is not recommended.")),
-				urwid.Divider(),
-				urwid.Text((colors.light_red, "Also, Debug settings WILL NOT be saved when you click on the \"Save to config file\" button")),
-				urwid.Divider(),
-				urwid.Text("- = -"),
-				urwid.Divider(),
-				self.settings_checkbox_delete_af,
-				urwid.Divider(),
-				self.settings_checkbox_allow_non_matching_values,
-				urwid.Divider(),
-				])
-
-			return settings_pile
-
-		def update(self):
-			""" Update checkbox states for they don't lie """
-			self.settings_checkbox_delete_af.set_state(variables.delete_after_download, do_callback=False)
-			self.settings_checkbox_allow_non_matching_values.set_state(dynamic_verifier.allow_non_matching_values, do_callback=False) # TODO REMAKE DEBUG SECTION TO PLUGINS
 
 	# = - E X A M P L E - =
 	#class Three_SECTION:

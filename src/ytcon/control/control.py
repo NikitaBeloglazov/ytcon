@@ -32,15 +32,4 @@ class ControlClass_base:
 		journal.clear_errors()
 		journal.info(f"[YTCON] {self.delete_finished()} item(s) removed from list!")
 
-	def delete_after_download_switch(self, _=None, _1=None):
-		""" Special mode switch function for urwid.Button's """
-		# TODO: Move to normal settings
-		journal.info("")
-		if variables.delete_after_download: # true
-			variables.delete_after_download = False
-			journal.info("[YTCON] Delete after download disabled!")
-		elif not variables.delete_after_download: # false
-			variables.delete_after_download = True
-			journal.error("[YTCON] Delete after download ENABLED! This means that the downloaded files WILL NOT BE SAVED!")
-
 ControlClass = ControlClass_base()

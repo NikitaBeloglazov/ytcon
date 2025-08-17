@@ -149,12 +149,6 @@ class InputHandlerClass:
 				raise self.InputProcessed
 			# - = - = - = - = - = - = - =
 
-			# - = Delete after download = -
-			if text in ("dad", "delete after download"):
-				ControlClass.delete_after_download_switch()
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - =
-
 			if text in ("clear", "cls"):
 				ControlClass.clear()
 

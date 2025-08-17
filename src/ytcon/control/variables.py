@@ -19,8 +19,6 @@ class VariablesStorage: # TODO: maybe rework to static class? https://stackoverf
 		self.prev_last_error = ""
 		self.prev_error_countdown = 0
 
-		self.delete_after_download = False
-
 		# TODO: SEE log.py, line 93
 		self.log = ["", "", "", "", "", "Logs will appear there.."]
 
