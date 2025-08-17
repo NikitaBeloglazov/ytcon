@@ -166,6 +166,11 @@ class DynamicVerifier:
 		""" Input validator for plugins with module.widget_type == "checkbox" """
 		data = not data # i don't know what the fuck but for some reason checkbox with postchange signal returns inverted value?????
 
+		if data is True:
+			self.checkbox_changecolor(module, colors.green)
+		if data is False:
+			self.checkbox_changecolor(module, colors.cyan)
+
 		if self.allow_non_matching_values is True or module.verify_input == "ignore":
 			settings.setting_switch_for_plugins(None, data, module)
 			module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
@@ -182,7 +187,6 @@ class DynamicVerifier:
 					return None
 				else:
 					settings.setting_switch_for_plugins(None, data, module)
-					self.checkbox_changecolor(module, colors.cyan)
 
 			if isinstance(exec_result, bool):
 				if exec_result is False:
@@ -193,12 +197,7 @@ class DynamicVerifier:
 					return None
 				else:
 					settings.setting_switch_for_plugins(None, data, module)
-					self.checkbox_changecolor(module, colors.cyan)
 
-		if data is True:
-			self.checkbox_changecolor(module, colors.green)
-		if data is False:
-			self.checkbox_changecolor(module, colors.cyan)
 		module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
 
 	def edit_field(self, _=None, data=None, module=None, verbose=False, force=False):

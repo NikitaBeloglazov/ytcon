@@ -19,5 +19,7 @@ class MainClass():
 	if_enabled_type = "json_insert"
 	# if_disabled = None
 
+	verify_input = "ignore"
+
 # - = - = -
 dynamic_modules.register(MainClass)
