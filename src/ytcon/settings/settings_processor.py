@@ -16,7 +16,6 @@ class SettingsClass:
 
 		# Default settings
 		self.settings = {
-			"clipboard_autopaste": True,
 			"progressbar_appearance": "detailed",
 			"check_updates_on_boot": True,
 			"show_updates_bottom_sign": True,
@@ -66,14 +65,14 @@ class SettingsClass:
 			logger.debug(traceback.format_exc())
 			journal.warning(f"[YTCON] Saved settings load FAILED: EOFError: {exc}: {self.configpath}settings.db")
 			journal.error("[YTCON] YOUR SETTINGS FILE IS CORRUPTED. Default settings restored and corrupted save file removed.")
-			self.write_setting("clipboard_autopaste", False)
+			self.write_setting("ytcon.clipboard_autopaste", False)
 			settings_menu_variables.settings_soft_update_scheduled = True # update checkboxes
 			journal.warning("[YTCON] Clipboard autopaste has been turned off for security reasons. You can it enable it in settings")
 			logger.debug(os.remove(f"{self.configpath}settings.db"))
 
 	def clipboard_autopaste_switch(self, _=None, _1=None):
 		""" Clipboard autopaste switch function for urwid.Button's. FOR BACK COMPABILITY """
-		self.setting_switch(None, None, name="clipboard_autopaste")
+		self.setting_switch(None, None, name="ytcon.clipboard_autopaste")
 
 	def setting_switch(self, _=None, state=None, name=None):
 		""" Switches state to negative current state or to state set by state argument. Made for for urwid.Button's """

@@ -40,28 +40,6 @@ class SettingsSections:
 
 		logger.debug(self.settings_sections)
 
-	class General_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
-		""" General settings section """
-		name = "General"
-
-		def get(self):
-			""" Get content of section """
-			self.settings_checkbox_clipboard = urwid.CheckBox("Clipboard auto-paste", on_state_change=settings.setting_switch, user_data="clipboard_autopaste")
-
-			# UPDATE CHECKBOXES
-			self.update()
-
-			settings_pile = urwid.Pile([
-				urwid.Divider(),
-				self.settings_checkbox_clipboard,
-				urwid.Divider(),
-				])
-			return settings_pile
-
-		def update(self):
-			""" Update checkbox states for they don't lie """
-			self.settings_checkbox_clipboard.set_state(settings.get_setting("clipboard_autopaste"), do_callback=False)
-
 	class Appearance_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" settings section related to appearance """
 		name = "Appearance"
@@ -90,6 +68,7 @@ class SettingsSections:
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
 				urwid.Text((colors.light_yellow, "Progress bar type")),
+				urwid.Divider(),
 				self.settings_checkbox_progresstype_detailed,
 				urwid.Divider(),
 				self.settings_checkbox_progresstype_simple,

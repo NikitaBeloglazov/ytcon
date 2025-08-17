@@ -45,7 +45,7 @@ def clipboard_init():
 
 		if user_answer.lower() in ("yes", "y"):
 			journal.error("[YTCON] If you don't want answer \"yes\" every time, solve the problem, or disable auto-paste in settings and PRESS \"Save to config file\"")
-			settings.write_setting("clipboard_autopaste", False)
+			settings.write_setting("ytcon.clipboard_autopaste", False)
 		else:
 			print("Exiting..")
 			sys.exit(1)
@@ -69,7 +69,7 @@ def clipboard_checker():
 
 			# Keep setting ON for "save to config file" ability
 			time.sleep(60)
-			settings.write_setting("clipboard_autopaste", False)
+			settings.write_setting("ytcon.clipboard_autopaste", False)
 			update_checkboxes()
 			variables.clipboard_checker_state_launched = False
 			return None
@@ -81,7 +81,7 @@ def clipboard_checker():
 		old_clip = ""
 
 		while True:
-			if settings.get_setting("clipboard_autopaste") is False:
+			if settings.get_setting("ytcon.clipboard_autopaste") is False:
 				variables.clipboard_checker_state_launched = False
 				journal.info("[YTCON] Clipboard auto-paste turned off.")
 				return None

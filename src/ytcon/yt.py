@@ -134,7 +134,7 @@ for i in debug_that_will_be_saved_later:
 # - = - = - = - Late initialize - = - = - = - =
 settings.load()
 
-if settings.get_setting("clipboard_autopaste") is True:
+if settings.get_setting("ytcon.clipboard_autopaste") is True:
 	clipboard_init()
 if settings.get_setting("check_updates_on_boot") is True:
 	threading.Thread(target=app_updates.initialize(), daemon=True).start()

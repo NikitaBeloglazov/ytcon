@@ -143,12 +143,6 @@ class InputHandlerClass:
 			journal.info("")
 			journal.info("[YTCON] [INPUT] " + original_text)
 
-			# - = Clipboard auto-paste = -
-			if text in ("cb", "clipboard", "clip"):
-				settings.clipboard_autopaste_switch()
-				raise self.InputProcessed
-			# - = - = - = - = - = - = - =
-
 			if text in ("clear", "cls"):
 				ControlClass.clear()
 

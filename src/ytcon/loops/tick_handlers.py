@@ -24,7 +24,7 @@ def tick_handler(loop, _):
 
 	# - = - = - = - = - = - = - = - = -
 	# Autopaste button color changer
-	if (settings.get_setting("clipboard_autopaste") is True and variables.clipboard_checker_state_launched is not True) or (settings.get_setting("clipboard_autopaste") is False and variables.clipboard_checker_state_launched is not False):
+	if (settings.get_setting("ytcon.clipboard_autopaste") is True and variables.clipboard_checker_state_launched is not True) or (settings.get_setting("ytcon.clipboard_autopaste") is False and variables.clipboard_checker_state_launched is not False):
 		widgets.main_footer_buttons.contents[2] = (urwid.AttrMap(widgets.main_footer_clipboard_autopaste_button, "yellow"), widgets.main_footer_buttons.contents[2][1])
 		variables.temp["autopaste_button_color"] = "yellow" # some kind of cache
 
@@ -38,7 +38,7 @@ def tick_handler(loop, _):
 	# - = - = - = - = - = - = - = - = -
 
 	# - = Clipboard thread activator = -
-	if settings.get_setting("clipboard_autopaste") and variables.clipboard_checker_state_launched is False:
+	if settings.get_setting("ytcon.clipboard_autopaste") and variables.clipboard_checker_state_launched is False:
 		threading.Thread(target=clipboard_checker, daemon=True).start()
 	# - = - = - = - = - = - = - = - = -
 

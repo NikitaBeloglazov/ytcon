@@ -25,21 +25,13 @@ class Dynamic:
 		logger.debug("[plugins] loading: %s", module.savename)
 		self.settings_map.append(module)
 		# self.settings_map_by_savename[module.savename] = module
-		# self.settings_map[module.savename] = {
-			# "title": module.title,
-			# "description": module.description,
-			# "section": module.section,
-
-			# "savename": module.savename,
-
-			# "widget_type": module.widget_type,
-			# "if_enabled": module.if_enabled,
-			# # "if_disabled": module.if_disabled,
-			# }
 
 		# - = - = - = - = - = -
 		# Add to settings_processor, for saving ability
-		settings.write_setting(module.savename, False)
+		if hasattr(module, 'enabled_by_default') and module.enabled_by_default is True:
+			settings.write_setting(module.savename, True)
+		else:
+			settings.write_setting(module.savename, False)
 		# - = - = - = - = - = -
 
 		# - = - = - = - = - = -
@@ -47,7 +39,7 @@ class Dynamic:
 		self.make_widget(module)
 		# - = - = - = - = - = -
 
-		logger.debug(pprint.pformat(self.settings_map))
+		# logger.debug(pprint.pformat(self.settings_map))
 		journal.info("[YTCON][plugins] Loaded: " + module.savename)
 
 	def make_widget(self, module):

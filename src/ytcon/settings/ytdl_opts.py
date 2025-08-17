@@ -9,7 +9,7 @@ import pprint
 from downloader.hook import hook
 from log import journal, logger
 
-from settings.settings_processor import settings
+# from settings.settings_processor import settings
 from settings_plugins import dynamic_ytdl_options
 
 class YtdlOptsStorage:
