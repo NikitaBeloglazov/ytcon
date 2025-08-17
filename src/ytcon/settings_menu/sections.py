@@ -34,32 +34,32 @@ class SettingsSections:
 
 		# Filter only classes
 		self.settings_sections = [cls for cls in class_attributes.values() if isinstance(cls, type)]
+		self.settings_sections.extend(get_all_sections())
 		self.settings_sections.append(settings_section.Update_Status_SECTION)
 		self.settings_sections.append(settings_section.Update_Settings_SECTION)
-		self.settings_sections.extend(get_all_sections())
 
 		logger.debug(self.settings_sections)
 
 	class Appearance_SECTION: # pylint: disable=attribute-defined-outside-init # because get() initializes a class
 		""" settings section related to appearance """
 		name = "Appearance"
-		def get(self):
+		def get(self): # TODO replace with urwid.RadioButton?
 			""" Get content of section """
 			self.settings_checkbox_progresstype_detailed = urwid.CheckBox([
-				(colors.cyan, "46% |███▍   | - Detailed"),
+				(colors.cyan, "|███▍   | - Detailed"),
 				"\nUse some unicode characters (▏;▍;▋;▉;█)\nto display the percentage more accurately.\nDoesn't fully work in tty",
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "detailed"))
 			self.settings_checkbox_progresstype_simple = urwid.CheckBox([
-				(colors.cyan, "46% |████   | - Simple"),
+				(colors.cyan, "|████   | - Simple"),
 				"\nUse only ACSII squares (█) to show percentage"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "simple"))
 			self.settings_checkbox_progresstype_arrow = urwid.CheckBox([
-				(colors.cyan, "46% |===>   | - Arrow"),
+				(colors.cyan, "|===>   | - Arrow"),
 				"\nLet's just add some oldfag style 😎"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "arrow"))
 			self.settings_checkbox_progresstype_pacman = urwid.CheckBox([
-				(colors.cyan, "46% |--C o | - Pacman"),
-				"\nPacman game"
+				(colors.cyan, "|--C o | - Pacman"),
+				"\nHomage to the Pac-Man game"
 				], on_state_change=settings.setting_change_content, user_data=("progressbar_appearance", "pacman"))
 
 			# UPDATE CHECKBOXES
@@ -67,7 +67,7 @@ class SettingsSections:
 
 			settings_pile = urwid.Pile([
 				urwid.Divider(),
-				urwid.Text((colors.light_yellow, "Progress bar type")),
+				urwid.Text((colors.bold, "Progress bar type")),
 				urwid.Divider(),
 				self.settings_checkbox_progresstype_detailed,
 				urwid.Divider(),

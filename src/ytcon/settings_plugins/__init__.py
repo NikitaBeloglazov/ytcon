@@ -82,7 +82,12 @@ def get_all_sections():
 		modules_sorted_by_sections[i.section].append(i)
 
 	logger.debug("modules_sorted_by_sections:")
-	logger.debug(pprint.pformat(modules_sorted_by_sections))
+	logger.debug(modules_sorted_by_sections)
+
+	# - = Sort = -
+	modules_sorted_by_sections = dict(sorted(modules_sorted_by_sections.items())) # Sort sections by name
+	modules_sorted_by_sections["Debug"] = modules_sorted_by_sections.pop("Debug") # Move debug to bottom
+	# - = - = - =
 
 	for section_name, modules_list in modules_sorted_by_sections.items(): # i contains json keys (names of section)
 		ready_sections_list.append(DynamicSection(section_name+"*", modules_list))
