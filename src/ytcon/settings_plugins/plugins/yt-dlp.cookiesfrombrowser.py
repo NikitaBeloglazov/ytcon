@@ -16,7 +16,6 @@ class MainClass(PluginBase):
 
 	if_enabled = "cookiesfrombrowser"
 	if_enabled_type = IfEnabledType.CONTENT_TUPLE
-	# if_disabled = None
 
 	verify_input = VerifyInput.COMPARE_WITH_LIST
 	verify_input_data = SUPPORTED_BROWSERS # allow only supported browsers by yt-dlp

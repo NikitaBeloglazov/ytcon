@@ -20,7 +20,6 @@ class MainClass(PluginBase):
 
 	if_enabled = {"impersonate": ImpersonateTarget()}
 	if_enabled_type = IfEnabledType.JSON_INSERT
-	# if_disabled = None
 
 	verify_input = VerifyInput.EXEC
 	# verify_input_data = lambda : curl_cffi is not None

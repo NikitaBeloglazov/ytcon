@@ -16,9 +16,6 @@ class MainClass(PluginBase):
 
 	if_enabled = {"nocheckcertificate": True}
 	if_enabled_type = IfEnabledType.JSON_INSERT
-	# if_disabled = None
-
-	verify_input = VerifyInput.IGNORE
 
 # - = - = -
 dynamic_modules.register(MainClass)

@@ -18,7 +18,5 @@ class MainClass(PluginBase):
 	if_enabled = None
 	if_enabled_type = IfEnabledType.NONE
 
-	verify_input = VerifyInput.IGNORE
-
 # - = - = -
 dynamic_modules.register(MainClass)

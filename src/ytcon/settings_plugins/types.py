@@ -5,20 +5,20 @@ from typing import Optional, Union, Tuple, List, Dict, Any, Callable
 from pydantic import BaseModel, Field
 
 class WidgetType(str, Enum):
-	CHECKBOX = "checkbox"
-	INPUT_FIELD = "input_field"
+	CHECKBOX = "CHECKBOX"
+	INPUT_FIELD = "INPUT_FIELD"
 
 class VerifyInput(str, Enum):
-	IGNORE = "ignore"
-	EXEC = "exec"
-	COMPARE_WITH_LIST = "compare_with_list"
-	REGEX = "regex"
+	IGNORE = "IGNORE"
+	EXEC = "EXEC"
+	COMPARE_WITH_LIST = "COMPARE_WITH_LIST"
+	REGEX = "REGEX"
 
 class IfEnabledType(str, Enum):
-	JSON_INSERT = "json_insert"
-	CONTENT = "content"
-	CONTENT_TUPLE = "content_tuple"
-	CONTENT_IN_NESTED_JSON = "content_in_nested_json"
+	JSON_INSERT = "JSON_INSERT"
+	CONTENT = "CONTENT"
+	CONTENT_TUPLE = "CONTENT_TUPLE"
+	CONTENT_IN_NESTED_JSON = "CONTENT_IN_NESTED_JSON"
 	NONE = "NONE"
 
 class PluginBase(ABC):
@@ -31,9 +31,8 @@ class PluginBase(ABC):
 	if_enabled: Optional[Dict] = None # TODO REWORK!!!
 	if_enabled_type: IfEnabledType
 
-	# if_disabled: Optional[Dict] = None
-	verify_input: VerifyInput
-	verify_input_data: Any = None
+	verify_input: Optional[VerifyInput] = VerifyInput.IGNORE
+	verify_input_data: Optional[Callable] = None
 
 	enabled_by_default: bool = False
 

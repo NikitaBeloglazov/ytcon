@@ -15,7 +15,6 @@ class MainClass(PluginBase):
 
 	if_enabled = ("http_headers", "User-Agent") # -> {'http_headers': {'User-Agent': 'test'}}
 	if_enabled_type = IfEnabledType.CONTENT_IN_NESTED_JSON
-	# if_disabled = None
 
 	verify_input = VerifyInput.REGEX
 	verify_input_data = r"^Mozilla\/[0-9.]+\s+\([^)]+\)\s+.+$" # written with neural network so that it can work really bad
