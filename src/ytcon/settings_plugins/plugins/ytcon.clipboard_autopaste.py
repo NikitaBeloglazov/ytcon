@@ -1,9 +1,10 @@
 import sys
 sys.path.append("..")
 from settings_plugins import dynamic_modules
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
 # - = - = -
 
-class MainClass():
+class MainClass(PluginBase):
 	# https://pypi.org/project/clipman/
 	title = "Clipboard auto-paste"
 	description = "Automatically regularly checks the clipboard, and if link are there,\nstart downloading this link. Also works in the background.\n\nAdditional information about the module and support:\nhttps://pypi.org/project/clipman/"
@@ -12,12 +13,12 @@ class MainClass():
 	savename = "ytcon.clipboard_autopaste"
 	enabled_by_default = True
 
-	widget_type = "checkbox"
+	widget_type = WidgetType.CHECKBOX
 
 	if_enabled = None
-	if_enabled_type = None
+	if_enabled_type = IfEnabledType.NONE
 
-	verify_input = "ignore"
+	verify_input = VerifyInput.IGNORE
 
 # - = - = -
 dynamic_modules.register(MainClass)

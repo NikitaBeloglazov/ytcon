@@ -1,10 +1,11 @@
 import sys
 sys.path.append("..")
 from settings_plugins import dynamic_modules
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
 # - = - = -
 from render.colors import colors
 
-class MainClass():
+class MainClass(PluginBase):
 	# https://github.com/yt-dlp/yt-dlp/issues/4914
 	title = "Do not abort download on error"
 	description = ((colors.light_red, "<!!> Dangerous option - can make ytcon a little unstable (untested)\nPlease use only if necessary <!!>"),
@@ -13,13 +14,13 @@ class MainClass():
 
 	savename = "yt-dlp.ignoreerrors"
 
-	widget_type = "checkbox"
+	widget_type = WidgetType.CHECKBOX
 
 	if_enabled = {"ignoreerrors": "only_download"}
-	if_enabled_type = "json_insert"
+	if_enabled_type = IfEnabledType.JSON_INSERT
 	# if_disabled = None
 
-	verify_input = "ignore"
+	verify_input = VerifyInput.IGNORE
 
 # - = - = -
 dynamic_modules.register(MainClass)

@@ -1,11 +1,12 @@
 import sys
 sys.path.append("..")
 from settings_plugins import dynamic_modules
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
 # - = - = -
 from yt_dlp.networking.impersonate import ImpersonateTarget
 from yt_dlp.dependencies import curl_cffi
 
-class MainClass():
+class MainClass(PluginBase):
 	# Also --extractor-args "generic:impersonate" can be used
 	# https://github.com/yt-dlp/yt-dlp#impersonation, pip install "yt-dlp[default,curl-cffi]"
 	title = "Impersonate requests / Cloudflare avoider"
@@ -15,13 +16,13 @@ class MainClass():
 
 	savename = "yt-dlp.impersonate"
 
-	widget_type = "checkbox"
+	widget_type = WidgetType.CHECKBOX
 
 	if_enabled = {"impersonate": ImpersonateTarget()}
-	if_enabled_type = "json_insert"
+	if_enabled_type = IfEnabledType.JSON_INSERT
 	# if_disabled = None
 
-	verify_input = "exec"
+	verify_input = VerifyInput.EXEC
 	# verify_input_data = lambda : curl_cffi is not None
 
 	@staticmethod

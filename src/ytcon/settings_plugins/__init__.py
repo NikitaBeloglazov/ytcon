@@ -12,6 +12,7 @@ from log import logger, journal
 from render.colors import colors
 # from settings_menu import sections
 from settings.settings_processor import settings, configpath # first for switches, 2nd for importring from saves path
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
 
 class Dynamic:
 	""" Responsible for control and registering dynamic modules  """
@@ -22,7 +23,13 @@ class Dynamic:
 
 	def register(self, module):
 		""" Registers dynamic module in json object """
-		logger.debug("[plugins] loading: %s", module.savename)
+		plugin_name = getattr(module, 'savename', module.__name__)
+		logger.debug("[plugins] loading: %s", plugin_name)
+
+		# Type-safety for plugins
+		if not (isinstance(module, type) and issubclass(module, PluginBase)):
+			raise TypeError(f"[plugins] '{plugin_name}' must inherit from PluginBase")
+
 		self.settings_map.append(module)
 		# self.settings_map_by_savename[module.savename] = module
 
@@ -50,13 +57,13 @@ class Dynamic:
 		elif type(module.description) is tuple or type(module.description) is list:
 			module_note = [(colors.cyan, module.title + "\n")] + list(module.description) # by urwid must be list, not tuple
 		else:
-			raise NotImplementedError(f"[YTCON][PLUGINS] issue with plugin {module.savename}: \"{type(module.description)}\" is unknown description type! Supported types: str, typle/list")
+			raise NotImplementedError(f"[YTCON][PLUGINS] issue with plugin {module.savename}: \"{type(module.description)}\" is unknown description type! Supported types: str, tuple/list")
 		# - = - = - = - = - = - = - = - = - =
 
-		if module.widget_type == "checkbox":
+		if module.widget_type == WidgetType.CHECKBOX:
 			module.widget = urwid.CheckBox(module_note, user_data=module)
 			urwid.connect_signal(module.widget, "postchange", dynamic_verifier.checkbox, module) # cause "change" state doesn't allow change state inside called def
-		elif module.widget_type == "input_field":
+		elif module.widget_type == WidgetType.INPUT_FIELD:
 			module_note = urwid.Text(module_note)
 			module.original_widget = DymanicEdit((colors.cyan, " > "), multiline=True)
 			#module_bottom = urwid.Text("└─── ── ──  ──  ─  ─  ─")
@@ -126,7 +133,7 @@ class DynamicSection():
 				# get user_data from button class
 				# Pylint disabled because there is no normal way to get user_data
 				user_data = widget._urwid_signals["postchange"][0][2] # pylint: disable=protected-access # there must be module class result
-				if user_data.widget_type == "checkbox":
+				if user_data.widget_type == WidgetType.CHECKBOX:
 					widget.set_state(settings.get_setting(user_data.savename), do_callback=False) # update state
 			if isinstance(widget, urwid.Pile):
 				# possibly, this is a input_field
@@ -134,7 +141,7 @@ class DynamicSection():
 
 				# Pylint disabled because there is no normal way to get user_data
 				user_data = original_widget._urwid_signals["change"][0][2] # pylint: disable=protected-access # there must be module class result
-				if user_data.widget_type == "input_field":
+				if user_data.widget_type == WidgetType.INPUT_FIELD:
 					if settings.get_setting(user_data.savename) is not False:
 						user_data.original_widget.edit_text = str(settings.get_setting(user_data.savename))
 						user_data.original_widget.set_edit_pos(999) # Spawn cursor at the end and not at the beginning
@@ -154,7 +161,6 @@ class DymanicEdit(urwid.Edit):
 		else:
 			super().keypress(size, key)
 
-
 # - = - = - = - = - = - = - = - = - = - = - = -
 
 class DynamicVerifier:
@@ -171,12 +177,12 @@ class DynamicVerifier:
 		if data is False:
 			self.checkbox_changecolor(module, colors.cyan)
 
-		if settings.get_setting("ytcon.debug.plugins_skip_input_checks") is True or module.verify_input == "ignore":
+		if settings.get_setting("ytcon.debug.plugins_skip_input_checks") is True or module.verify_input == VerifyInput.IGNORE:
 			settings.setting_switch_for_plugins(None, data, module)
 			module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
 			return None
 
-		if module.verify_input == "exec":
+		if module.verify_input == VerifyInput.EXEC:
 			exec_result = module.verify_input_data()
 			if isinstance(exec_result, (tuple, list)):
 				if exec_result[0] is False:
@@ -201,7 +207,7 @@ class DynamicVerifier:
 		module.widget.set_state(settings.get_setting(module.savename), do_callback=False) # return button state to actual state
 
 	def edit_field(self, _=None, data=None, module=None, verbose=False, force=False):
-		""" Input validator for plugins with module.widget_type == "input_field" """
+		""" Input validator for plugins with module.widget_type == WidgetType.INPUT_FIELD """
 		if data == "":
 			self.edit_field_changecolor(module, colors.cyan)
 			if settings.get_setting(module.savename) is not False:
@@ -214,12 +220,12 @@ class DynamicVerifier:
 			self.edit_field_changecolor(module, colors.yellow)
 			return None
 
-		if settings.get_setting("ytcon.debug.plugins_skip_input_checks") is True or module.verify_input == "ignore":
+		if settings.get_setting("ytcon.debug.plugins_skip_input_checks") is True or module.verify_input == VerifyInput.IGNORE:
 			settings.setting_switch_for_plugins(None, data, module)
 			self.edit_field_changecolor(module, colors.light_green)
 			return None
 
-		if module.verify_input == "compare_with_list":
+		if module.verify_input == VerifyInput.COMPARE_WITH_LIST:
 			if data not in module.verify_input_data:
 				self.edit_field_changecolor(module, colors.light_red)
 				if verbose is True:
@@ -233,7 +239,7 @@ class DynamicVerifier:
 				self.edit_field_changecolor(module, colors.light_green)
 			return None
 
-		if module.verify_input == "regex":
+		if module.verify_input == VerifyInput.REGEX:
 			# journal.info(re.match(module.verify_input_data, data))
 			if re.match(module.verify_input_data, data) is None:
 				self.edit_field_changecolor(module, colors.light_red)
@@ -279,22 +285,20 @@ class DynamicOpts:
 			if settings.get_setting(plugin.savename) is not False and plugin.if_enabled is not None:
 				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first keys to check duplicates
 
-					if plugin.if_enabled_type == "json_insert": # for checkboxes
+					if plugin.if_enabled_type == IfEnabledType.JSON_INSERT: # for checkboxes
 						ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
 
 					# Sets if_enabled in yt-dlp options with contents of ytcon setting
 					# content mostly used for edit fields
-					elif plugin.if_enabled_type == "content": # mostly for edit fields
+					elif plugin.if_enabled_type == IfEnabledType.CONTENT: # mostly for edit fields
 						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: settings.get_setting(plugin.savename)}
-					elif plugin.if_enabled_type == "content_tuple":
+					elif plugin.if_enabled_type == IfEnabledType.CONTENT_TUPLE:
 						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: (settings.get_setting(plugin.savename), )}
-					elif plugin.if_enabled_type == "content_in_nested_json":
+					elif plugin.if_enabled_type == IfEnabledType.CONTENT_IN_NESTED_JSON:
 						# Currently only supports single-level nesting. Maybe there is a way to nest multiple levels, but I'm too lazy.
 						if plugin.if_enabled[0] not in ydl_opts_from_plugins:
 							ydl_opts_from_plugins[plugin.if_enabled[0]] = {}
 						ydl_opts_from_plugins[plugin.if_enabled[0]] = ydl_opts_from_plugins[plugin.if_enabled[0]] | {plugin.if_enabled[-1]: settings.get_setting(plugin.savename)}
-					# elif plugin.if_enabled_type == "internals":
-					#	pass
 
 				else:
 					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
