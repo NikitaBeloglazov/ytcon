@@ -14,7 +14,7 @@ class VerifyInput(str, Enum):
 	COMPARE_WITH_LIST = "COMPARE_WITH_LIST"
 	REGEX = "REGEX"
 
-class IfEnabledType(str, Enum):
+class YtdlOptsInjectModeType(str, Enum):
 	JSON_INSERT = "JSON_INSERT"
 	CONTENT = "CONTENT"
 	CONTENT_TUPLE = "CONTENT_TUPLE"
@@ -28,8 +28,8 @@ class PluginBase(ABC):
 	savename: str
 	widget_type: WidgetType
 
-	if_enabled: Optional[Dict] = None # TODO REWORK!!!
-	if_enabled_type: IfEnabledType
+	ydl_opts: Optional[Dict] = None
+	ydl_opts_inject_mode: YtdlOptsInjectModeType
 
 	verify_input: Optional[VerifyInput] = VerifyInput.IGNORE
 	verify_input_data: Optional[Callable] = None
@@ -39,12 +39,12 @@ class PluginBase(ABC):
 	# widget: Any = None
 	# original_widget: Any = None
 
-	# Fields requiring strict type validation (must be exact Enum instances, not raw strings).
-	# Add a field here if its type cannot be a plain value — e.g. "checkbox" instead of WidgetType.CHECKBOX.
+	# Fields requiring strict type validation
+	# (must be exact Enum instances, not raw strings, e.g use WidgetType.CHECKBOX instead of "checkbox".)
 	_type_checks = {
 		"widget_type": WidgetType,
 		"verify_input": VerifyInput,
-		"if_enabled_type": IfEnabledType,
+		"ydl_opts_inject_mode": YtdlOptsInjectModeType,
 	}
 
 	def __init_subclass__(cls, **kwargs):

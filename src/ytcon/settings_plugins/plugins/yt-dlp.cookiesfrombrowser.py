@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..")
 from settings_plugins import dynamic_modules
-from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, YtdlOptsInjectModeType
 # - = - = -
 from yt_dlp.cookies import SUPPORTED_BROWSERS
 
@@ -14,8 +14,8 @@ class MainClass(PluginBase):
 
 	widget_type = WidgetType.INPUT_FIELD
 
-	if_enabled = "cookiesfrombrowser"
-	if_enabled_type = IfEnabledType.CONTENT_TUPLE
+	ydl_opts = "cookiesfrombrowser"
+	ydl_opts_inject_mode = YtdlOptsInjectModeType.CONTENT_TUPLE
 
 	verify_input = VerifyInput.COMPARE_WITH_LIST
 	verify_input_data = SUPPORTED_BROWSERS # allow only supported browsers by yt-dlp

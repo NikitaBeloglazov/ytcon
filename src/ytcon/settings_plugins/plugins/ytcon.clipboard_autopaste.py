@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..")
 from settings_plugins import dynamic_modules
-from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, YtdlOptsInjectModeType
 # - = - = -
 
 class MainClass(PluginBase):
@@ -15,8 +15,8 @@ class MainClass(PluginBase):
 
 	widget_type = WidgetType.CHECKBOX
 
-	if_enabled = None
-	if_enabled_type = IfEnabledType.NONE
+	ydl_opts = None
+	ydl_opts_inject_mode = YtdlOptsInjectModeType.NONE
 
 # - = - = -
 dynamic_modules.register(MainClass)

@@ -12,7 +12,7 @@ from log import logger, journal
 from render.colors import colors
 # from settings_menu import sections
 from settings.settings_processor import settings, configpath # first for switches, 2nd for importring from saves path
-from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, YtdlOptsInjectModeType
 
 class Dynamic:
 	""" Responsible for control and registering dynamic modules  """
@@ -282,26 +282,26 @@ class DynamicOpts:
 		logger.debug(dynamic_modules.settings_map)
 
 		for plugin in dynamic_modules.settings_map:
-			if settings.get_setting(plugin.savename) is not False and plugin.if_enabled is not None:
-				if next(iter(plugin.if_enabled)) not in	ydl_opts_from_plugins: # get first keys to check duplicates
+			if settings.get_setting(plugin.savename) is not False and plugin.ydl_opts is not None:
+				if next(iter(plugin.ydl_opts)) not in	ydl_opts_from_plugins: # get first keys to check duplicates
 
-					if plugin.if_enabled_type == IfEnabledType.JSON_INSERT: # for checkboxes
-						ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.if_enabled
+					if plugin.ydl_opts_inject_mode == YtdlOptsInjectModeType.JSON_INSERT: # for checkboxes
+						ydl_opts_from_plugins = ydl_opts_from_plugins | plugin.ydl_opts
 
-					# Sets if_enabled in yt-dlp options with contents of ytcon setting
+					# Sets ydl_opts in yt-dlp options with contents of ytcon setting
 					# content mostly used for edit fields
-					elif plugin.if_enabled_type == IfEnabledType.CONTENT: # mostly for edit fields
-						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: settings.get_setting(plugin.savename)}
-					elif plugin.if_enabled_type == IfEnabledType.CONTENT_TUPLE:
-						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.if_enabled: (settings.get_setting(plugin.savename), )}
-					elif plugin.if_enabled_type == IfEnabledType.CONTENT_IN_NESTED_JSON:
+					elif plugin.ydl_opts_inject_mode == YtdlOptsInjectModeType.CONTENT: # mostly for edit fields
+						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.ydl_opts: settings.get_setting(plugin.savename)}
+					elif plugin.ydl_opts_inject_mode == YtdlOptsInjectModeType.CONTENT_TUPLE:
+						ydl_opts_from_plugins = ydl_opts_from_plugins | {plugin.ydl_opts: (settings.get_setting(plugin.savename), )}
+					elif plugin.ydl_opts_inject_mode == YtdlOptsInjectModeType.CONTENT_IN_NESTED_JSON:
 						# Currently only supports single-level nesting. Maybe there is a way to nest multiple levels, but I'm too lazy.
-						if plugin.if_enabled[0] not in ydl_opts_from_plugins:
-							ydl_opts_from_plugins[plugin.if_enabled[0]] = {}
-						ydl_opts_from_plugins[plugin.if_enabled[0]] = ydl_opts_from_plugins[plugin.if_enabled[0]] | {plugin.if_enabled[-1]: settings.get_setting(plugin.savename)}
+						if plugin.ydl_opts[0] not in ydl_opts_from_plugins:
+							ydl_opts_from_plugins[plugin.ydl_opts[0]] = {}
+						ydl_opts_from_plugins[plugin.ydl_opts[0]] = ydl_opts_from_plugins[plugin.ydl_opts[0]] | {plugin.ydl_opts[-1]: settings.get_setting(plugin.savename)}
 
 				else:
-					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.if_enabled))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
+					journal.error(f"[YTCON] PLUGIN CONFLICT FOUND: SOME PLUGIN ALREADY USES {next(iter(plugin.ydl_opts))}. One of the conflict plugins: {plugin.savename}. It will not be activated.")
 
 		logger.debug("DynamicOpts:")
 		logger.debug(ydl_opts_from_plugins)

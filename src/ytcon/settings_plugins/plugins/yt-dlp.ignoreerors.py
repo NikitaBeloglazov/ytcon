@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..")
 from settings_plugins import dynamic_modules
-from settings_plugins.types import PluginBase, WidgetType, VerifyInput, IfEnabledType
+from settings_plugins.types import PluginBase, WidgetType, VerifyInput, YtdlOptsInjectModeType
 # - = - = -
 from render.colors import colors
 
@@ -16,8 +16,8 @@ class MainClass(PluginBase):
 
 	widget_type = WidgetType.CHECKBOX
 
-	if_enabled = {"ignoreerrors": "only_download"}
-	if_enabled_type = IfEnabledType.JSON_INSERT
+	ydl_opts = {"ignoreerrors": "only_download"}
+	ydl_opts_inject_mode = YtdlOptsInjectModeType.JSON_INSERT
 
 # - = - = -
 dynamic_modules.register(MainClass)
