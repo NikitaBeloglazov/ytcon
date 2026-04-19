@@ -134,7 +134,7 @@ class Update_Settings_SECTION: # pylint: disable=attribute-defined-outside-init 
 		""" Get content of section """
 
 		# - = - = Settings
-		self.setting_checkbox_check_updates_on_boot = urwid.CheckBox([(colors.cyan, "Check updates on startup"), "\nDetermine in background the installed version, and check the newest version on the server (one API request to pypi.org)"], on_state_change=settings.setting_switch, user_data="check_updates_on_boot")
+		self.setting_checkbox_check_updates_on_boot = urwid.CheckBox([(colors.cyan, "Check updates on startup"), "\nDetermine in background the installed version, and check the newest version on the server\n(no telemetry, cookies, or spying, just one API request to pypi.org)"], on_state_change=settings.setting_switch, user_data="check_updates_on_boot")
 		self.setting_checkbox_show_update_bottom_sign = urwid.CheckBox([(colors.cyan, "Notify about new update"), "\nDisplay an message under the input field when new update is found. Requires some time to take effect (10-60 secs)"], on_state_change=settings.setting_switch, user_data="show_updates_bottom_sign")
 		# - = - = - = - =
 

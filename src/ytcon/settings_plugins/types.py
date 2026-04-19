@@ -36,9 +36,6 @@ class PluginBase(ABC):
 
 	enabled_by_default: bool = False
 
-	# widget: Any = None
-	# original_widget: Any = None
-
 	# Fields requiring strict type validation
 	# (must be exact Enum instances, not raw strings, e.g use WidgetType.CHECKBOX instead of "checkbox".)
 	_type_checks = {
